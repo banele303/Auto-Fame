@@ -1,102 +1,106 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import dynamic from 'next/dynamic';
 import { motion } from "framer-motion";
-import { Car, Users, Award, MapPin } from "lucide-react";
+import { Car, Users, Award, ShieldCheck, Sparkles, CheckCircle2 } from "lucide-react";
 
-const StatsSection = () => {
-  // Static stats per request (vehicles fixed at 20+, customers at 50+)
-
-  const parseValue = (val: string) => {
-    const match = val.match(/(\d+[\.]?\d*)/);
-    return match ? Number(match[1]) : 0;
-  };
-
+export default function StatsSection() {
   const stats = [
-    { key: 'vehicles', icon: Car, raw: '20+', label: 'Vehicles', description: 'Quality cars in our inventory' },
-    { key: 'customers', icon: Users, raw: '50+', label: 'Happy Customers', description: 'Satisfied with our service' },
-  ].map(s => ({
-    ...s,
-    target: parseValue(s.raw.toString()),
-    suffix: s.raw.toString().replace(/\d+[\.]?\d*/, '')
-  }));
-
-  const useCountUp = (target: number, duration = 1200) => {
-    const [value, setValue] = useState(0);
-    const startTs = useRef<number | null>(null);
-    useEffect(() => {
-      if (!target) return;
-      let frame: number;
-      const step = (ts: number) => {
-        if (startTs.current == null) startTs.current = ts;
-        const progress = Math.min(1, (ts - startTs.current) / duration);
-        setValue(Math.floor(progress * target));
-        if (progress < 1) frame = requestAnimationFrame(step);
-      };
-      frame = requestAnimationFrame(step);
-      return () => cancelAnimationFrame(frame);
-    }, [target, duration]);
-    return value;
-  };
-
-  const NewArrivalsSlider = dynamic(() => import('./NewArrivalsSlider'), { ssr: false });
+    {
+      key: 'vehicles',
+      icon: Car,
+      value: '20+',
+      label: 'Vehicles',
+      description: 'Quality cars in our inventory',
+      badge: 'Stock Available'
+    },
+    {
+      key: 'customers',
+      icon: Users,
+      value: '50+',
+      label: 'Happy Customers',
+      description: 'Satisfied with our service',
+      badge: 'Verified Reviews'
+    },
+    {
+      key: 'inspected',
+      icon: ShieldCheck,
+      value: '100%',
+      label: 'Inspected',
+      description: 'Roadworthy & safety certified',
+      badge: 'Quality Assurance'
+    },
+    {
+      key: 'approval',
+      icon: Sparkles,
+      value: 'Fast',
+      label: 'Bank Approval',
+      description: 'Instant financing assistance',
+      badge: 'Financing Ready'
+    },
+  ];
 
   return (
-    <section className="relative py-20 bg-gradient-to-br from-white via-[#f5fff6] to-white dark:from-gray-900 dark:via-gray-900/70 dark:to-gray-900 overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(circle_at_center,black,transparent)]">
-        <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-[#00A211]/10 blur-3xl" />
-        <div className="absolute bottom-0 -left-10 w-80 h-80 rounded-full bg-[#00A211]/10 blur-3xl" />
-      </div>
-      <div className="container mx-auto px-4 relative">
+    <section className="relative py-20 md:py-28 bg-[#090C0A] text-white overflow-hidden border-t border-white/10">
+      {/* Ambient background glows */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[45rem] h-[25rem] rounded-full bg-[#00A211]/10 blur-[140px] pointer-events-none" />
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 max-w-7xl">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
           viewport={{ once: true }}
-          className="text-center mb-14"
+          className="text-center max-w-3xl mx-auto mb-16"
         >
-          <h2 className="inline-block text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white relative">
-            <span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-[#00A211] via-[#00b516] to-[#008d0f]">Why Choose Advance Auto Dealership?</span>
-            <span className="absolute -inset-1 rounded-lg bg-[#00A211]/5 blur-sm" aria-hidden />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00A211]/15 border border-[#00A211]/30 text-[#35D04A] text-xs font-semibold uppercase tracking-wider mb-4">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Trust & Excellence
+          </div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
+            Why Choose <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A211] to-[#35D04A]">Advance Auto Dealership?</span>
           </h2>
-          <p className="mt-4 text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-          Leaders in affordable and quality vehicles you can trust and rely on 
+          <p className="mt-4 text-base sm:text-lg text-white/70 font-light leading-relaxed">
+            Leaders in affordable and quality vehicles you can trust and rely on
           </p>
         </motion.div>
-  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, index) => {
             const Icon = stat.icon;
-            const count = useCountUp(stat.target);
             return (
               <motion.div
                 key={stat.key}
-                initial={{ opacity: 0, y: 24, scale: 0.95 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                whileHover={{ y: -6, rotate: 0.2 }}
-                transition={{ duration: 0.55, delay: index * 0.08, ease: [0.22, 0.68, 0.36, 1] }}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="group relative overflow-hidden rounded-2xl bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all p-4 md:p-5"
+                className="group relative p-6 sm:p-7 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-[#35D04A]/50 backdrop-blur-xl transition-all duration-300 shadow-xl hover:-translate-y-1.5"
               >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-[#00A211]/10 via-transparent to-transparent" />
-                <div className="relative flex flex-col items-start text-left">
-                  <div className="mb-3 inline-flex items-center justify-center rounded-xl h-11 w-11 bg-[#00A211]/10 text-[#00A211] ring-1 ring-[#00A211]/20 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                    <Icon className="h-5 w-5 group-hover:animate-pulse" />
+                <div className="flex items-center justify-between mb-5">
+                  <div className="h-12 w-12 rounded-xl bg-[#00A211]/15 border border-[#00A211]/30 flex items-center justify-center text-[#35D04A] group-hover:scale-110 transition-transform">
+                    <Icon className="h-6 w-6" />
                   </div>
-                  <div className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white tabular-nums">
-                    {count}<span className="text-[#00A211] ml-0.5">{stat.suffix}</span>
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{stat.label}</div>
-                  <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">{stat.description}</div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-white/50 bg-white/5 px-2.5 py-1 rounded-md">
+                    {stat.badge}
+                  </span>
                 </div>
-                <span className="absolute left-0 bottom-0 h-0.5 w-0 bg-gradient-to-r from-[#00A211] via-[#00b516] to-[#008d0f] group-hover:w-full transition-all duration-500" />
+
+                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white group-hover:text-[#35D04A] transition-colors mb-1">
+                  {stat.value}
+                </div>
+                <div className="text-base font-bold text-white/90 mb-1">
+                  {stat.label}
+                </div>
+                <p className="text-xs text-white/60 font-light leading-normal">
+                  {stat.description}
+                </p>
               </motion.div>
             );
           })}
         </div>
-        <NewArrivalsSlider />
       </div>
     </section>
   );
-};
-
-export default StatsSection;
+}
