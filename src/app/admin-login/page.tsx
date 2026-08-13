@@ -11,7 +11,7 @@ import { Shield, Lock, Mail } from "lucide-react";
 import { loginAsAdmin, checkAdminAuth, ALLOWED_ADMIN_EMAILS } from "../admin/adminAuth";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("alexsouthflow@gmail.com");
+  const [email, setEmail] = useState("autofame1@gmail.com");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();

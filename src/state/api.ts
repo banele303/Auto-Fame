@@ -382,6 +382,8 @@ export const api = createApi({
                 adminData.email.toLowerCase() === 'alexsouthflow@gmail.com' ||
                 adminData.email.toLowerCase() === 'alexsouthflow2@gmail.com' ||
                 adminData.email.toLowerCase() === 'advanceautott@gmail.com' ||
+                adminData.email.toLowerCase() === 'autofame1@gmail.com' ||
+                adminData.email.toLowerCase() === 'autogame1@gmail.com' ||
                 adminData.role === 'admin'
               )) {
                 return {

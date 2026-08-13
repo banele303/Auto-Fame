@@ -10,6 +10,8 @@ export const ALLOWED_ADMIN_EMAILS = [
   "alexsouthflow@gmail.com",
   "alexsouthflow2@gmail.com",
   "advanceautott@gmail.com",
+  "autofame1@gmail.com",
+  "autogame1@gmail.com",
 ];
 
 const ADMIN_STORAGE_KEY = 'admin_auth_state';
