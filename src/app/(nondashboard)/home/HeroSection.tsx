@@ -175,15 +175,12 @@ export default function HeroSection() {
               initial="hidden"
               animate="show"
               custom={1}
-              className="font-display font-extrabold tracking-tight text-3xl sm:text-5xl xl:text-6xl leading-[1.12]"
+              className="font-display font-extrabold tracking-tight text-4xl sm:text-5xl xl:text-6xl leading-[1.1]"
             >
-              Drive The{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-100 to-white/60">
-                Extraordinary
-              </span>
+              <span className="text-white">For Quality</span>
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A211] via-[#35D04A] to-[#00A211]/80 text-2xl sm:text-4xl xl:text-5xl font-semibold tracking-normal">
-                For Quality Used Cars
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A211] via-[#35D04A] to-[#00A211]/80">
+                Used Cars
               </span>
             </motion.h1>
 
