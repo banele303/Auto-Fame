@@ -45,9 +45,11 @@ const CarDetailPage = () => {
   const { data: recentCars } = useGetCarsQuery({ limit: 8 });
   // Derive photos only after car is available (fallback to placeholder)
   // resolveCarImageUrl handles both raw Convex storage IDs and real HTTPS URLs
-  const photos = car?.photoUrls && car.photoUrls.length > 0
+  const rawPhotos = car?.photoUrls && car.photoUrls.length > 0
     ? car.photoUrls.map(resolveCarImageUrl)
-    : ["/placeholder.jpg"];
+    : ["/placeholder.svg"];
+  // Stable photo array ref — prevents re-mount on every re-render
+  const photos = rawPhotos;
 
   const goPrev = useCallback(() => {
     if (!photos.length) return;
@@ -202,7 +204,7 @@ const CarDetailPage = () => {
             {/* Main image area with constrained max width and subtle decorations */}
             <div className="relative mx-auto w-full max-w-4xl">
               <div className="group rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100/60 dark:bg-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-                <div className="relative aspect-[16/9] cursor-pointer" onClick={(e) => {
+                <div className="relative aspect-[4/3] sm:aspect-[3/2] cursor-pointer" onClick={(e) => {
                   // avoid triggering from button clicks
                   if ((e.target as HTMLElement).closest('button')) return;
                   openLightbox(selectedImageIndex);
@@ -213,6 +215,13 @@ const CarDetailPage = () => {
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                     priority
+                    unoptimized
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      if (!target.src.includes('/placeholder.svg')) {
+                        target.src = '/placeholder.svg';
+                      }
+                    }}
                   />
                   {/* Navigation Arrows */}
                   {photos.length > 1 && (

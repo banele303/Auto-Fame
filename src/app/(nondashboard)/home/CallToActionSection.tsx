@@ -140,7 +140,7 @@ const FeaturedTestimonial = () => (
     <div className="flex items-center mb-4">
       <div className="relative w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-blue-400">
         <Image
-          src="/placeholder.jpg"
+          src="/placeholder.svg"
           alt="User"
           fill
           className="object-cover"

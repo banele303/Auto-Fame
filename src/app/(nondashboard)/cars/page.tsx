@@ -433,7 +433,7 @@ const CarsContent = () => {
                     fuelType={car.fuelType}
                     condition={car.status}
                     transmission={car.transmission}
-                    photoUrls={car.photoUrls || ["/placeholder.jpg"]}
+                    photoUrls={car.photoUrls || ["/placeholder.svg"]}
                     features={car.features || []}
                     averageRating={car.averageRating || undefined}
                     isFavorited={favorites.includes(car.id)}
@@ -496,7 +496,7 @@ const CarsContent = () => {
                       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                         <div className="w-full sm:w-36 h-44 sm:h-40 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 mx-auto sm:mx-0">
                           <Image 
-                            src={car.photoUrls?.[0] || "/placeholder.jpg"} 
+                            src={car.photoUrls?.[0] || "/placeholder.svg"} 
                             alt={`${car.make} ${car.model}`}
                             width={144}
                             height={176}

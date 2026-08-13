@@ -92,14 +92,14 @@ export default function CarCardDashboard({
 
       <div className="relative w-full aspect-[4/3] overflow-hidden">
         <Image
-          src={imgSrc ?? "/placeholder.jpg"}
+          src={imgSrc ?? "/placeholder.svg"}
           alt={`${car.year} ${car.make} ${car.model}`} 
           fill
           className={`object-cover transition-transform duration-500 ${
             isHovered ? "scale-110" : "scale-100"
           }`}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          onError={(err) => setImgSrc("/placeholder.jpg")}
+          onError={(err) => setImgSrc("/placeholder.svg")}
           priority
         />
 

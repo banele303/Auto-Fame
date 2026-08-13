@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ChevronLeft, ChevronRight, Gauge, Sparkles } from "lucide-react";
-import { resolveCarImageUrl, getFallbackImageForCar } from "@/utils/imageUrl";
+import { getFallbackImageForCar } from "@/utils/imageUrl";
 
 interface CarItem {
   id: number;
@@ -19,6 +19,22 @@ interface CarItem {
   fuelType?: string;
   photoUrls: string[];
   postedDate?: string;
+}
+
+/** Resolve any URL format to a renderable string. Kept inline (no import) so it
+ *  never changes reference between renders and avoids causing key-based re-mounts. */
+function resolve(url: string | null | undefined): string {
+  if (!url || typeof url !== "string" || !url.trim()) return "/placeholder.svg";
+  const t = url.trim();
+  if (t.startsWith("blob:") || t.startsWith("data:")) return t;
+  if (t.startsWith("https://") || t.startsWith("http://")) {
+    return t.includes("frugal-zebra-890.convex.cloud")
+      ? t.replace("frugal-zebra-890.convex.cloud", "reliable-sturgeon-574.convex.cloud")
+      : t;
+  }
+  if (t.startsWith("/")) return t;
+  if (t.includes("/") || /\.(jpg|jpeg|png|webp|svg|gif|avif)$/i.test(t)) return `/${t}`;
+  return `/api/storage/${t}`;
 }
 
 const FALLBACK_NEW_ARRIVALS: CarItem[] = [
@@ -112,10 +128,104 @@ const FALLBACK_NEW_ARRIVALS: CarItem[] = [
   },
 ];
 
-export default function NewArrivalsSlider() {
+/** Stable per-car image source hook — resolves once and falls back without loop */
+function useCarImageSrc(car: CarItem): string {
+  const primary = resolve(car.photoUrls?.[0]);
+  const fallback = getFallbackImageForCar(car.make, car.model);
+
+  // Start with the primary URL. If it fails, switch to fallback.
+  const [src, setSrc] = useState(primary);
+
+  // When the car object changes (id changes), reset to the new primary
+  useEffect(() => {
+    setSrc(resolve(car.photoUrls?.[0]));
+  }, [car.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleError = useCallback(() => {
+    if (src !== fallback) setSrc(fallback);
+  }, [src, fallback]);
+
+  return src;
+}
+
+/** Wrapper so each card manages its own image state without causing sibling re-renders */
+function CarCard({ car, formatPrice }: { car: CarItem; formatPrice: (p: number) => string }) {
   const router = useRouter();
+  const primary = resolve(car.photoUrls?.[0]);
+  const fallback = getFallbackImageForCar(car.make, car.model);
+  const [src, setSrc] = useState(primary);
+
+  // Reset src when the car data changes (e.g. after API load)
+  useEffect(() => {
+    const next = resolve(car.photoUrls?.[0]);
+    setSrc(next);
+  }, [car.id, car.photoUrls?.[0]]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleError = () => {
+    if (src !== fallback) setSrc(fallback);
+  };
+
+  return (
+    <motion.div
+      key={car.id}
+      whileHover={{ y: -6 }}
+      transition={{ duration: 0.3 }}
+      onClick={() => router.push(`/cars/${car.id}`)}
+      className="min-w-[280px] max-w-[280px] sm:min-w-[300px] sm:max-w-[300px] snap-start bg-white/[0.04] hover:bg-white/[0.08] rounded-2xl border border-white/10 hover:border-[#35D04A]/60 overflow-hidden transition-all duration-300 shadow-xl cursor-pointer flex-shrink-0 flex flex-col justify-between group"
+    >
+      {/* Image Container */}
+      <div className="p-2.5 pb-0">
+        <div className="relative h-44 w-full overflow-hidden rounded-xl bg-black/40">
+          <Image
+            src={src}
+            alt={`${car.year} ${car.make} ${car.model}`}
+            fill
+            sizes="300px"
+            className="object-cover rounded-xl transition-transform duration-700 group-hover:scale-105"
+            onError={handleError}
+            unoptimized
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-30 transition-opacity" />
+
+          <div className="absolute top-2.5 left-2.5">
+            <span className="px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-white text-[10px] font-mono font-semibold border border-white/10">
+              {car.year}
+            </span>
+          </div>
+
+          <div className="absolute bottom-2.5 right-2.5">
+            <span className="px-2.5 py-1 rounded-md bg-[#00A211] text-white text-xs font-mono font-extrabold shadow-md">
+              {formatPrice(car.price)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Specs & Details */}
+      <div className="p-4 flex-1 flex flex-col justify-between">
+        <div>
+          <h4 className="font-display font-bold text-sm text-white group-hover:text-[#35D04A] transition-colors line-clamp-2 leading-tight mb-2">
+            {car.year} {car.make} {car.model}
+          </h4>
+        </div>
+
+        <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-white/50">
+          <span className="flex items-center gap-1">
+            <Gauge className="h-3 w-3 text-[#35D04A]" />
+            {car.mileage ? `${(car.mileage / 1000).toFixed(0)}k km` : "Low KM"}
+          </span>
+          <span>{car.transmission || "Auto"}</span>
+          <span className="text-[#35D04A] font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+            Details <ArrowRight className="h-3 w-3" />
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+export default function NewArrivalsSlider() {
   const [cars, setCars] = useState<CarItem[]>(FALLBACK_NEW_ARRIVALS);
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,10 +244,6 @@ export default function NewArrivalsSlider() {
     };
     fetchCars();
   }, []);
-
-  const handleImageError = (id: number) => {
-    setFailedImages((prev) => ({ ...prev, [String(id)]: true }));
-  };
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -168,7 +274,6 @@ export default function NewArrivalsSlider() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Scroll Control Buttons */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => scroll("left")}
@@ -202,70 +307,9 @@ export default function NewArrivalsSlider() {
         className="flex gap-5 overflow-x-auto pb-4 pt-1 scrollbar-hide snap-x snap-mandatory"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {cars.map((car) => {
-          const rawUrl = car.photoUrls?.[0];
-          const resolvedUrl = resolveCarImageUrl(rawUrl);
-          const isFailed = failedImages[String(car.id)];
-          const displayUrl = isFailed ? getFallbackImageForCar(car.make, car.model) : resolvedUrl;
-
-          return (
-            <motion.div
-              key={car.id}
-              whileHover={{ y: -6 }}
-              transition={{ duration: 0.3 }}
-              onClick={() => router.push(`/cars/${car.id}`)}
-              className="min-w-[280px] max-w-[280px] sm:min-w-[300px] sm:max-w-[300px] snap-start bg-white/[0.04] hover:bg-white/[0.08] rounded-2xl border border-white/10 hover:border-[#35D04A]/60 overflow-hidden transition-all duration-300 shadow-xl cursor-pointer flex-shrink-0 flex flex-col justify-between group"
-            >
-              {/* Image Container with Inner Framed Padding */}
-              <div className="p-2.5 pb-0">
-                <div className="relative h-44 w-full overflow-hidden rounded-xl bg-black/40">
-                  <Image
-                    src={displayUrl}
-                    alt={`${car.year} ${car.make} ${car.model}`}
-                    fill
-                    sizes="300px"
-                    className="object-cover rounded-xl transition-transform duration-700 group-hover:scale-105"
-                    onError={() => handleImageError(car.id)}
-                    unoptimized
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-30 transition-opacity" />
-
-                  <div className="absolute top-2.5 left-2.5">
-                    <span className="px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-white text-[10px] font-mono font-semibold border border-white/10">
-                      {car.year}
-                    </span>
-                  </div>
-
-                  <div className="absolute bottom-2.5 right-2.5">
-                    <span className="px-2.5 py-1 rounded-md bg-[#00A211] text-white text-xs font-mono font-extrabold shadow-md">
-                      {formatPrice(car.price)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Specs & Details */}
-              <div className="p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h4 className="font-display font-bold text-sm text-white group-hover:text-[#35D04A] transition-colors line-clamp-2 leading-tight mb-2">
-                    {car.year} {car.make} {car.model}
-                  </h4>
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-white/50">
-                  <span className="flex items-center gap-1">
-                    <Gauge className="h-3 w-3 text-[#35D04A]" />
-                    {car.mileage ? `${(car.mileage / 1000).toFixed(0)}k km` : "Low KM"}
-                  </span>
-                  <span>{car.transmission || "Auto"}</span>
-                  <span className="text-[#35D04A] font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-                    Details <ArrowRight className="h-3 w-3" />
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+        {cars.map((car) => (
+          <CarCard key={car.id} car={car} formatPrice={formatPrice} />
+        ))}
       </div>
     </div>
   );

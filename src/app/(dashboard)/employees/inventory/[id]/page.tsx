@@ -122,7 +122,7 @@ const CarDetails = () => {
           
           <div className="relative w-full md:w-2/5 aspect-[4/3] rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
             <Image
-              src={car?.photoUrls?.[0] || "/placeholder.jpg"}
+              src={car?.photoUrls?.[0] || "/placeholder.svg"}
               alt={`${car?.make} ${car?.model}`}
               fill
               unoptimized={true}

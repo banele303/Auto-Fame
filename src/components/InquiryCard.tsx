@@ -23,7 +23,7 @@ const InquiryCard = ({
   children,
 }: InquiryCardProps) => {
   const [imgSrc, setImgSrc] = useState(
-    resolveCarImageUrl(inquiry.car.photoUrls?.[0]) || "/placeholder.jpg"
+    resolveCarImageUrl(inquiry.car.photoUrls?.[0]) || "/placeholder.svg"
   );
 
   const statusColor =
@@ -48,7 +48,7 @@ const InquiryCard = ({
             height={150}
             className="rounded-xl object-cover w-full lg:w-[200px] h-[150px]"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            onError={() => setImgSrc("/placeholder.jpg")}
+            onError={() => setImgSrc("/placeholder.svg")}
           />
           <div className="flex flex-col justify-between">
             <div>
@@ -114,7 +114,7 @@ const InquiryCard = ({
           <div className="flex gap-4">
             <div>
               <Image
-                src="/placeholder.jpg"
+                src="/placeholder.svg"
                 alt={contactPerson.name}
                 width={40}
                 height={40}

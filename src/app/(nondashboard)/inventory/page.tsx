@@ -439,7 +439,7 @@ const InventoryContent = () => {
                   <div className="flex gap-6">
                     <div className="w-32 h-24 bg-gray-200 rounded-lg overflow-hidden">
                       <Image 
-                        src={car.photoUrls?.[0] || "/placeholder.jpg"} 
+                        src={car.photoUrls?.[0] || "/placeholder.svg"} 
                         alt={`${car.make} ${car.model}`}
                         width={128}
                         height={96}

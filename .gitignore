@@ -46,7 +46,24 @@ next-env.d.ts
 uploads/
 
 # heavy media and car images
-/public/cars/
+# NOTE: the 13 model-matched fallback images below MUST stay tracked — the home page
+# New Arrivals / Featured Cars sections depend on them as the last-resort image when
+# the Convex storage proxy is unreachable. If they are ignored, Vercel never deploys
+# them and the fallbacks silently 404 (served as SPA HTML instead of an image).
+/public/cars/*
+!/public/cars/kia_rio_28672837_1.jpg
+!/public/cars/volkswagen_polovivo_28640896_1.jpg
+!/public/cars/volkswagen_polo_27844862_1.jpg
+!/public/cars/volkswagen_tcross_28544392_1.jpg
+!/public/cars/haval_jolionpro_28674518_1.jpg
+!/public/cars/toyota_fortuner_28663155_1.jpg
+!/public/cars/toyota_rumion_28675872_1.jpg
+!/public/cars/bmw_x2_28685698_1.jpg
+!/public/cars/suzuki_swift_28686619_1.jpg
+!/public/cars/nissan_np200_28684067_1.jpg
+!/public/cars/hyundai_i20_28685947_1.jpg
+!/public/cars/ford_ranger_28068068_1.jpg
+!/public/cars/renault_sandero_28682390_1.jpg
 /public/uploads/
 /public/IMG-*
 /public/*.zip

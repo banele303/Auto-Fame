@@ -58,7 +58,7 @@ function PropertyCard({
     resolveCarImageUrl(
       property.images && property.images.length > 0 ? property.images[0] :
       property.photoUrls && property.photoUrls.length > 0 ? property.photoUrls[0] :
-      "/placeholder.jpg"
+      "/placeholder.svg"
     )
   )
   const [isHovered, setIsHovered] = useState(false)
@@ -73,7 +73,7 @@ function PropertyCard({
   const handleImageError = () => {
     console.error(`Failed to load image: ${imgSrc}`)
     setImgError(true)
-    setImgSrc("/placeholder.jpg")
+    setImgSrc("/placeholder.svg")
   }
 
   const [isLoaded, setIsLoaded] = useState(false)

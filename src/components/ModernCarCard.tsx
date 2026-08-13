@@ -65,7 +65,7 @@ function ModernCarCard({
   showActions = false,
   userRole = null,
 }: ModernCarCardProps) {
-  const [imgSrc, setImgSrc] = useState<string>(resolveCarImageUrl(car.photoUrls?.[0]) || "/placeholder.jpg")
+  const [imgSrc, setImgSrc] = useState<string>(resolveCarImageUrl(car.photoUrls?.[0]) || "/placeholder.svg")
   const [isHovered, setIsHovered] = useState(false)
   const [imgError, setImgError] = useState(false)
   const router = useRouter()
@@ -73,7 +73,7 @@ function ModernCarCard({
   const handleImageError = () => {
     console.error(`Failed to load image: ${imgSrc}`)
     setImgError(true)
-    setImgSrc("/placeholder.jpg")
+    setImgSrc("/placeholder.svg")
   }
 
   const targetHref = carLink || `/cars/${car.id}`

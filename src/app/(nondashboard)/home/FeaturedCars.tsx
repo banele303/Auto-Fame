@@ -122,7 +122,7 @@ export default function FeaturedCars() {
   const router = useRouter();
   const [selectedCar, setSelectedCar] = useState<any>(null);
   const [isReserveFormOpen, setIsReserveFormOpen] = useState(false);
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [failedImages, setFailedImages] = useState<Record<string, string>>({});
 
   const { data: cars, isLoading } = useGetCarsQuery({});
 
@@ -137,8 +137,8 @@ export default function FeaturedCars() {
     ? cars.filter((c: any) => c.status === "AVAILABLE").slice(0, 8)
     : FALLBACK_NEW_ARRIVALS;
 
-  const handleImageError = (id: string | number) => {
-    setFailedImages((prev) => ({ ...prev, [String(id)]: true }));
+  const handleImageError = (id: string | number, url: string) => {
+    setFailedImages((prev) => ({ ...prev, [String(id)]: url }));
   };
 
   const handleReserve = (e: React.MouseEvent, car: any) => {
@@ -176,8 +176,17 @@ export default function FeaturedCars() {
           {availableCars.map((car: any) => {
             const rawUrl = car.photoUrls?.[0];
             const resolvedUrl = resolveCarImageUrl(rawUrl);
-            const isFailed = failedImages[String(car.id)];
-            const displayUrl = isFailed ? getFallbackImageForCar(car.make, car.model) : resolvedUrl;
+            const failedUrl = failedImages[String(car.id)];
+            // Fallback chain: resolved URL → model-matched image → deployed placeholder.
+            // Only fall back when the CURRENT url failed, so fresh data with a new url
+            // gets a chance instead of staying stuck on a broken fallback.
+            const fallbackUrl = getFallbackImageForCar(car.make, car.model);
+            const displayUrl =
+              failedUrl === resolvedUrl
+                ? fallbackUrl
+                : failedUrl === fallbackUrl
+                  ? "/placeholder.svg"
+                  : resolvedUrl;
 
             return (
               <div
@@ -194,7 +203,7 @@ export default function FeaturedCars() {
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       className="object-cover rounded-xl transition-transform duration-700 group-hover:scale-105"
-                      onError={() => handleImageError(car.id)}
+                      onError={() => handleImageError(car.id, displayUrl)}
                       unoptimized
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
