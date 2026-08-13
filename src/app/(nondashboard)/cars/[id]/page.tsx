@@ -366,66 +366,90 @@ const CarDetailPage = () => {
             
             {/* Customer Reviews section removed as requested */}
 
-            {/* Recent Vehicles Section */}
+            {/* Recent Vehicles Section - Recreated Grid without horizontal scroll */}
             {recentCars && recentCars.length > 0 && (
-              <div className="mt-10">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#00A211] to-[#00A211]/60">Recent Vehicles</h2>
+              <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#00A211] font-bold block mb-1">
+                      More From Showroom
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-gray-900 dark:text-white">
+                      Recent Vehicles
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => router.push("/cars")}
+                    className="text-xs font-mono font-bold text-[#00A211] hover:underline flex items-center gap-1"
+                  >
+                    View Showroom →
+                  </button>
                 </div>
-                <div className="relative">
-                  <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-                    {recentCars
-                      .filter(rc => rc.id !== car.id)
-                      .slice(0, 10)
-                      .map(rc => (
+
+                {/* Clean Non-Scrolling Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recentCars
+                    .filter((rc) => rc.id !== car.id)
+                    .slice(0, 6)
+                    .map((rc) => {
+                      const rawPhoto = rc.photoUrls?.[0];
+                      const resolvedPhoto = resolveCarImageUrl(rawPhoto);
+
+                      return (
                         <motion.div
                           key={rc.id}
-                          whileHover={{ y: -6 }}
-                          className="group relative w-64 flex-shrink-0 snap-start rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-lg transition-all"
+                          whileHover={{ y: -5 }}
                           onClick={() => router.push(`/cars/${rc.id}`)}
+                          className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700/80 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
                         >
-                          <div className="relative h-40 w-full overflow-hidden">
-                            <Image
-                              src={rc.photoUrls?.[0] || '/placeholder.jpg'}
-                              alt={`${rc.make} ${rc.model}`}
-                              fill
-                              className="object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60 group-hover:opacity-70 transition-opacity" />
-                            <div className="absolute top-2 left-2 flex gap-2">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#00A211]/90 text-white shadow">{rc.status}</span>
-                              {/* Rating badge removed in redesign */}
-                            </div>
-                            <div className="absolute bottom-2 left-2 right-2">
-                              <p className="text-sm font-semibold text-white drop-shadow">{rc.year} {rc.make}</p>
-                              <p className="text-xs text-white/80 line-clamp-1">{rc.model}</p>
-                            </div>
-                          </div>
-                          <div className="p-3 space-y-2">
-                            <p className="text-lg font-bold text-[#00A211]">R {rc.price.toLocaleString()}</p>
-                            <div className="text-[11px] text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-2 gap-y-1">
-                              <span>{(rc.mileage || 0).toLocaleString()} km</span>
-                              <span className="text-gray-300 dark:text-gray-600">•</span>
-                              <span>{rc.fuelType}</span>
-                              <span className="text-gray-300 dark:text-gray-600">•</span>
-                              <span>{rc.transmission}</span>
-                            </div>
-                            <div className="flex justify-between items-center pt-1">
-                              <button
-                                className="text-xs font-medium px-3 py-1 rounded-full bg-[#00A211]/10 text-[#00A211] hover:bg-[#00A211]/20 transition-colors"
-                                onClick={(e) => { e.stopPropagation(); router.push(`/cars/${rc.id}`); }}
-                              >
-                                View
-                              </button>
-                              <div className="h-2 w-2 rounded-full bg-[#00A211]/60 group-hover:scale-125 transition-transform" />
+                          {/* Inner Framed Padding Container */}
+                          <div className="p-2.5 pb-0">
+                            <div className="relative h-44 w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900">
+                              <Image
+                                src={resolvedPhoto}
+                                alt={`${rc.year} ${rc.make} ${rc.model}`}
+                                fill
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                className="object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+                                onError={(e) => {
+                                  e.currentTarget.srcset = "";
+                                  e.currentTarget.src = "/placeholder.svg";
+                                }}
+                                unoptimized
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+
+                              <div className="absolute top-2.5 left-2.5">
+                                <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-white text-[10px] font-mono font-bold">
+                                  {rc.year}
+                                </span>
+                              </div>
+
+                              <div className="absolute bottom-2.5 right-2.5">
+                                <span className="px-2.5 py-1 rounded-md bg-[#00A211] text-white text-xs font-mono font-extrabold shadow">
+                                  R {rc.price.toLocaleString()}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-[#00A211]/30 via-transparent to-[#00A211]/30 blur-sm" />
+
+                          {/* Content Specs */}
+                          <div className="p-4 space-y-3">
+                            <h3 className="font-display font-bold text-base text-gray-900 dark:text-white group-hover:text-[#00A211] transition-colors line-clamp-1">
+                              {rc.year} {rc.make} {rc.model}
+                            </h3>
+
+                            <div className="flex items-center justify-between text-xs font-mono text-gray-500 dark:text-gray-400 pt-2.5 border-t border-gray-100 dark:border-gray-700">
+                              <span>{rc.mileage ? `${(rc.mileage / 1000).toFixed(0)}k km` : "Low KM"}</span>
+                              <span>{rc.transmission || "Auto"}</span>
+                              <span className="text-[#00A211] font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                                View →
+                              </span>
+                            </div>
                           </div>
                         </motion.div>
-                      ))}
-                  </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
