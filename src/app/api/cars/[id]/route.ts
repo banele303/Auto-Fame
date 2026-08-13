@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Resolve Convex storage IDs to full HTTPS CDN URLs
     if (normalized.photoUrls?.length) {
-      const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
+      const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://reliable-sturgeon-574.convex.cloud";
       const resolved = normalized.photoUrls.map((id: string) => {
         if (id.startsWith("http://") || id.startsWith("https://")) return id;
         if (id.startsWith("/")) return `${convexCloudUrl}${id}`;
@@ -124,7 +124,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         if (Array.isArray(parsed) && parsed.length > 0) {
           const validParsed = parsed.filter((u: any) => typeof u === 'string' && !u.startsWith('blob:') && !u.startsWith('data:'));
           if (validParsed.length > 0) {
-            const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
+            const convexCloudUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://reliable-sturgeon-574.convex.cloud";
             keptExisting = validParsed.map((url: string) => {
               if (url.startsWith("http://") || url.startsWith("https://")) return url;
               if (url.startsWith("/")) return `${convexCloudUrl}${url}`;

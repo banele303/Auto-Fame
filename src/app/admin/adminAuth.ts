@@ -2,7 +2,7 @@
 
 import { ConvexHttpClient } from "convex/browser";
 
-const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
+const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || "https://reliable-sturgeon-574.convex.cloud";
 const convex = new ConvexHttpClient(CONVEX_URL);
 
 // Whitelisted admin emails authorized for system management

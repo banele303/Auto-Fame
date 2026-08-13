@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud"
+const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || "https://reliable-sturgeon-574.convex.cloud"
 
 export async function GET(
   _req: NextRequest,
@@ -41,6 +41,6 @@ export async function GET(
     return NextResponse.redirect(`${CONVEX_URL}/api/storage/${id}`, 307)
   } catch (err) {
     console.error("Storage proxy error:", err)
-    return NextResponse.redirect("/placeholder.jpg", 307)
+    return NextResponse.redirect("/placeholder.svg", 307)
   }
 }

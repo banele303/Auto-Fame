@@ -13,7 +13,7 @@ const nextConfig = {
       // Convex API endpoint
       {
         protocol: "https",
-        hostname: "frugal-zebra-890.convex.cloud",
+        hostname: "reliable-sturgeon-574.convex.cloud",
         port: "",
         pathname: "/**",
       },

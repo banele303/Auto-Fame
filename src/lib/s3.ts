@@ -29,7 +29,7 @@ export async function uploadToConvex(file: File): Promise<string> {
       }
     } catch {}
 
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://frugal-zebra-890.convex.cloud";
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://reliable-sturgeon-574.convex.cloud";
     return `${convexUrl}/api/storage/${storageId}`;
   } catch (error: any) {
     console.error("Error uploading file to Convex:", error);
