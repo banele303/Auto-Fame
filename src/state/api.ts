@@ -1,6 +1,5 @@
 import { cleanParams, createNewUserInDatabase, withToast } from "@/lib/utils"
-// Import from generated Prisma Client
-import type { Customer, Employee, Car, Dealership, Sale, TestDrive, FinancingApplication, Review, Inquiry } from "@prisma/client"
+import type { Customer, Employee, Car, Dealership, Sale, TestDrive, FinancingApplication, Review, Inquiry } from "@/types/prismaTypes"
 
 // Extended types with relations
 export interface InquiryWithRelations extends Inquiry {

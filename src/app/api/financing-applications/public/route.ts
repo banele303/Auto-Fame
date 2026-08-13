@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 // Numeric coercion using built-in helpers for reliable typing
@@ -232,7 +231,7 @@ export async function POST(req: NextRequest) {
     if (e.code === 'P1001') {
       return NextResponse.json({ error: 'Cannot reach database. Check network / DATABASE_URL.' }, { status: 500 });
     }
-    if (e instanceof Prisma.PrismaClientInitializationError || /invalid port number|Error parsing connection string/i.test(message)) {
+    if (/invalid port number|Error parsing connection string|Prisma/i.test(message)) {
       return NextResponse.json({ error: 'Invalid DATABASE_URL.' }, { status: 500 });
     }
     console.error('Public financing submission error (unhandled):', e);
