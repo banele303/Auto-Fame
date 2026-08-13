@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGetAuthUserQuery, useGetEmployeeCarsQuery, useDeleteCarMutation } from "@/state/api"; 
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -292,11 +293,16 @@ const CarCard = ({ car, onEdit, onDelete }: {
         
         <div className="relative w-full lg:w-2/5 h-56 lg:h-64 overflow-hidden">
           <Image
-            src={car.photoUrls?.[0] || "/placeholder.jpg"} 
+            src={resolveCarImageUrl(car.photoUrls?.[0])} 
             alt={`${car.make} ${car.model}`} 
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 40vw, 35vw"
             className="object-cover ml-3 rounded-md"
+            onError={(e) => {
+              e.currentTarget.srcset = "";
+              e.currentTarget.src = "/placeholder.svg";
+            }}
+            unoptimized
           />
           <div className="absolute top-3 left-3 z-10">
             <Badge className="bg-blue-500/90 backdrop-blur-sm text-white hover:bg-blue-600 text-sm px-3 py-1.5 shadow-lg">

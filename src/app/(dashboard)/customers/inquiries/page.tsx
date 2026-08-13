@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import Link from "next/link";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 const Inquiries = () => { 
   const { data: authUser } = useGetAuthUserQuery();
@@ -81,10 +82,15 @@ const Inquiries = () => {
                 <div className="relative w-full h-full rounded-md overflow-hidden">
                   {inquiry.car?.photoUrls?.[0] ? (
                     <Image
-                      src={inquiry.car.photoUrls[0] || "/placeholder.svg"}
+                      src={resolveCarImageUrl(inquiry.car.photoUrls[0])}
                       alt={`${inquiry.car.make} ${inquiry.car.model}`}
                       fill
                       className="object-cover rounded-md"
+                      onError={(e) => {
+                        e.currentTarget.srcset = "";
+                        e.currentTarget.src = "/placeholder.svg";
+                      }}
+                      unoptimized
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-md">

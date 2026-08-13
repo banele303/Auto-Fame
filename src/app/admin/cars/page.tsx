@@ -49,6 +49,7 @@ interface Car {
 
 import { useGetCarsQuery, useGetAuthUserQuery } from '@/state/api';
 import { configureAdminAuth, fetchAuthSession } from '../../admin/adminAuth';
+import { resolveCarImageUrl } from '@/utils/imageUrl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -708,9 +709,19 @@ export default function AdminCarsPage() {
                     <TableRow key={car.id} className="group hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
                       <TableCell className="py-4 pl-6">
                         <div className="flex items-center gap-4">
-                          <div className="relative h-16 w-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200 dark:border-gray-700">
+                          <div className="relative h-16 w-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                              {car.photoUrls?.[0] ? (
-                                <Image src={car.photoUrls[0]} alt="" fill className="object-cover" />
+                                <Image
+                                  src={resolveCarImageUrl(car.photoUrls[0])}
+                                  alt={`${car.make} ${car.model}`}
+                                  fill
+                                  className="object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.srcset = "";
+                                    e.currentTarget.src = "/placeholder.svg";
+                                  }}
+                                  unoptimized
+                                />
                              ) : (
                                 <div className="h-full w-full flex items-center justify-center text-gray-300">
                                    <Car size={24} />
