@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Gauge, ArrowRight, Camera, Sparkles, Check, Car as CarIcon, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGetCarsQuery } from "@/state/api";
-import { resolveCarImageUrl } from "@/utils/imageUrl";
+import { resolveCarImageUrl, getFallbackImageForCar } from "@/utils/imageUrl";
 import TestDriveForm from "@/components/forms/TestDriveForm";
 import ReserveCarForm from "@/components/forms/ReserveCarForm";
 
@@ -177,7 +177,7 @@ export default function FeaturedCars() {
             const rawUrl = car.photoUrls?.[0];
             const resolvedUrl = resolveCarImageUrl(rawUrl);
             const isFailed = failedImages[String(car.id)];
-            const displayUrl = isFailed ? "/placeholder.svg" : resolvedUrl;
+            const displayUrl = isFailed ? getFallbackImageForCar(car.make, car.model) : resolvedUrl;
 
             return (
               <div

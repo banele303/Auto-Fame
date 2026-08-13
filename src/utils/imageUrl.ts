@@ -7,7 +7,7 @@
  *
  *   2. Direct HTTPS/HTTP URL (including Convex CDN storage URLs like
  *      "https://reliable-sturgeon-574.convex.cloud/api/storage/..."):
- *      → used directly
+ *      → redirects legacy "frugal-zebra-890" to "reliable-sturgeon-574"
  *
  *   3. Relative URL (e.g. "/placeholder.svg" or "cars/image.jpg"):
  *      → formatted with leading slash
@@ -20,15 +20,22 @@ export function resolveCarImageUrl(url: string | null | undefined): string {
     return "/placeholder.svg";
   }
 
-  const trimmed = url.trim();
+  let trimmed = url.trim();
 
   // Local Blob URL or Data URL — return as-is for browser previews
   if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) {
     return trimmed;
   }
 
-  // Direct HTTP or HTTPS URL (Convex CDN, S3, Unsplash, etc.) — return as-is
+  // Direct HTTP or HTTPS URL
   if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+    // Legacy Convex instance redirect
+    if (trimmed.includes("frugal-zebra-890.convex.cloud")) {
+      trimmed = trimmed.replace(
+        "frugal-zebra-890.convex.cloud",
+        "reliable-sturgeon-574.convex.cloud"
+      );
+    }
     return trimmed;
   }
 
@@ -47,12 +54,49 @@ export function resolveCarImageUrl(url: string | null | undefined): string {
 }
 
 /**
- * Returns the first resolved image URL from a car's photoUrls array,
- * falling back to /placeholder.svg if none exist.
+ * Known local image fallbacks by vehicle model/make
  */
-export function getPrimaryCarImage(photoUrls: string[] | null | undefined): string {
+const MODEL_FALLBACK_IMAGES: Record<string, string> = {
+  "polo vivo": "/cars/volkswagen_polovivo_28640896_1.jpg",
+  polo: "/cars/volkswagen_polo_27844862_1.jpg",
+  "t-cross": "/cars/volkswagen_tcross_28544392_1.jpg",
+  jolion: "/cars/haval_jolionpro_28674518_1.jpg",
+  fortuner: "/cars/toyota_fortuner_28663155_1.jpg",
+  rio: "/cars/kia_rio_28672837_1.jpg",
+  rumion: "/cars/toyota_rumion_28675872_1.jpg",
+  x2: "/cars/bmw_x2_28685698_1.jpg",
+  swift: "/cars/suzuki_swift_28686619_1.jpg",
+  hilux: "/cars/toyota_fortuner_28663155_1.jpg",
+  np200: "/cars/nissan_np200_28684067_1.jpg",
+  i20: "/cars/hyundai_i20_28685947_1.jpg",
+  ranger: "/cars/ford_ranger_28068068_1.jpg",
+  sandero: "/cars/renault_sandero_28682390_1.jpg",
+};
+
+/**
+ * Returns a high-quality model-matched fallback image if a photo fails to load
+ */
+export function getFallbackImageForCar(make?: string, model?: string): string {
+  const combined = `${make || ""} ${model || ""}`.toLowerCase();
+  for (const [key, path] of Object.entries(MODEL_FALLBACK_IMAGES)) {
+    if (combined.includes(key)) {
+      return path;
+    }
+  }
+  return "/placeholder.svg";
+}
+
+/**
+ * Returns the first resolved image URL from a car's photoUrls array,
+ * falling back to model match or /placeholder.svg if none exist.
+ */
+export function getPrimaryCarImage(
+  photoUrls: string[] | null | undefined,
+  make?: string,
+  model?: string
+): string {
   if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length === 0) {
-    return "/placeholder.svg";
+    return getFallbackImageForCar(make, model);
   }
   return resolveCarImageUrl(photoUrls[0]);
 }

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Car, Calendar, Fuel, Gauge, Heart, Eye, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { resolveCarImageUrl } from "@/utils/imageUrl";
+import { resolveCarImageUrl, getFallbackImageForCar } from "@/utils/imageUrl";
 
 interface CarCardProps {
   id: number;
@@ -84,10 +84,15 @@ const CarCard: React.FC<CarCardProps> = ({
       <div className="p-2.5 pb-0">
         <div className="relative h-48 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900">
           <Image
-            src={resolveCarImageUrl(photoUrls[0]) || "/placeholder.svg"}
+            src={resolveCarImageUrl(photoUrls[0]) || getFallbackImageForCar(make, model)}
             alt={`${year} ${make} ${model}`}
             fill
             className="object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.currentTarget.srcset = "";
+              e.currentTarget.src = getFallbackImageForCar(make, model);
+            }}
+            unoptimized
           />
           
           {/* Floating Badge */}

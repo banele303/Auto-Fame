@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ChevronLeft, ChevronRight, Gauge, Sparkles } from "lucide-react";
-import { resolveCarImageUrl } from "@/utils/imageUrl";
+import { resolveCarImageUrl, getFallbackImageForCar } from "@/utils/imageUrl";
 
 interface CarItem {
   id: number;
@@ -206,7 +206,7 @@ export default function NewArrivalsSlider() {
           const rawUrl = car.photoUrls?.[0];
           const resolvedUrl = resolveCarImageUrl(rawUrl);
           const isFailed = failedImages[String(car.id)];
-          const displayUrl = isFailed ? "/placeholder.svg" : resolvedUrl;
+          const displayUrl = isFailed ? getFallbackImageForCar(car.make, car.model) : resolvedUrl;
 
           return (
             <motion.div
