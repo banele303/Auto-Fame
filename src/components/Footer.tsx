@@ -57,12 +57,15 @@ export default function Footer() {
             <p className="text-sm text-gray-400 mt-1">WhatsApp: <a href="https://wa.me/27680720424" target="_blank" rel="noopener noreferrer" className="hover:text-white">+27 68 072 0424</a></p>
             <p className="text-sm text-gray-400 mt-1">Email: <a href="mailto:info@autofame.co.za" className="hover:text-white">info@autofame.co.za</a></p>
             <div className="flex items-center gap-4 text-gray-400 mt-4">
-                <a href="https://www.facebook.com/share/1Dzk6oHqXE/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-white"><Facebook size={20} /></a>
-                <a href="#" aria-label="Instagram" className="hover:text-white"><Instagram size={20} /></a>
-                <a href="https://www.tiktok.com/@adv1auto?_t=ZS-8zEF81vzNFC&_r=1" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-white"><TikTokIcon size={20} /></a>
+              <a href="https://www.facebook.com/share/1Dzk6oHqXE/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-white"><Facebook size={20} /></a>
+              <a href="#" aria-label="Instagram" className="hover:text-white"><Instagram size={20} /></a>
+              <a href="https://www.tiktok.com/@adv1auto?_t=ZS-8zEF81vzNFC&_r=1" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-white"><TikTokIcon size={20} /></a>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <p>&copy; {year} Advance Auto. All rights reserved.</p>
-         
+          <p>&copy; {year} Auto Fame. All rights reserved.</p>
         </div>
       </div>
     </footer>
