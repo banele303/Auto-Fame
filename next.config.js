@@ -49,22 +49,9 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '6mb',
     },
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
   },
-  // Add environment variables from .env files
   env: {
-    // AWS Configuration
-    AWS_REGION: process.env.AWS_REGION,
-    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
-    AWS_BUCKET_NAME: process.env.AWS_BUCKET_NAME,
-    // Google Maps API Key
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
-    // Cognito Configuration
-    NEXT_PUBLIC_AWS_COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_AWS_COGNITO_USER_POOL_ID,
-    NEXT_PUBLIC_AWS_COGNITO_USER_POOL_CLIENT_ID: process.env.NEXT_PUBLIC_AWS_COGNITO_USER_POOL_CLIENT_ID,
-    // Database Configuration - explicitly pass DATABASE_URL to server environment
-    DATABASE_URL: process.env.DATABASE_URL || process.env.NEXT_PUBLIC_DATABASE_URL,
   },
   // Expose uploaded files from /uploads through a rewrite (NOT for production scale / security hardening)
   async rewrites() {
