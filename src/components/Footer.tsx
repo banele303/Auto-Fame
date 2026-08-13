@@ -55,7 +55,7 @@ export default function Footer() {
             <h3 className="text-sm font-semibold tracking-wide text-white uppercase mb-4">Contact</h3>
             <p className="text-sm text-gray-400">Phone: <a href="tel:0612259884" className="hover:text-white">061 225 9884</a></p>
             <p className="text-sm text-gray-400 mt-1">WhatsApp: <a href="https://wa.me/27612259884" target="_blank" rel="noopener noreferrer" className="hover:text-white">061 225 9884</a></p>
-            <p className="text-sm text-gray-400 mt-1">Email: <a href="mailto:info@autofame.co.za" className="hover:text-white">info@autofame.co.za</a></p>
+            <p className="text-sm text-gray-400 mt-1">Email: <a href="mailto:autofame1@gmail.com" className="hover:text-white">autofame1@gmail.com</a></p>
             <div className="flex items-center gap-4 text-gray-400 mt-4">
               <a href="https://www.facebook.com/share/1Dzk6oHqXE/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-white"><Facebook size={20} /></a>
               <a href="#" aria-label="Instagram" className="hover:text-white"><Instagram size={20} /></a>

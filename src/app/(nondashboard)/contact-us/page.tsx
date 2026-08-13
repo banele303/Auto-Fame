@@ -138,7 +138,7 @@ export default function ContactUsPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-slate-800 text-lg">Email</h3>
-                  <p className="text-slate-600 mt-1">info@autofame.co.za</p> 
+                  <p className="text-slate-600 mt-1">autofame1@gmail.com</p> 
                   <p className="text-slate-600">We&apos;ll respond as soon as possible</p>
                 </div>
               </div>

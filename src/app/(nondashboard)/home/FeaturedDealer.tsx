@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 const FeaturedDealer = () => {
   const address = "1 Rifle Range Rd, Baragwanath, Johannesburg South, 2091";
   const phone = "061 225 9884";
-  const email = "info@autofame.co.za";
+  const email = "autofame1@gmail.com";
   const hours = [
     { label: "Mon - Fri", value: "08:00 - 17:00" },
     { label: "Saturday", value: "08:00 - 14:00" },
