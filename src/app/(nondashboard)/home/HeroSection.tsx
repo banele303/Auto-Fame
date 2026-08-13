@@ -3,8 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -19,13 +18,7 @@ import {
   Gauge,
   ShieldCheck,
   Sparkles,
-  MapPin,
-  Clock,
-  ChevronRight,
-  Sliders,
   Award,
-  Zap,
-  Car,
 } from "lucide-react";
 import { useGetCarsQuery } from "@/state/api";
 import { resolveCarImageUrl } from "@/utils/imageUrl";
@@ -98,20 +91,37 @@ export default function HeroSection() {
 
   const carMakes = useMemo(() => {
     if (!availableCars.length) {
-      return ["TOYOTA", "VOLKSWAGEN", "FORD", "HYUNDAI", "MERCEDES-BENZ", "BMW", "NISSAN", "KIA", "AUDI"];
+      return ["TOYOTA", "VOLKSWAGEN", "FORD", "HYUNDAI", "MERCEDES-BENZ", "BMW", "NISSAN", "KIA", "AUDI", "HAVAL"];
     }
     return [...new Set(availableCars.map((c: any) => c.make))];
   }, [availableCars]);
 
   // Search state
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedMake, setSelectedMake] = useState<string>("any");
+  const [selectedModel, setSelectedModel] = useState<string>("any");
   const [priceRange, setPriceRange] = useState<string>("any");
+
+  const carModelsMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const c of availableCars as any[]) {
+      if (!c.make) continue;
+      if (!map[c.make]) map[c.make] = [];
+      if (!map[c.make].includes(c.model)) map[c.make].push(c.model);
+    }
+    return map;
+  }, [availableCars]);
+
+  const availableModelsForMake = useMemo(() => {
+    if (selectedMake === "any" || !selectedMake) {
+      return [...new Set((availableCars as any[]).map((c: any) => c.model))].filter(Boolean);
+    }
+    return carModelsMap[selectedMake] || [];
+  }, [selectedMake, availableCars, carModelsMap]);
 
   const handleCarSearch = () => {
     const params = new URLSearchParams();
-    if (searchQuery.trim()) params.set("search", searchQuery.trim());
     if (selectedMake !== "any") params.set("make", selectedMake);
+    if (selectedModel !== "any") params.set("model", selectedModel);
     if (priceRange !== "any") params.set("priceRange", priceRange);
     router.push(`/cars${params.toString() ? `?${params.toString()}` : ""}`);
   };
@@ -124,7 +134,7 @@ export default function HeroSection() {
     }).format(n);
 
   return (
-    <section className="relative min-h-[92vh] bg-[#070A08] text-white overflow-hidden pt-28 md:pt-36 pb-16 flex flex-col justify-between">
+    <section className="relative min-h-[92vh] bg-[#070A08] text-white overflow-hidden pt-24 sm:pt-28 md:pt-36 pb-12 flex flex-col justify-between">
       {/* Background Image with Dark Vignette Gradient */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -132,7 +142,7 @@ export default function HeroSection() {
           alt="Luxury vehicle background"
           fill
           priority
-          className="object-cover object-center opacity-40 filter contrast-125 brightness-90"
+          className="object-cover object-center opacity-35 filter contrast-125 brightness-90"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#070A08] via-[#070A08]/85 to-[#070A08]/40" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#070A08] via-transparent to-[#070A08]/70" />
@@ -145,19 +155,19 @@ export default function HeroSection() {
           initial="hidden"
           animate="show"
           custom={0}
-          className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-md mb-8"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-md mb-6 max-w-full overflow-hidden"
         >
-          <span className="relative flex h-2 w-2">
+          <span className="relative flex h-2 w-2 flex-shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#35D04A] opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00A211]"></span>
           </span>
-          <span className="font-mono text-xs text-white/80 tracking-wider uppercase">
+          <span className="font-mono text-[11px] sm:text-xs text-white/80 tracking-wider uppercase truncate">
             Johannesburg South · 1 Rifle Range Rd, Baragwanath
           </span>
         </motion.div>
 
         {/* HERO MAIN CONTENT GRID */}
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-8 items-center">
           {/* LEFT COLUMN: MINIMALIST HEADLINE & ACTIONS */}
           <div className="lg:col-span-7">
             <motion.h1
@@ -165,9 +175,9 @@ export default function HeroSection() {
               initial="hidden"
               animate="show"
               custom={1}
-              className="font-display font-extrabold tracking-tight text-4xl sm:text-6xl xl:text-7xl leading-[1.05]"
+              className="font-display font-extrabold tracking-tight text-3xl sm:text-5xl xl:text-6xl leading-[1.08]"
             >
-              Drive The <br />
+              Drive The <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-100 to-white/60">
                 Extraordinary.
               </span>
@@ -178,68 +188,100 @@ export default function HeroSection() {
               initial="hidden"
               animate="show"
               custom={2}
-              className="mt-6 max-w-xl text-white/70 text-base sm:text-lg font-light leading-relaxed"
+              className="mt-4 sm:mt-6 max-w-xl text-white/70 text-sm sm:text-lg font-light leading-relaxed"
             >
               Hand-picked, roadworthy certified pre-owned vehicles with transparent pricing and instant bank financing in Johannesburg South.
             </motion.p>
 
-            {/* MINIMALIST SEARCH WIDGET */}
+            {/* RESPONSIVE MOBILE & DESKTOP SEARCH WIDGET */}
             <motion.div
               variants={fadeUp}
               initial="hidden"
               animate="show"
               custom={3}
-              className="mt-8 p-3 sm:p-4 rounded-2xl bg-white/[0.05] border border-white/15 backdrop-blur-xl max-w-2xl shadow-2xl"
+              className="mt-6 sm:mt-8 p-3.5 sm:p-4 rounded-2xl bg-white/[0.05] border border-white/15 backdrop-blur-xl max-w-2xl shadow-2xl"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Make Select */}
-                <div>
-                  <label className="block text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1 pl-1">
-                    Make
-                  </label>
-                  <Select value={selectedMake} onValueChange={setSelectedMake}>
-                    <SelectTrigger className="h-10 bg-white/[0.06] border-white/10 text-white text-xs rounded-xl focus:ring-[#00A211]">
-                      <SelectValue placeholder="All Makes" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 text-white border-slate-800">
-                      <SelectItem value="any">All Makes</SelectItem>
-                      {carMakes.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-3">
+                {/* MAKE & MODEL ON THE EXACT SAME ROW ON MOBILE! */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {/* Make Select */}
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1 pl-1">
+                      Make
+                    </label>
+                    <Select
+                      value={selectedMake}
+                      onValueChange={(val) => {
+                        setSelectedMake(val);
+                        setSelectedModel("any");
+                      }}
+                    >
+                      <SelectTrigger className="h-10 bg-white/[0.06] border-white/15 text-white text-xs rounded-xl focus:ring-[#00A211]">
+                        <SelectValue placeholder="All Makes" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 text-white border-slate-800">
+                        <SelectItem value="any">All Makes</SelectItem>
+                        {carMakes.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Model Select */}
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1 pl-1">
+                      Model
+                    </label>
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <SelectTrigger className="h-10 bg-white/[0.06] border-white/15 text-white text-xs rounded-xl focus:ring-[#00A211]">
+                        <SelectValue placeholder="All Models" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 text-white border-slate-800">
+                        <SelectItem value="any">All Models</SelectItem>
+                        {availableModelsForMake.map((mod) => (
+                          <SelectItem key={mod} value={mod}>
+                            {mod}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                {/* Price Range */}
-                <div>
-                  <label className="block text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1 pl-1">
-                    Budget
-                  </label>
-                  <Select value={priceRange} onValueChange={setPriceRange}>
-                    <SelectTrigger className="h-10 bg-white/[0.06] border-white/10 text-white text-xs rounded-xl focus:ring-[#00A211]">
-                      <SelectValue placeholder="Any Price" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 text-white border-slate-800">
-                      <SelectItem value="any">Any Price</SelectItem>
-                      <SelectItem value="under-150k">Under R150,000</SelectItem>
-                      <SelectItem value="150k-300k">R150,000 - R300,000</SelectItem>
-                      <SelectItem value="300k-500k">R300,000 - R500,000</SelectItem>
-                      <SelectItem value="over-500k">Over R500,000</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* BUDGET & SEARCH BUTTON ROW */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Price Range */}
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1 pl-1">
+                      Budget
+                    </label>
+                    <Select value={priceRange} onValueChange={setPriceRange}>
+                      <SelectTrigger className="h-10 bg-white/[0.06] border-white/15 text-white text-xs rounded-xl focus:ring-[#00A211]">
+                        <SelectValue placeholder="Any Price" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 text-white border-slate-800">
+                        <SelectItem value="any">Any Price</SelectItem>
+                        <SelectItem value="under-150k">Under R150,000</SelectItem>
+                        <SelectItem value="150k-300k">R150,000 - R300,000</SelectItem>
+                        <SelectItem value="300k-500k">R300,000 - R500,000</SelectItem>
+                        <SelectItem value="over-500k">Over R500,000</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Search Button */}
-                <div className="flex items-end">
-                  <Button
-                    onClick={handleCarSearch}
-                    className="w-full h-10 rounded-xl bg-[#00A211] hover:bg-[#00870e] text-white text-xs font-semibold shadow-lg shadow-[#00A211]/25 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Search className="h-4 w-4" />
-                    Search Stock
-                  </Button>
+                  {/* Search Button */}
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleCarSearch}
+                      className="w-full h-10 rounded-xl bg-[#00A211] hover:bg-[#00870e] text-white text-xs font-bold shadow-lg shadow-[#00A211]/25 transition-all flex items-center justify-center gap-2 active:scale-95"
+                    >
+                      <Search className="h-4 w-4" />
+                      Search Stock
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -250,19 +292,19 @@ export default function HeroSection() {
               initial="hidden"
               animate="show"
               custom={4}
-              className="mt-8 flex flex-wrap items-center gap-6 font-mono text-xs text-white/60"
+              className="mt-6 sm:mt-8 flex flex-wrap items-center gap-4 sm:gap-6 font-mono text-xs text-white/60"
             >
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5">
                 <ShieldCheck className="h-4 w-4 text-[#35D04A]" />
                 100% Inspected
               </span>
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-[#35D04A]" />
-                Instant Finance Approval
+                Instant Finance
               </span>
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5">
                 <Award className="h-4 w-4 text-[#35D04A]" />
-                Fair Trade-In Values
+                Fair Trade-In
               </span>
             </motion.div>
           </div>
@@ -273,10 +315,10 @@ export default function HeroSection() {
             initial="hidden"
             animate="show"
             custom={3}
-            className="lg:col-span-5"
+            className="lg:col-span-5 hidden sm:block"
           >
             {currentCar && (
-              <div className="relative rounded-2xl overflow-hidden bg-white/[0.04] border border-white/15 backdrop-blur-xl p-5 shadow-2xl group">
+              <div className="relative rounded-2xl overflow-hidden bg-white/[0.04] border border-white/15 backdrop-blur-xl p-4 sm:p-5 shadow-2xl group">
                 {/* Floating Tag */}
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded-md bg-[#00A211]/20 text-[#35D04A] border border-[#00A211]/30">
@@ -288,7 +330,7 @@ export default function HeroSection() {
                 </div>
 
                 {/* Car Image Display */}
-                <div className="relative h-56 sm:h-64 w-full rounded-xl overflow-hidden bg-black/40 mb-4">
+                <div className="relative h-48 sm:h-60 w-full rounded-xl overflow-hidden bg-black/40 mb-4">
                   <Image
                     src={resolveCarImageUrl(currentCar.photoUrls?.[0])}
                     alt={`${currentCar.make} ${currentCar.model}`}
@@ -308,7 +350,7 @@ export default function HeroSection() {
                 {/* Car Title & Price */}
                 <div className="flex items-end justify-between gap-4 mb-4">
                   <div>
-                    <h3 className="font-display font-bold text-lg text-white">
+                    <h3 className="font-display font-bold text-base sm:text-lg text-white">
                       {currentCar.make} {currentCar.model}
                     </h3>
                     <p className="text-xs text-white/60 mt-0.5">
@@ -316,7 +358,7 @@ export default function HeroSection() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-extrabold text-[#35D04A] font-mono">
+                    <span className="text-base sm:text-lg font-extrabold text-[#35D04A] font-mono">
                       {formatPrice(currentCar.price)}
                     </span>
                   </div>
@@ -353,12 +395,12 @@ export default function HeroSection() {
       </div>
 
       {/* BOTTOM BRAND LOGO TICKER BAR */}
-      <div className="relative z-10 mt-12 pt-6 border-t border-white/10">
+      <div className="relative z-10 mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <p className="text-center font-mono text-[10px] uppercase tracking-widest text-white/40 mb-4">
+          <p className="text-center font-mono text-[10px] uppercase tracking-widest text-white/40 mb-3">
             Trusted Brands Available In Our Showroom
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-mono font-bold tracking-wider text-white/40 uppercase">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-10 text-xs font-mono font-bold tracking-wider text-white/40 uppercase">
             {carMakes.map((m) => (
               <span key={m} className="hover:text-white transition-colors cursor-pointer" onClick={() => router.push(`/cars?make=${m}`)}>
                 {m}
