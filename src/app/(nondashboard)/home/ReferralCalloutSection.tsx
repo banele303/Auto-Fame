@@ -1,63 +1,91 @@
 "use client";
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Gift, Users, Share2, Trophy, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 
-const perks = [
-  {
-    icon: Users,
-    title: 'Invite Friends & Family',
-    desc: 'Share your unique referral link or send a quick introduction. No limit on how many people you can refer.'
-  },
-  {
-    icon: Gift,
-    title: 'Earn up to R1 000 Per Deal',
-    desc: 'Get a cash reward or service credit for every successful financed vehicle purchased through your referral.'
-  },
-  {
-    icon: Share2,
-    title: 'Share Easily',
-    desc: 'Use WhatsApp, Email, or social media. We track everything for you—simple and transparent.'
-  },
-  {
-    icon: Trophy,
-    title: 'Tier Bonuses',
-    desc: 'Hit 5, 10, or 20 referrals and unlock boosted payouts & loyalty perks.'
-  },
-];
+import React from "react";
+import { motion } from "framer-motion";
+import { Gift, Share2, Sparkles, Clock, ArrowRight, ShieldCheck, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ReferralCalloutSection() {
+  const handleWhatsAppReferral = () => {
+    const message = encodeURIComponent(
+      "Hi AutoFame! I have a referral for a financed vehicle purchase. Please assist me with submitting the referral details."
+    );
+    window.open(`https://wa.me/27612259884?text=${message}`, "_blank");
+  };
+
   return (
-    <section className="relative py-20 bg-transparent" aria-labelledby="referral-heading">
-      <div className="mx-auto px-6 lg:px-10 max-w-6xl">
-        <div className="relative rounded-3xl overflow-hidden border border-[hsl(var(--primary))]/30 bg-[hsl(var(--primary))] text-white px-8 md:px-12 py-14">
-          <div className="absolute inset-0 pointer-events-none opacity-[0.25] mix-blend-overlay">
-            <div className="absolute -top-24 -left-12 w-72 h-72 rounded-full bg-white/20 blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-[24rem] h-[24rem] rounded-full bg-white/10 blur-3xl" />
-          </div>
-          <div className="relative grid gap-14 place-items-center">
-            {/* Left copy */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            viewport={{ once: true }}
-            className="space-y-6 text-center max-w-3xl mx-auto"
-          >
-            <span className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-4 py-1.5 rounded-full text-xs tracking-wide font-semibold uppercase">
-              <Share2 size={14} /> Referral Program
-            </span>
-      <h2 id="referral-heading" className="text-3xl md:text-4xl font-bold leading-tight">
-        Earn up to R1 000 for Every Successful Referral
-      </h2>
-            <p className="text-white/90 text-lg max-w-2xl leading-relaxed mx-auto">
+    <section className="relative py-20 bg-[#070A08] text-white overflow-hidden" aria-labelledby="referral-heading">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
+        {/* Luxury Non-Green Dark Amber & Gold Container */}
+        <div className="relative rounded-3xl overflow-hidden border border-amber-500/20 bg-gradient-to-br from-[#0F141C] via-[#0A0D14] to-[#121824] p-8 sm:p-12 shadow-2xl">
+          {/* Subtle Ambient Lighting */}
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-amber-500/10 blur-[130px] pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+
+          <div className="relative z-10 max-w-3xl mx-auto text-center">
+            {/* Minimal Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono font-semibold uppercase tracking-wider mb-6"
+            >
+              <Gift className="h-3.5 w-3.5" />
+              Referral Program
+            </motion.div>
+
+            {/* Headline */}
+            <motion.h2
+              id="referral-heading"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              viewport={{ once: true }}
+              className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight mb-6"
+            >
+              Earn up to <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-200">R1 000</span> for Every Successful Referral
+            </motion.h2>
+
+            {/* Description */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="text-white/80 text-base sm:text-lg font-light leading-relaxed mb-6"
+            >
               Love what we do? Turn your network into opportunity. Refer a buyer who completes a financed vehicle purchase and receive a generous reward. There&apos;s no cap—keep earning with every deal.
-            </p>
-            <p className="text-sm text-white/85 max-w-xl mx-auto">Paid out within 7 days after a qualifying purchase is finalized.</p>
-            {/* Action buttons removed per request */}
-          </motion.div>
-            {/* Right perks grid removed as requested */}
+            </motion.p>
+
+            {/* Payout Guarantee Box */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-mono text-amber-300 mb-8"
+            >
+              <Clock className="h-4 w-4 text-amber-400" />
+              Paid out within 7 days after a qualifying purchase is finalized.
+            </motion.div>
+
+            {/* Call to Action Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              viewport={{ once: true }}
+              className="flex justify-center"
+            >
+              <Button
+                onClick={handleWhatsAppReferral}
+                className="h-13 px-8 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm shadow-xl shadow-amber-500/20 transition-all flex items-center gap-2 group"
+              >
+                Submit A Referral Now
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </motion.div>
           </div>
         </div>
       </div>
