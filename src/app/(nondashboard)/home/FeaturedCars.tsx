@@ -185,31 +185,33 @@ export default function FeaturedCars() {
                 onClick={() => router.push(`/cars/${car.id}`)}
                 className="group relative bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-[#35D04A]/60 rounded-2xl overflow-hidden transition-all duration-300 shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between"
               >
-                {/* Image Container */}
-                <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40">
-                  <Image
-                    src={displayUrl}
-                    alt={`${car.year} ${car.make} ${car.model}`}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    onError={() => handleImageError(car.id)}
-                    unoptimized
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+                {/* Image Container with Inner Framed Padding */}
+                <div className="p-3 pb-0">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-black/40">
+                    <Image
+                      src={displayUrl}
+                      alt={`${car.year} ${car.make} ${car.model}`}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover rounded-xl transition-transform duration-700 group-hover:scale-105"
+                      onError={() => handleImageError(car.id)}
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
 
-                  {/* Year Tag */}
-                  <div className="absolute top-3 left-3">
-                    <span className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[11px] font-mono font-semibold border border-white/10">
-                      {car.year}
-                    </span>
-                  </div>
+                    {/* Year Tag */}
+                    <div className="absolute top-3 left-3">
+                      <span className="px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-white text-[11px] font-mono font-semibold border border-white/10">
+                        {car.year}
+                      </span>
+                    </div>
 
-                  {/* Price Tag */}
-                  <div className="absolute bottom-3 right-3">
-                    <span className="px-3 py-1 rounded-lg bg-[#00A211] text-white text-xs font-mono font-extrabold shadow-lg">
-                      {formatPrice(car.price)}
-                    </span>
+                    {/* Price Tag */}
+                    <div className="absolute bottom-3 right-3">
+                      <span className="px-3 py-1 rounded-lg bg-[#00A211] text-white text-xs font-mono font-extrabold shadow-lg">
+                        {formatPrice(car.price)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -235,26 +237,25 @@ export default function FeaturedCars() {
                       <span>{car.fuelType || "Petrol"}</span>
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions - High-Contrast Visible Reserve & Details Buttons */}
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      <button
+                        type="button"
                         onClick={(e) => handleReserve(e, car)}
-                        className="h-9 text-xs rounded-xl border-white/20 hover:border-[#35D04A] text-white hover:bg-[#35D04A]/10 transition-all font-semibold"
+                        className="h-10 text-xs rounded-xl bg-[#00A211] hover:bg-[#00870e] text-white font-extrabold transition-all shadow-md flex items-center justify-center border-0 active:scale-95"
                       >
                         Reserve
-                      </Button>
-                      <Button
-                        size="sm"
+                      </button>
+                      <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/cars/${car.id}`);
                         }}
-                        className="h-9 text-xs rounded-xl bg-[#00A211] hover:bg-[#00870e] text-white font-semibold shadow-md"
+                        className="h-10 text-xs rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold transition-all border border-white/15 flex items-center justify-center active:scale-95"
                       >
                         Details
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 </div>

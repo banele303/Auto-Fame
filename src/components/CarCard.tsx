@@ -81,51 +81,49 @@ const CarCard: React.FC<CarCardProps> = ({
       onKeyDown={(e)=>{ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToDetails(); } }}
     >
       
-      <div className="relative h-48 overflow-hidden rounded-t-2xl">
-        <Image
-          src={resolveCarImageUrl(photoUrls[0]) || "/placeholder.jpg"}
-          alt={`${year} ${make} ${model}`}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-        />
-        
-        {/* Floating Badge */}
-        <div className="absolute top-3 left-3">
-          <Badge className="bg-[#00A211] hover:bg-[#009210] text-white font-semibold px-3 py-1 rounded-full text-xs">
-            Available
-          </Badge>
-        </div>
-
-        
-        <div className="absolute top-3 right-3">
-          <button
-            onClick={(e) => { e.stopPropagation(); onFavoriteToggle?.(id); }}
-            className={`p-2 rounded-full shadow-md transition-all duration-200 ${
-              isFavorited 
-                ? 'bg-red-500 text-white' 
-                : 'bg-white/90 text-gray-600 hover:bg-white hover:text-red-500'
-            }`}
-          >
-            <Heart size={18} className={isFavorited ? 'fill-current' : ''} />
-          </button>
-        </div>
-
-        
-        {photoUrls.length > 1 && (
-          <div className="absolute bottom-3 right-3 bg-black/60 text-white px-2.5 py-1 rounded-full text-xs font-medium">
-            +{photoUrls.length - 1}
+      <div className="p-2.5 pb-0">
+        <div className="relative h-48 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900">
+          <Image
+            src={resolveCarImageUrl(photoUrls[0]) || "/placeholder.svg"}
+            alt={`${year} ${make} ${model}`}
+            fill
+            className="object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+          />
+          
+          {/* Floating Badge */}
+          <div className="absolute top-3 left-3">
+            <Badge className="bg-[#00A211] hover:bg-[#009210] text-white font-semibold px-3 py-1 rounded-full text-xs shadow-sm">
+              Available
+            </Badge>
           </div>
-        )}
+
+          <div className="absolute top-3 right-3">
+            <button
+              onClick={(e) => { e.stopPropagation(); onFavoriteToggle?.(id); }}
+              className={`p-2 rounded-full shadow-md transition-all duration-200 ${
+                isFavorited 
+                  ? 'bg-red-500 text-white' 
+                  : 'bg-white/90 text-gray-600 hover:bg-white hover:text-red-500'
+              }`}
+            >
+              <Heart size={18} className={isFavorited ? 'fill-current' : ''} />
+            </button>
+          </div>
+
+          {photoUrls.length > 1 && (
+            <div className="absolute bottom-3 right-3 bg-black/60 text-white px-2.5 py-1 rounded-full text-xs font-medium">
+              +{photoUrls.length - 1}
+            </div>
+          )}
+        </div>
       </div>
 
-      
       <div className="p-5">
-        
         <div className="mb-3">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 leading-tight">
             {year} {make} {model}
           </h3>
-          <div className="text-3xl font-bold text-[#00acee]">
+          <div className="text-2xl font-extrabold text-[#00A211]">
             {formatPrice(price)}
           </div>
           

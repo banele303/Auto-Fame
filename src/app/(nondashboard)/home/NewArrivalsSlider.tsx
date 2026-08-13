@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronLeft, ChevronRight, Gauge, Sparkles, Shield, Tag } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Gauge, Sparkles } from "lucide-react";
 import { resolveCarImageUrl } from "@/utils/imageUrl";
 
 interface CarItem {
@@ -216,29 +216,31 @@ export default function NewArrivalsSlider() {
               onClick={() => router.push(`/cars/${car.id}`)}
               className="min-w-[280px] max-w-[280px] sm:min-w-[300px] sm:max-w-[300px] snap-start bg-white/[0.04] hover:bg-white/[0.08] rounded-2xl border border-white/10 hover:border-[#35D04A]/60 overflow-hidden transition-all duration-300 shadow-xl cursor-pointer flex-shrink-0 flex flex-col justify-between group"
             >
-              {/* Image Container */}
-              <div className="relative h-44 w-full overflow-hidden bg-black/40">
-                <Image
-                  src={displayUrl}
-                  alt={`${car.year} ${car.make} ${car.model}`}
-                  fill
-                  sizes="300px"
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  onError={() => handleImageError(car.id)}
-                  unoptimized
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-30 transition-opacity" />
+              {/* Image Container with Inner Framed Padding */}
+              <div className="p-2.5 pb-0">
+                <div className="relative h-44 w-full overflow-hidden rounded-xl bg-black/40">
+                  <Image
+                    src={displayUrl}
+                    alt={`${car.year} ${car.make} ${car.model}`}
+                    fill
+                    sizes="300px"
+                    className="object-cover rounded-xl transition-transform duration-700 group-hover:scale-105"
+                    onError={() => handleImageError(car.id)}
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-30 transition-opacity" />
 
-                <div className="absolute top-2.5 left-2.5">
-                  <span className="px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-white text-[10px] font-mono font-semibold border border-white/10">
-                    {car.year}
-                  </span>
-                </div>
+                  <div className="absolute top-2.5 left-2.5">
+                    <span className="px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-white text-[10px] font-mono font-semibold border border-white/10">
+                      {car.year}
+                    </span>
+                  </div>
 
-                <div className="absolute bottom-2.5 right-2.5">
-                  <span className="px-2.5 py-1 rounded-md bg-[#00A211] text-white text-xs font-mono font-extrabold shadow-md">
-                    {formatPrice(car.price)}
-                  </span>
+                  <div className="absolute bottom-2.5 right-2.5">
+                    <span className="px-2.5 py-1 rounded-md bg-[#00A211] text-white text-xs font-mono font-extrabold shadow-md">
+                      {formatPrice(car.price)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
