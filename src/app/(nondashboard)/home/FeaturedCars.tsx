@@ -187,7 +187,7 @@ export default function FeaturedCars() {
               >
                 {/* Image Container with Inner Framed Padding */}
                 <div className="p-3 pb-0">
-                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-black/40">
+                  <div className="relative aspect-[16/10] min-h-[210px] sm:min-h-0 w-full overflow-hidden rounded-xl bg-black/40">
                     <Image
                       src={displayUrl}
                       alt={`${car.year} ${car.make} ${car.model}`}

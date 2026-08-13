@@ -404,7 +404,7 @@ const CarDetailPage = () => {
                         >
                           {/* Inner Framed Padding Container */}
                           <div className="p-2.5 pb-0">
-                            <div className="relative h-44 w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900">
+                            <div className="relative aspect-[16/10] min-h-[210px] sm:min-h-0 w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900">
                               <Image
                                 src={resolvedPhoto}
                                 alt={`${rc.year} ${rc.make} ${rc.model}`}
