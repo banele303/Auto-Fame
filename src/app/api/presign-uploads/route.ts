@@ -30,14 +30,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: `Unauthorized: ${authResult.message}` }, { status: 401 });
     }
 
-    const missing: string[] = [];
-    if (!process.env.AWS_REGION) missing.push('AWS_REGION');
-    if (!process.env.AWS_ACCESS_KEY_ID) missing.push('AWS_ACCESS_KEY_ID');
-    if (!process.env.AWS_SECRET_ACCESS_KEY) missing.push('AWS_SECRET_ACCESS_KEY');
-    if (!process.env.AWS_BUCKET_NAME) missing.push('AWS_BUCKET_NAME');
-    if (missing.length) {
-      return NextResponse.json({ message: 'Missing required S3 env vars', missing }, { status: 500 });
-    }
 
     let formData: FormData;
     try {

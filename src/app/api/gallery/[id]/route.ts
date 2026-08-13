@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
-import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 export const runtime = "nodejs";
-
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
 
 export async function DELETE(
   req: NextRequest,
@@ -37,22 +28,6 @@ export async function DELETE(
 
     if (!item) {
       return NextResponse.json({ message: "Item not found" }, { status: 404 });
-    }
-
-    // Delete from S3 if it's an S3 URL
-    if (item.url.includes(process.env.AWS_BUCKET_NAME!)) {
-      try {
-        const urlParts = new URL(item.url);
-        const key = urlParts.pathname.substring(1); // remove leading /
-        
-        await s3Client.send(new DeleteObjectCommand({
-          Bucket: process.env.AWS_BUCKET_NAME!,
-          Key: key,
-        }));
-        console.log(`Deleted from S3: ${key}`);
-      } catch (s3Error) {
-        console.error("Failed to delete from S3:", s3Error);
-      }
     }
 
     // Delete from DB

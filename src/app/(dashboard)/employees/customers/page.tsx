@@ -98,7 +98,7 @@ const useGetEmployeeCustomers = (employeeId: string, skip: boolean) => {
       try {
         let authHeaders = {};
         try {
-          const { fetchAuthSession } = await import('aws-amplify/auth');
+          const { fetchAuthSession } = await import('@/app/admin/adminAuth');
           const session = await fetchAuthSession();
           const idToken = session.tokens?.idToken?.toString();
           

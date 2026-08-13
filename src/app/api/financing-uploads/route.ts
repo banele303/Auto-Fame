@@ -39,12 +39,8 @@ export async function POST(req: NextRequest){
     if (!files.length) return NextResponse.json({message:'No files received'}, {status:400, headers:cors()});
     const maxForType = DOC_MAX[docType] ?? 6;
     if (files.length > maxForType) return NextResponse.json({message:`Too many files for ${docType}. Max ${maxForType}`},{status:400,headers:cors()});
-    const haveAwsCreds = !!(process.env.AWS_BUCKET_NAME && process.env.AWS_REGION && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
-    const isProd = process.env.NODE_ENV === 'production';
-    if (isProd && !haveAwsCreds) return NextResponse.json({message:'Storage not configured (AWS env vars missing)'},{status:500,headers:cors()});
-    const useS3 = haveAwsCreds;
     const localBase = path.join(process.cwd(),'public','uploads','financing',docType);
-    if (!useS3) await fs.mkdir(localBase,{recursive:true}).catch(()=>{});
+    await fs.mkdir(localBase,{recursive:true}).catch(()=>{});
     const uploaded: any[] = [];
     for (const f of files) {
       const sizeMb = f.size/1024/1024;

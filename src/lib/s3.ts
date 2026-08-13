@@ -38,42 +38,8 @@ export async function uploadToConvex(file: File): Promise<string> {
 }
 
 /**
- * Compatibility wrapper - uploads to Convex storage (with S3 fallback)
+ * Upload helper - uploads to Convex storage
  */
-export async function uploadToS3(file: File, folder = "cars"): Promise<string> {
-  try {
-    return await uploadToConvex(file);
-  } catch (err: any) {
-    console.warn("Convex upload failed, checking S3 credentials...", err?.message);
-    
-    const bucket = process.env.AWS_BUCKET_NAME?.trim();
-    const region = process.env.AWS_REGION?.trim();
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
-
-    if (bucket && region && accessKeyId && secretAccessKey) {
-      const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
-      const s3 = new S3Client({
-        region,
-        credentials: { accessKeyId, secretAccessKey },
-      });
-
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const fileName = `${folder}/${Date.now()}-${file.name}`;
-
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: bucket,
-          Key: fileName,
-          Body: buffer,
-          ContentType: file.type || "image/jpeg",
-        })
-      );
-
-      return `https://${bucket}.s3.${region}.amazonaws.com/${fileName}`;
-    }
-
-    throw new Error(`Failed to upload photo: ${err?.message || "Storage unavailable"}`);
-  }
+export async function uploadToS3(file: File, _folder = "cars"): Promise<string> {
+  return await uploadToConvex(file);
 }

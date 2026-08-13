@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from "sonner";
 import Image from "next/image";
-import { fetchAuthSession } from "aws-amplify/auth";
+import { fetchAuthSession } from "@/app/admin/adminAuth";
 import { batchCompress } from "@/lib/imageCompression";
 import { CAR_UPLOAD_MAX_FILES, CAR_UPLOAD_SINGLE_MAX_MB } from "@/config/uploadLimits";
 

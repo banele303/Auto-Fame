@@ -27,7 +27,11 @@ import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { ConvexClient } from "convex/browser";
 import type { TagDescription } from '@reduxjs/toolkit/query';
 import { toast } from 'sonner';
-import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
+
+// Auth stubs replacing AWS Amplify
+const fetchAuthSession = async () => ({ tokens: undefined });
+const getCurrentUser = async () => null;
+type CognitoAuthUser = any;
 
 import { FiltersState } from "./index";  // FiltersState is defined in index.ts, not in slices folder
 
