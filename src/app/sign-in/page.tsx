@@ -30,7 +30,7 @@ export default function SignInPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
         <h1 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">Sign In</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Sign in to Advance Auto</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Sign in to AutoFame</p>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">

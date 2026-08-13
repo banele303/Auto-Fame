@@ -30,7 +30,7 @@ export default function PartnerReferralCTA() {
                 Power our inventory growth & earn recurring payouts
               </h2>
               <p className="text-gray-600 dark:text-gray-300 max-w-xl leading-relaxed">
-                Are you a mechanic, detailer, spotter, or small trader constantly around quality vehicles or serious buyers? Become an Advance Auto Partner. Refer qualified buyers or available vehicles—when a financed purchase completes, you get paid. No caps. Higher volume unlocks boosted brackets.
+                Are you a mechanic, detailer, spotter, or small trader constantly around quality vehicles or serious buyers? Become an AutoFame Partner. Refer qualified buyers or available vehicles—when a financed purchase completes, you get paid. No caps. Higher volume unlocks boosted brackets.
               </p>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 <li className="flex gap-2"><span className="mt-2 h-2 w-2 rounded-full bg-[hsl(var(--primary))]" /> Payouts within 7 days of cleared financed deals.</li>

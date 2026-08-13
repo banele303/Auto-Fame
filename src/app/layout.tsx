@@ -29,8 +29,8 @@ import React, { Suspense } from 'react';
 import PostHogPageView from './PostHogPageView';
 
 export const metadata: Metadata = {
-  title: "Advance Auto - Your Dream Car Awaits",
-  description: "Find your next car at Advance Auto. Browse new and used cars, schedule test drives, and get financing options.",
+  title: "AutoFame - Cars You Can Trust",
+  description: "Find your next pre-owned luxury car, SUV, or bakkie at AutoFame. Browse verified inventory, schedule test drives, and get instant bank financing.",
   icons: {
     icon: '/favicon.ico',
   },

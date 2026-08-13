@@ -58,7 +58,7 @@ export default function StatsSection() {
             Trust & Excellence
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
-            Why Choose <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A211] to-[#35D04A]">Advance Auto Dealership?</span>
+            Why Choose <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A211] to-[#35D04A]">AutoFame Dealership?</span>
           </h2>
           <p className="mt-4 text-base sm:text-lg text-white/70 font-light leading-relaxed">
             Leaders in affordable and quality vehicles you can trust and rely on

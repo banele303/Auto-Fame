@@ -82,7 +82,7 @@ export default function ContactUsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.7 }}
               >
-                Contact <span className="text-[hsl(var(--primary))]">Advance Auto</span>
+                Contact <span className="text-[hsl(var(--primary))]">AutoFame</span>
               </motion.h1>
               <motion.p
                 className="relative mt-5 text-center text-base md:text-lg text-white/85 leading-relaxed max-w-2xl mx-auto"

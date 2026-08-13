@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!post) return { title: 'Post Not Found' };
   
   return {
-    title: `${post.title} | Advance Auto Blog`,
+    title: `${post.title} | AutoFame Blog`,
     description: post.excerpt || post.metaDescription || `Read about ${post.title}`,
     keywords: post.metaKeywords,
   };
@@ -73,7 +73,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                             <div className="p-2 bg-primary/10 rounded-full">
                                 <UserIcon className="w-4 h-4 text-primary" />
                             </div>
-                            <span className="font-semibold text-slate-900 dark:text-slate-200">{post.authorName || 'Advance Auto Team'}</span>
+                            <span className="font-semibold text-slate-900 dark:text-slate-200">{post.authorName || 'AutoFame Team'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <CalendarIcon className="w-4 h-4 opacity-70" />
@@ -129,7 +129,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             <div className="mt-16 pt-8 border-t flex justify-between items-center">
                 <div className="flex flex-col gap-1">
                     <span className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Written by</span>
-                    <span className="text-lg font-bold">{post.authorName || 'Advance Auto Team'}</span>
+                    <span className="text-lg font-bold">{post.authorName || 'AutoFame Team'}</span>
                 </div>
                 <Button variant="outline" size="icon" className="rounded-full h-12 w-12 hover:bg-muted" title="Share Article">
                     <Share2 className="w-5 h-5" />

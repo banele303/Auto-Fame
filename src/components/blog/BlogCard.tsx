@@ -67,7 +67,7 @@ export function BlogCard({ post }: { post: BlogPost }) {
       <CardFooter className="flex justify-between items-center border-t border-border/50 pt-4 mt-auto">
          <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
             <UserIcon className="w-4 h-4 text-primary/80" />
-            <span>{post.authorName || 'Advance Auto Team'}</span>
+            <span>{post.authorName || 'AutoFame Team'}</span>
          </div>
          <span className="text-sm font-semibold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
             Read Article <ArrowRight className="w-4 h-4" />

@@ -1,62 +1,76 @@
 "use client";
-import React from 'react';
-import { motion } from 'framer-motion';
-import Image from 'next/image';
+
+import React from "react";
+import { motion } from "framer-motion";
+import { ShieldCheck, Award, HeartHandshake, CheckCircle2 } from "lucide-react";
 
 export default function AboutUsSection() {
   return (
-    <section className="relative py-24 bg-white dark:bg-gray-950 overflow-hidden" aria-labelledby="about-heading">
-      <div className="absolute inset-0 pointer-events-none opacity-[0.05] bg-[radial-gradient(circle_at_40%_40%,#16a34a,transparent_60%)]" />
-      <div className="container mx-auto px-6 lg:px-10 relative">
-        <div className="grid lg:grid-cols-2 gap-14 items-center">
-          {/* Image side (restored) */}
-          <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7 }}
-            viewport={{ once: true }}
-            className="relative group"
+    <section
+      className="relative py-24 bg-[#090D0A] text-white overflow-hidden border-t border-b border-white/10"
+      aria-labelledby="about-heading"
+    >
+      {/* Background ambient lighting */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[28rem] rounded-full bg-[#00A211]/10 blur-[150px] pointer-events-none" />
+
+      <div className="container mx-auto px-6 lg:px-10 relative z-10 max-w-5xl text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="space-y-6"
+        >
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00A211]/15 border border-[#00A211]/30 text-[#35D04A] text-xs font-semibold uppercase tracking-wider">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Our Mission & Legacy
+          </div>
+
+          <h2
+            id="about-heading"
+            className="text-3xl md:text-5xl font-display font-extrabold tracking-tight text-white"
           >
-            <div className="absolute -inset-4 bg-[radial-gradient(circle_at_30%_30%,hsl(var(--primary))_0%,transparent_70%)] rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative rounded-3xl overflow-hidden ring-1 ring-emerald-500/10 shadow-xl h-[300px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[440px]">
-              <Image
-                src="/about-image.jpeg"
-                alt="Advance Auto dealership overview"
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0" />
-            </div>
-          </motion.div>
-          {/* Content side with updated text only */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            viewport={{ once: true }}
-            className="space-y-6"
-          >
-            <h2 id="about-heading" className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(90deg,hsl(var(--primary))_0%,hsl(var(--primary))_100%)]">About Us</h2>
-            <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
-              Advance Auto is a trusted dealership with clients from all corners of the country. Located at 1 Rifle Range Road in Baragwanath - Joburg South, we take pride in selling affordable and quality cars. We are happy to be at your service and look forward to helping you buy your next car with us.
+            About <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A211] to-[#35D04A]">AutoFame</span>
+          </h2>
+
+          <p className="text-white/80 leading-relaxed text-base sm:text-lg max-w-3xl mx-auto font-light">
+            AutoFame is a trusted pre-owned vehicle dealership serving customers from across South Africa. Located at <strong className="text-white font-medium">1 Rifle Range Road in Baragwanath, Johannesburg South</strong>, we take pride in offering hand-picked, roadworthy-certified quality cars at fair, transparent prices.
+          </p>
+
+          <p className="text-white/70 leading-relaxed text-base sm:text-lg max-w-3xl mx-auto font-light">
+            We understand that mobility is a necessity and buying a car is one of life&apos;s important commitments. Purchasing your next vehicle with AutoFame opens doors to new opportunities, pride, and peace of mind.
+          </p>
+
+          {/* Core Values Badges */}
+          <div className="pt-6 flex flex-wrap justify-center gap-3">
+            {[
+              { label: 'Transparent Pricing', icon: Award },
+              { label: 'Flexible Financing', icon: HeartHandshake },
+              { label: 'Quality Certified', icon: CheckCircle2 },
+              { label: 'After-Sale Support', icon: ShieldCheck },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <span
+                  key={item.label}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-mono font-medium text-white/80"
+                >
+                  <Icon className="h-4 w-4 text-[#35D04A]" />
+                  {item.label}
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="pt-6 border-t border-white/10 max-w-xs mx-auto">
+            <p className="font-display font-bold text-lg text-white">
+              AutoFame
             </p>
-            <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
-              We understand that mobility is a need and buying a car is one of the biggest commitments. Buying a car with us unlocks and creates opportunities for you. Mobility provides sense of pride, comfort and convenience. It widens our perspective and also gives us memories to cherish forever.
+            <p className="text-xs font-mono text-[#35D04A] tracking-wider uppercase">
+              Cars You Can Trust
             </p>
-            <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
-              Come to Advance Auto for best service and customer experience!!!
-            </p>
-            <p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">Advance Auto<br/>Cars You Can Trust</p>
-            {/* Removed stats cards and specific tags per request */}
-            <div className="pt-2 flex flex-wrap gap-3 text-xs font-medium">
-              {['Transparent Pricing','Flexible Finance','After‑Sale Support'].map(tag => (
-                <span key={tag} className="px-3 py-1 rounded-full bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] dark:bg-[hsl(var(--primary))]/15 dark:text-[hsl(var(--primary))] border border-[hsl(var(--primary))]/30">{tag}</span>
-              ))}
-            </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

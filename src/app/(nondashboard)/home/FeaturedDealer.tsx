@@ -40,7 +40,7 @@ const FeaturedDealer = () => {
             <MapPin size={14} /> Our Showroom
           </span>
           <h2 className="text-2xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 dark:from-emerald-300 dark:via-green-300 dark:to-emerald-200 md:whitespace-nowrap">
-            Visit Advance Auto Johannesburg South
+            Visit AutoFame Johannesburg South
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-gray-600 dark:text-gray-300">
             Your destination for quality vehicles and personal service. Book a test drive, explore financing, or just drop in for a consultation—everything starts at our single flagship location.

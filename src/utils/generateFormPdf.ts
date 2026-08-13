@@ -111,7 +111,7 @@ export const generateFormPdf = (application: Application): void => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('ADVANCE AUTO', margin + 20, currentY + 35);
+    doc.text('AUTOFAME', margin + 20, currentY + 35);
     
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');

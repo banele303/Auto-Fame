@@ -121,7 +121,7 @@ const BlogSection = () => {
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
                       <UserIcon size={12} />
-                      <span>{post.authorName || "Advance Auto Team"}</span>
+                      <span>{post.authorName || "AutoFame Team"}</span>
                     </div>
                     <span className="text-[#00A211] font-semibold text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                       Read More
