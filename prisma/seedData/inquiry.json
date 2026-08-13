@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "message": "Interested in the Toyota Corolla. Can I schedule a test drive?",
+    "status": "NEW",
+    "inquiryDate": "2024-03-01T10:00:00Z",
+    "carId": 1,
+    "customerId": "customer1_cognito_id",
+    "dealershipId": 1,
+    "employeeId": "employee2_cognito_id"
+  },
+  {
+    "id": 2,
+    "message": "Looking for more details on the BMW X5. Is it still available?",
+    "status": "CONTACTED",
+    "inquiryDate": "2024-03-05T14:30:00Z",
+    "carId": 2,
+    "customerId": "customer2_cognito_id",
+    "dealershipId": 2,
+    "employeeId": "employee3_cognito_id"
+  }
+]

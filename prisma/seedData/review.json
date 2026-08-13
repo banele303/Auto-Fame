@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "rating": 5,
+    "title": "Excellent Car!",
+    "comment": "Smooth ride, great features, and fantastic service from the dealership.",
+    "reviewDate": "2024-03-20T00:00:00Z",
+    "carId": 1,
+    "customerId": "customer1_cognito_id"
+  },
+  {
+    "id": 2,
+    "rating": 4,
+    "title": "Great SUV",
+    "comment": "Powerful and comfortable. Minor issue with the infotainment system, but resolved quickly.",
+    "reviewDate": "2024-03-25T00:00:00Z",
+    "carId": 2,
+    "customerId": "customer2_cognito_id"
+  }
+]

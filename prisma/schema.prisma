@@ -1,0 +1,382 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis(schema: "public")]
+}
+
+model Car {
+  id              Int          @id @default(autoincrement())
+  vin             String       @unique
+  make            String
+  model           String
+  year            Int
+  price           Float
+  mileage         Int
+  condition       CarCondition
+  carType         CarType
+  fuelType        FuelType
+  transmission    Transmission
+  engine          String
+  exteriorColor   String
+  interiorColor   String
+  description     String
+  features        String[]     @default([])
+  photoUrls       String[]     @default([])
+  status          CarStatus    @default(AVAILABLE)
+  postedDate      DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  averageRating   Float?       @default(0)
+  numberOfReviews Int?         @default(0)
+  dealershipId    Int
+  employeeId      String?
+  featured        Boolean      @default(false)
+  dealership      Dealership   @relation(fields: [dealershipId], references: [id])
+  employee        Employee?    @relation(fields: [employeeId], references: [cognitoId])
+  inquiries       Inquiry[]
+  reviews         Review[]
+  sales           Sale?
+  testDrives      TestDrive[]
+  favoritedBy     Customer[]   @relation("CustomerFavorites")
+
+  @@index([make, model, year])
+  @@index([price])
+  @@index([status])
+}
+
+model Dealership {
+  id          Int         @id @default(autoincrement())
+  name        String
+  address     String
+  city        String
+  state       String
+  country     String
+  postalCode  String
+  phoneNumber String
+  email       String
+  website     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  latitude    Float?
+  longitude   Float?
+  cars        Car[]
+  employees   Employee[]
+  inquiries   Inquiry[]
+  sales       Sale[]
+  testDrives  TestDrive[]
+}
+
+model Employee {
+  id           Int            @id @default(autoincrement())
+  cognitoId    String         @unique
+  name         String
+  email        String
+  phoneNumber  String
+  role         EmployeeRole
+  status       EmployeeStatus @default(ACTIVE)
+  hireDate     DateTime       @default(now())
+  commission   Float          @default(0)
+  dealershipId Int
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  managedCars  Car[]
+  dealership   Dealership     @relation(fields: [dealershipId], references: [id])
+  inquiries    Inquiry[]
+  sales        Sale[]
+  testDrives   TestDrive[]
+}
+
+model Customer {
+  id            Int                    @id @default(autoincrement())
+  cognitoId     String                 @unique
+  name          String
+  email         String
+  phoneNumber   String
+  address       String?
+  city          String?
+  state         String?
+  postalCode    String?
+  dateOfBirth   DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  financingApps FinancingApplication[]
+  inquiries     Inquiry[]
+  reviews       Review[]
+  sales         Sale[]
+  testDrives    TestDrive[]
+  favorites     Car[]                  @relation("CustomerFavorites")
+}
+
+model Admin {
+  id          Int      @id @default(autoincrement())
+  cognitoId   String   @unique
+  name        String
+  email       String
+  phoneNumber String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Inquiry {
+  id           Int           @id @default(autoincrement())
+  message      String
+  status       InquiryStatus @default(NEW)
+  inquiryDate  DateTime      @default(now())
+  followUpDate DateTime?
+  carId        Int
+  customerId   String
+  employeeId   String?
+  dealershipId Int
+  car          Car           @relation(fields: [carId], references: [id])
+  customer     Customer      @relation(fields: [customerId], references: [cognitoId])
+  dealership   Dealership    @relation(fields: [dealershipId], references: [id])
+  employee     Employee?     @relation(fields: [employeeId], references: [cognitoId])
+}
+
+model TestDrive {
+  id            Int        @id @default(autoincrement())
+  scheduledDate DateTime
+  actualDate    DateTime?
+  duration      Int?
+  notes         String?
+  completed     Boolean    @default(false)
+  carId         Int
+  customerId    String
+  employeeId    String?
+  dealershipId  Int
+  createdAt     DateTime   @default(now())
+  car           Car        @relation(fields: [carId], references: [id])
+  customer      Customer   @relation(fields: [customerId], references: [cognitoId])
+  dealership    Dealership @relation(fields: [dealershipId], references: [id])
+  employee      Employee?  @relation(fields: [employeeId], references: [cognitoId])
+}
+
+model Sale {
+  id           Int                   @id @default(autoincrement())
+  salePrice    Float
+  downPayment  Float                 @default(0)
+  tradeInValue Float                 @default(0)
+  saleDate     DateTime              @default(now())
+  deliveryDate DateTime?
+  carId        Int                   @unique
+  customerId   String
+  employeeId   String
+  dealershipId Int
+  financingId  Int?                  @unique
+  car          Car                   @relation(fields: [carId], references: [id])
+  customer     Customer              @relation(fields: [customerId], references: [cognitoId])
+  dealership   Dealership            @relation(fields: [dealershipId], references: [id])
+  employee     Employee              @relation(fields: [employeeId], references: [cognitoId])
+  financing    FinancingApplication? @relation(fields: [financingId], references: [id])
+}
+
+model FinancingApplication {
+  id              Int                         @id @default(autoincrement())
+  loanAmount      Float
+  interestRate    Float
+  termMonths      Int
+  monthlyPayment  Float
+  status          FinancingStatus             @default(PENDING)
+  applicationDate DateTime                    @default(now())
+  approvalDate    DateTime?
+  customerId      String
+  creditScore     Int?
+  annualIncome    Float?
+  customer        Customer                    @relation(fields: [customerId], references: [cognitoId])
+  details         FinancingApplicationDetail?
+  sale            Sale?
+  documents       FinancingApplicationDocument[]
+}
+
+model FinancingApplicationDocument {
+  id                     Int                    @id @default(autoincrement())
+  financingApplicationId Int
+  docType                String
+  originalName           String
+  storedName             String
+  mime                   String
+  size                   Int
+  url                    String
+  uploadedAt             DateTime               @default(now())
+  financingApplication   FinancingApplication   @relation(fields: [financingApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([financingApplicationId])
+  @@index([docType])
+}
+
+model FinancingApplicationDetail {
+  id                      Int                  @id @default(autoincrement())
+  financingApplicationId  Int                  @unique
+  firstName               String
+  lastName                String
+  email                   String
+  phone                   String
+  dateOfBirth             DateTime?
+  idNumber                String?
+  address                 String?
+  city                    String?
+  state                   String?
+  postalCode              String?
+  housingStatus           String?
+  monthlyHousingPayment   Float?
+  employmentStatus        String?
+  employerName            String?
+  jobTitle                String?
+  employmentYears         Float?
+  monthlyIncomeGross      Float?
+  otherIncome             Float?
+  otherIncomeSource       String?
+  creditScoreRange        String?
+  downPaymentAmount       Float?
+  preferredContactMethod  String?
+  hasTradeIn              Boolean              @default(false)
+  tradeInDetails          String?
+  coApplicantName         String?
+  coApplicantIncome       Float?
+  coApplicantRelationship String?
+  consentCreditCheck      Boolean              @default(false)
+  agreeTerms              Boolean              @default(false)
+  // Stores any additional public form fields (vehicle details, next of kin, bank info, expenses, declarations, etc.)
+  extraData               Json?
+  createdAt               DateTime             @default(now())
+  financingApplication    FinancingApplication @relation(fields: [financingApplicationId], references: [id])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  title      String
+  comment    String
+  reviewDate DateTime @default(now())
+  carId      Int
+  customerId String
+  car        Car      @relation(fields: [carId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [cognitoId])
+
+  @@unique([carId, customerId])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+// NOTE: Aligning with existing Postgres enum created in earlier migration which still uses CERTIFIED_PRE_OWNED.
+// Using CERTIFIED here previously caused runtime enum mismatch (500 errors on /api/cars) because DB stores CERTIFIED_PRE_OWNED.
+enum CarCondition {
+  NEW
+  USED
+  CERTIFIED_PRE_OWNED
+  DEALER_DEMO
+}
+
+enum CarType {
+  SEDAN
+  SUV
+  HATCHBACK
+  COUPE
+  CONVERTIBLE
+  WAGON
+  PICKUP_TRUCK
+  VAN
+  MINIVAN
+  CROSSOVER
+  SPORTS_CAR
+  LUXURY
+  HYBRID
+  ELECTRIC
+}
+
+// Re-introduced HYDROGEN to mirror existing DB enum values. Removing it while rows still referenced it triggers runtime errors.
+enum FuelType {
+  // LEGACY: Some existing rows still store GASOLINE. Keep temporarily so Prisma can read them.
+  GASOLINE
+  // PREFERRED: Use PETROL going forward (forms + UI). Migration plan: update rows then remove GASOLINE.
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+  PLUG_IN_HYBRID
+  HYDROGEN
+}
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+  CVT
+  DUAL_CLUTCH
+}
+
+enum CarStatus {
+  AVAILABLE
+  SOLD
+  RESERVED
+  PENDING
+  MAINTENANCE
+  INACTIVE
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum FinancingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum EmployeeRole {
+  SALES_MANAGER
+  SALES_ASSOCIATE
+  FINANCE_MANAGER
+  SERVICE_ADVISOR
+  ADMIN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Post {
+  id              Int       @id @default(autoincrement())
+  title           String
+  slug            String    @unique
+  content         String
+  excerpt         String?
+  coverImage      String?
+  tags            String[]  @default([])
+  published       Boolean   @default(false)
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String[]  @default([])
+  authorId        String?
+  authorName      String?
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Gallery {
+  id        Int      @id @default(autoincrement())
+  url       String   @unique
+  title     String?
+  category  String?  @default("2025")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

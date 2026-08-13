@@ -1,0 +1,507 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useGetAuthUserQuery } from "@/state/api";
+import { 
+  Car, // Changed from Building2
+  User, 
+  Mail, 
+  Phone, 
+  Search, 
+  Filter, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  MessageSquare, // For inquiries
+  DollarSign, // For sales
+  Calendar, // For test drives
+} from "lucide-react"; // Updated icons
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+// Define interfaces for type safety
+interface Dealership {
+  id: number;
+  name: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+}
+
+interface Car {
+  id: number;
+  make: string;
+  model: string;
+  year: number;
+  dealership: Dealership;
+}
+
+interface Customer {
+  id: number;
+  cognitoId: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  inquiryStatus?: string; // Assuming a primary status for display
+  inquiryId?: number;
+  carDetails?: {
+    id: number;
+    make: string;
+    model: string;
+    year: number;
+  };
+}
+
+// Custom hook to fetch customers for an employee
+const useGetEmployeeCustomers = (employeeId: string, skip: boolean) => { // Renamed hook
+  const [customers, setCustomers] = useState<Customer[]>([]); // Changed tenants to customers
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchCustomers = async () => {
+      if (skip || !employeeId) return; // Changed managerId to employeeId
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        let authHeaders = {};
+        try {
+          const session = await fetchAuthSession();
+          const accessToken = session.tokens?.accessToken;
+          if (accessToken) {
+            authHeaders = { Authorization: `Bearer ${accessToken}` };
+          }
+        } catch (authError) {
+          console.warn("Failed to get auth session:", authError);
+        }
+
+        const response = await fetch(`/api/employees/${employeeId}/customers`, { // Updated API endpoint
+          headers: {
+            ...authHeaders,
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch customers: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setCustomers(data.customers || []);
+      } catch (err: any) {
+        console.error("Error fetching customers:", err);
+        setError(err.message);
+        setCustomers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, [employeeId, skip]); // Changed managerId to employeeId
+
+  return { customers, isLoading, error };
+}; {
+          const { fetchAuthSession } = await import('aws-amplify/auth');
+          const session = await fetchAuthSession();
+          const idToken = session.tokens?.idToken?.toString();
+          
+          if (idToken) {
+            authHeaders = {
+              Authorization: `Bearer ${idToken}`
+            };
+          }
+        } catch (authError) {
+          console.warn("Auth session fetch failed:", authError);
+        }
+        
+        {/* Assuming an API endpoint for fetching customers associated with an employee */}
+        const response = await fetch(`/api/employees/${employeeId}/customers`, { {/* Updated API endpoint */}
+          headers: {
+            ...authHeaders
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching customers: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setCustomers(data);
+      } catch (err: any) {
+        console.error("Failed to fetch customers:", err);
+        setError(err.message || "Failed to fetch customers");
+        toast.error("Failed to fetch customers");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCustomers();
+  }, [employeeId, skip]); {/* Changed managerId to employeeId */}
+  
+  return { data: customers, isLoading, error }; {/* Changed tenants to customers */}
+};
+
+function EmployeeCustomersPage() { {/* Renamed component */}
+  const router = useRouter();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  
+  const { data: authUser, isLoading: authLoading } = useGetAuthUserQuery();
+  
+  const { 
+    data: customers, {/* Changed tenants to customers */}
+    isLoading: customersLoading, {/* Changed tenantsLoading to customersLoading */}
+    error: customersError {/* Changed tenantsError to customersError */}
+  } = useGetEmployeeCustomers(
+    authUser?.cognitoInfo?.userId || "", 
+    !authUser?.cognitoInfo?.userId || authUser?.userRole !== "employee" {/* Changed manager to employee */}
+  );
+  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); {/* For inquiry status */}
+  const [carFilter, setCarFilter] = useState("all"); {/* Changed propertyFilter to carFilter */}
+  
+  const uniqueCars = React.useMemo(() => { {/* Changed uniqueProperties to uniqueCars */}
+    const cars = new Map(); {/* Changed properties to cars */}
+    
+    customers?.forEach(customer => { {/* Changed tenants to customers */}
+      if (customer.carDetails) { {/* Changed propertyDetails to carDetails */}
+        cars.set(customer.carDetails.id, { {/* Changed propertyDetails to carDetails */}
+          id: customer.carDetails.id,
+          make: customer.carDetails.make,
+          model: customer.carDetails.model,
+          year: customer.carDetails.year,
+        });
+      }
+    });
+    
+    return Array.from(cars.values()); {/* Changed properties to cars */}
+  }, [customers]); {/* Changed tenants to customers */}
+  
+  const filteredCustomers = React.useMemo(() => { {/* Changed filteredTenants to filteredCustomers */}
+    if (!customers) return []; {/* Changed tenants to customers */}
+    
+    return customers.filter(customer => { {/* Changed tenant to customer */}
+      const searchMatch = 
+        searchTerm === "" ||
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.carDetails?.make || "").toLowerCase().includes(searchTerm.toLowerCase()) || {/* Updated search */}
+        (customer.carDetails?.model || "").toLowerCase().includes(searchTerm.toLowerCase()); {/* Updated search */}
+      
+      const statusMatch = 
+        statusFilter === "all" || 
+        customer.inquiryStatus === statusFilter; {/* Changed applicationStatus to inquiryStatus */}
+      
+      const carMatch = 
+        carFilter === "all" || 
+        (customer.carDetails && customer.carDetails.id.toString() === carFilter); {/* Changed propertyDetails to carDetails */}
+      
+      return searchMatch && statusMatch && carMatch;
+    });
+  }, [customers, searchTerm, statusFilter, carFilter]); {/* Changed tenants to customers, propertyFilter to carFilter */}
+  
+  const isLoading = authLoading || customersLoading; {/* Changed tenantsLoading to customersLoading */}
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  if (authUser?.userRole !== "employee") { {/* Changed manager to employee */}
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <XCircle className="h-16 w-16 text-red-500 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+        <p className="text-gray-500 mb-4">You don&apos;t have permission to view this page.</p>
+        <Button onClick={() => router.push("/")}>Go to Home</Button>
+      </div>
+    );
+  }
+  
+  const getStatusBadge = (status: string) => { {/* For inquiry status */}
+    switch (status) {
+      case "NEW":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+            <Clock className="h-3 w-3 mr-1" />
+            New
+          </Badge>
+        );
+      case "CONTACTED":
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Contacted
+          </Badge>
+        );
+      case "SCHEDULED":
+        return (
+          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+            <Calendar className="h-3 w-3 mr-1" />
+            Scheduled
+          </Badge>
+        );
+      case "COMPLETED":
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        );
+      case "CANCELLED":
+        return (
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            <XCircle className="h-3 w-3 mr-1" />
+            Cancelled
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400">
+            Unknown
+          </Badge>
+        );
+    }
+  };
+  
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center">
+        <h1 className={cn(
+          "text-3xl font-bold tracking-tight",
+          isDark ? "text-white" : "text-slate-900"
+        )}>
+          Manage Customers
+        </h1>
+        <Button 
+          onClick={() => router.push('/employees/dashboard')} {/* Updated path */}
+          variant="outline"
+        >
+          Back to Dashboard
+        </Button>
+      </div>
+      
+      {/* Filters */}
+      <Card className={cn(
+        "shadow-sm",
+        isDark ? "bg-gray-800" : "bg-white"
+      )}>
+        <CardHeader className="pb-2">
+          <CardTitle>Filters</CardTitle>
+          <CardDescription>Filter customers by name, inquiry status, or car</CardDescription> {/* Updated text */}
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Search customers..." {/* Updated text */}
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by inquiry status" /> {/* Updated text */}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="NEW">New</SelectItem>
+                  <SelectItem value="CONTACTED">Contacted</SelectItem>
+                  <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select value={carFilter} onValueChange={setCarFilter}> {/* Changed propertyFilter to carFilter */}
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by car" /> {/* Updated text */}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cars</SelectItem> {/* Updated text */}
+                  {uniqueCars.map((car) => ( {/* Changed uniqueProperties to uniqueCars */}
+                    <SelectItem key={car.id} value={car.id.toString()}> {/* Changed property to car */}
+                      {`${car.make} ${car.model} (${car.year})`} {/* Updated text */}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                  setCarFilter("all"); {/* Changed setPropertyFilter to setCarFilter */}
+                }}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Reset Filters
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Customers Table */}
+      <Card className={cn(
+        "shadow-sm",
+        isDark ? "bg-gray-800" : "bg-white"
+      )}>
+        <CardHeader className="pb-2">
+          <CardTitle>Customers</CardTitle> {/* Updated text */}
+          <CardDescription>
+            {filteredCustomers.length} {filteredCustomers.length === 1 ? "customer" : "customers"} found {/* Updated text */}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredCustomers.length === 0 ? (
+            <div className="text-center py-8">
+              <User className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+              <h3 className="text-lg font-medium mb-1">No customers found</h3> {/* Updated text */}
+              <p className="text-gray-500 mb-4">
+                {customers?.length ? "Try adjusting your filters" : "You don't have any customers yet"} {/* Updated text */}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead> {/* Updated text */}
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Car of Interest</TableHead> {/* Updated text */}
+                    <TableHead>Inquiry Status</TableHead> {/* Updated text */}
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map((customer) => ( {/* Changed tenant to customer */}
+                    <TableRow key={customer.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "p-2 rounded-full",
+                            isDark ? "bg-blue-900/30" : "bg-blue-100"
+                          )}>
+                            <User className={cn(
+                              "h-4 w-4",
+                              isDark ? "text-blue-400" : "text-blue-600"
+                            )} />
+                          </div>
+                          <div>
+                            <p className="font-medium">{customer.name}</p>
+                            <p className="text-sm text-gray-500">{customer.cognitoId}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Mail className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
+                            <span className="text-sm">{customer.email}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Phone className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
+                            <span className="text-sm">{customer.phoneNumber || "Not provided"}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {customer.carDetails ? (
+                          <div className="space-y-1">
+                            <p className="font-medium">{`${customer.carDetails.year} ${customer.carDetails.make} ${customer.carDetails.model}`}</p> {/* Updated text */}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">No car of interest</span> {/* Updated text */}
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(customer.inquiryStatus || "NEW")} {/* Changed applicationStatus to inquiryStatus */}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              Actions
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Customer Actions</DropdownMenuLabel> {/* Updated text */}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => router.push(`/employees/inquiries/${customer.inquiryId}`)}> {/* Updated path */}
+                              View Latest Inquiry
+                            </DropdownMenuItem>
+                            {customer.carDetails && (
+                              <DropdownMenuItem onClick={() => router.push(`/employees/inventory/${customer.carDetails?.id}`)}> {/* Updated path */}
+                                View Car
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => toast.info("Schedule Test Drive feature coming soon")}> {/* Updated text */}
+                              Schedule Test Drive
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toast.info("Contact feature coming soon")}>
+                              Contact Customer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default EmployeeCustomersPage; {/* Changed export name */}

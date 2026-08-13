@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Prisma: Generate + Seed",
+			"type": "shell",
+			"command": "node -e \"console.log('Generating Prisma Client...')\" && npx prisma generate && node -e \"console.log('Seeding...')\" && npx prisma db seed",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		}
+	]
+}

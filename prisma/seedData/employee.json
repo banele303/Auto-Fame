@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "cognitoId": "employee1_cognito_id",
+    "name": "John Doe",
+    "email": "john.doe@sacar.com",
+    "phoneNumber": "+27821234567",
+    "role": "SALES_MANAGER",
+    "status": "ACTIVE",
+    "hireDate": "2022-01-15T00:00:00Z",
+    "commission": 0.05,
+    "dealershipId": 1
+  },
+  {
+    "id": 2,
+    "cognitoId": "employee2_cognito_id",
+    "name": "Jane Smith",
+    "email": "jane.smith@sacar.com",
+    "phoneNumber": "+27719876543",
+    "role": "SALES_ASSOCIATE",
+    "status": "ACTIVE",
+    "hireDate": "2023-03-01T00:00:00Z",
+    "commission": 0.03,
+    "dealershipId": 1
+  },
+  {
+    "id": 3,
+    "cognitoId": "employee3_cognito_id",
+    "name": "Peter Jones",
+    "email": "peter.jones@sacar.com",
+    "phoneNumber": "+27601112222",
+    "role": "ADMIN",
+    "status": "ACTIVE",
+    "hireDate": "2021-06-20T00:00:00Z",
+    "commission": 0.0,
+    "dealershipId": 2
+  }
+]

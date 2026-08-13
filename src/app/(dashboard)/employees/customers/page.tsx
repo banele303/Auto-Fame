@@ -1,0 +1,507 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useGetAuthUserQuery } from "@/state/api";
+import { 
+  Car, // Changed from Building2
+  User, 
+  Mail, 
+  Phone, 
+  Search, 
+  Filter, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  MessageSquare, // For inquiries
+  DollarSign, // For sales
+  Calendar, // For test drives
+} from "lucide-react"; // Updated icons
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+// Define interfaces for type safety
+interface Dealership {
+  id: number;
+  name: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+}
+
+interface Car {
+  id: number;
+  make: string;
+  model: string;
+  year: number;
+  dealership: Dealership;
+}
+
+interface Customer {
+  id: number;
+  cognitoId: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  inquiryStatus?: string; // Assuming a primary status for display
+  inquiryId?: number;
+  carDetails?: {
+    id: number;
+    make: string;
+    model: string;
+    year: number;
+  };
+}
+
+// Custom hook to fetch customers for an employee
+const useGetEmployeeCustomers = (employeeId: string, skip: boolean) => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchCustomers = async () => {
+      if (skip || !employeeId) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        let authHeaders = {};
+        try {
+          const { fetchAuthSession } = await import('aws-amplify/auth');
+          const session = await fetchAuthSession();
+          const idToken = session.tokens?.idToken?.toString();
+          
+          if (idToken) {
+            authHeaders = {
+              Authorization: `Bearer ${idToken}`
+            };
+          }
+        } catch (authError) {
+          console.warn("Auth session fetch failed:", authError);
+        }
+        
+        // Assuming an API endpoint for fetching customers associated with an employee
+        const response = await fetch(`/api/employees/${employeeId}/customers`, {
+          headers: {
+            ...authHeaders
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching customers: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setCustomers(data);
+      } catch (err: any) {
+        console.error("Failed to fetch customers:", err);
+        setError(err.message || "Failed to fetch customers");
+        toast.error("Failed to fetch customers");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCustomers();
+  }, [employeeId, skip]);
+  
+  return { data: customers, isLoading, error };
+};
+
+function EmployeeCustomersPage() {
+  const router = useRouter();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  
+  const { data: authUser, isLoading: authLoading } = useGetAuthUserQuery();
+  
+  const { 
+    data: customers,
+    isLoading: customersLoading,
+    error: customersError
+  } = useGetEmployeeCustomers(
+    authUser?.cognitoInfo?.userId || "", 
+    !authUser?.cognitoInfo?.userId || authUser?.userRole !== "employee"
+  );
+  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [carFilter, setCarFilter] = useState("all");
+  
+  const uniqueCars = React.useMemo(() => {
+    const cars = new Map();
+    
+    customers?.forEach(customer => {
+      if (customer.carDetails) {
+        cars.set(customer.carDetails.id, {
+          id: customer.carDetails.id,
+          make: customer.carDetails.make,
+          model: customer.carDetails.model,
+          year: customer.carDetails.year,
+        });
+      }
+    });
+    
+    return Array.from(cars.values());
+  }, [customers]);
+  
+  const filteredCustomers = React.useMemo(() => {
+    if (!customers) return [];
+    
+    return customers.filter(customer => {
+      const searchMatch = 
+        searchTerm === "" ||
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.carDetails?.make || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.carDetails?.model || "").toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const statusMatch = 
+        statusFilter === "all" || 
+        customer.inquiryStatus === statusFilter;
+      
+      const carMatch = 
+        carFilter === "all" || 
+        (customer.carDetails && customer.carDetails.id.toString() === carFilter);
+      
+      return searchMatch && statusMatch && carMatch;
+    });
+  }, [customers, searchTerm, statusFilter, carFilter]);
+  
+  const isLoading = authLoading || customersLoading;
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  if (authUser?.userRole !== "employee") {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <XCircle className="h-16 w-16 text-red-500 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+        <p className="text-gray-500 mb-4">You don&apos;t have permission to view this page.</p>
+        <Button onClick={() => router.push("/")}>Go to Home</Button>
+      </div>
+    );
+  }
+  
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "NEW":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+            <Clock className="h-3 w-3 mr-1" />
+            New
+          </Badge>
+        );
+      case "CONTACTED":
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Contacted
+          </Badge>
+        );
+      case "SCHEDULED":
+        return (
+          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+            <Calendar className="h-3 w-3 mr-1" />
+            Scheduled
+          </Badge>
+        );
+      case "COMPLETED":
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        );
+      case "CANCELLED":
+        return (
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            <XCircle className="h-3 w-3 mr-1" />
+            Cancelled
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400">
+            Unknown
+          </Badge>
+        );
+    }
+  };
+
+  return (
+    <div className={cn(
+      "min-h-screen transition-colors duration-300",
+      isDark ? "bg-black" : "bg-gray-50"
+    )}>
+      <div className="max-w-7xl mx-auto p-6">
+        
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => router.push('/employees/dashboard')}
+              className="flex items-center gap-2"
+            >
+              <Car className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">My Customers</h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage customers associated with your sales
+              </p>
+            </div>
+          </div>
+        </div>
+
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{customers?.length || 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Active Inquiries</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {customers?.filter(c => c.inquiryStatus && c.inquiryStatus !== "COMPLETED" && c.inquiryStatus !== "CANCELLED").length || 0}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Cars Involved</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{uniqueCars.length}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="NEW">New</SelectItem>
+                  <SelectItem value="CONTACTED">Contacted</SelectItem>
+                  <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={carFilter} onValueChange={setCarFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by car" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cars</SelectItem>
+                  {uniqueCars.map((car) => (
+                    <SelectItem key={car.id} value={car.id.toString()}>
+                      {`${car.make} ${car.model} (${car.year})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Customers ({filteredCustomers.length})</CardTitle>
+            <CardDescription>
+              Customers who have shown interest in cars you&apos;re managing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filteredCustomers.length > 0 ? (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Car Interest</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCustomers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium",
+                              isDark ? "bg-blue-800 text-white" : "bg-blue-100 text-blue-800"
+                            )}>
+                              {customer.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-medium">{customer.name}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail className="h-3 w-3" />
+                              {customer.email}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Phone className="h-3 w-3" />
+                              {customer.phoneNumber}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {customer.carDetails ? (
+                            <div className="text-sm">
+                              <div className="font-medium">
+                                {customer.carDetails.year} {customer.carDetails.make} {customer.carDetails.model}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">No car specified</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {customer.inquiryStatus ? getStatusBadge(customer.inquiryStatus) : (
+                            <Badge variant="outline">No Status</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => window.location.href = `mailto:${customer.email}`}
+                              >
+                                <Mail className="mr-2 h-4 w-4" />
+                                Send Email
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => window.location.href = `tel:${customer.phoneNumber}`}
+                              >
+                                <Phone className="mr-2 h-4 w-4" />
+                                Call Customer
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/admin/customers/${customer.cognitoId}`)}
+                              >
+                                <User className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No customers found</h3>
+                <p className="text-gray-500">
+                  {customers?.length === 0 
+                    ? "You don't have any customers yet."
+                    : "No customers match your current filters."
+                  }
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {customersError && (
+          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-800 dark:text-red-400">
+              Error loading customers: {customersError}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default EmployeeCustomersPage;

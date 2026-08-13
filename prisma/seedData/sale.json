@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "salePrice": 340000,
+    "downPayment": 50000,
+    "tradeInValue": 20000,
+    "saleDate": "2024-03-12T16:00:00Z",
+    "deliveryDate": "2024-03-15T10:00:00Z",
+    "carId": 1,
+    "customerId": "customer1_cognito_id",
+    "employeeId": "employee2_cognito_id",
+    "dealershipId": 1,
+    "financingId": null
+  }
+]

@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "loanAmount": 290000,
+    "interestRate": 0.08,
+    "termMonths": 60,
+    "monthlyPayment": 5880.5,
+    "status": "APPROVED",
+    "applicationDate": "2024-03-10T11:30:00Z",
+    "approvalDate": "2024-03-11T09:00:00Z",
+    "customerId": "customer1_cognito_id",
+    "creditScore": 720,
+    "annualIncome": 600000
+  }
+]

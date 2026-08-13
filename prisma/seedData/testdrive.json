@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "scheduledDate": "2024-03-10T11:00:00Z",
+    "actualDate": "2024-03-10T11:05:00Z",
+    "duration": 30,
+    "notes": "Customer was very interested. Discussed financing options.",
+    "completed": true,
+    "carId": 1,
+    "customerId": "customer1_cognito_id",
+    "employeeId": "employee2_cognito_id",
+    "dealershipId": 1
+  },
+  {
+    "id": 2,
+    "scheduledDate": "2024-03-15T15:00:00Z",
+    "actualDate": null,
+    "duration": null,
+    "notes": null,
+    "completed": false,
+    "carId": 2,
+    "customerId": "customer2_cognito_id",
+    "employeeId": "employee3_cognito_id",
+    "dealershipId": 2
+  }
+]

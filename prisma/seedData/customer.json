@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "cognitoId": "customer1_cognito_id",
+    "name": "Alice Johnson",
+    "email": "alice.j@example.com",
+    "phoneNumber": "+27721112222",
+    "address": "10 Oak Avenue",
+    "city": "Johannesburg",
+    "state": "Gauteng",
+    "postalCode": "2000",
+    "dateOfBirth": "1990-05-20T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "cognitoId": "customer2_cognito_id",
+    "name": "Bob Williams",
+    "email": "bob.w@example.com",
+    "phoneNumber": "+27833334444",
+    "address": "25 Pine Street",
+    "city": "Cape Town",
+    "state": "Western Cape",
+    "postalCode": "8001",
+    "dateOfBirth": "1985-11-10T00:00:00Z"
+  }
+]

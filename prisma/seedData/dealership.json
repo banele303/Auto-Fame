@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1,
+    "name": "SaCar Johannesburg",
+    "address": "123 Main Street, Sandton",
+    "city": "Johannesburg",
+    "state": "Gauteng",
+    "country": "South Africa",
+    "postalCode": "2196",
+    "phoneNumber": "+27111234567",
+    "email": "jhb@sacar.com",
+    "website": "https://www.sacarjhb.com",
+    "coordinates": "POINT(28.0473 -26.2041)"
+  },
+  {
+    "id": 2,
+    "name": "SaCar Cape Town",
+    "address": "456 Waterfront Drive, V&A Waterfront",
+    "city": "Cape Town",
+    "state": "Western Cape",
+    "country": "South Africa",
+    "postalCode": "8001",
+    "phoneNumber": "+27214567890",
+    "email": "cpt@sacar.com",
+    "website": "https://www.sacarcpt.com",
+    "coordinates": "POINT(18.4241 -33.9249)"
+  }
+]
