@@ -142,10 +142,10 @@ export default function HeroSection() {
           alt="Luxury vehicle background"
           fill
           priority
-          className="object-cover object-center opacity-35 filter contrast-125 brightness-90"
+          className="object-cover object-center sm:object-[center_35%] opacity-65 sm:opacity-60 filter contrast-125 brightness-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#070A08] via-[#070A08]/85 to-[#070A08]/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#070A08] via-transparent to-[#070A08]/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#070A08]/90 via-[#070A08]/65 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#070A08] via-transparent to-[#070A08]/50" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
