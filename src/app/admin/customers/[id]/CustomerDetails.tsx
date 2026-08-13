@@ -104,10 +104,7 @@ export default function CustomerDetailsClient({ id }: CustomerDetailsProps) {
       </div>
       
       
-      <Card className={cn(
-        "p-6 mb-6",
-        isDark ? "bg-slate-800" : "bg-white"
-      )}>
+      <Card className="p-6 mb-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="flex items-center mb-4 md:mb-0">
             <div className={cn(

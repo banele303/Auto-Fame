@@ -99,7 +99,7 @@ const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ userRole = "adm
 
       
       {error && (
-        <div className="p-4 rounded-md bg-red-50 text-red-600 border border-red-200 text-sm">{error}</div>
+        <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800/50 text-sm">{error}</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

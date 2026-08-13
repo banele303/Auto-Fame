@@ -1,305 +1,213 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Car, 
-  Mail, 
-  Phone, 
-  ArrowLeft, 
-  Gauge, 
-  ClipboardList, 
-  Users,
-  Building,
-  Eye,
-  DollarSign,
-  MessageSquare,
-  Calendar,
-  Key,
-  Fuel,
-  MapPin,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { useGetCarQuery } from "@/state/api";
-import { DetailPageSkeleton } from "@/components/ui/skeletons";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Car, DollarSign, Calendar, MapPin, Key, Shield, Users } from "lucide-react";
+import { resolveCarImageUrl } from "@/utils/imageUrl";
 
-
-export default function AdminCarDetailsPage() {
+export default function AdminCarDetailPage() {
   const params = useParams();
-  const carId = Number(params.id);
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
   const router = useRouter();
-  
-  const { data: car, isLoading: carLoading, error: carError } = useGetCarQuery(carId);
+  const idStr = params?.id as string;
+  const numericId = parseInt(idStr, 10);
 
-  if (carLoading) {
-    return <DetailPageSkeleton />;
-  }
-  
-  if (carError) {
+  const { data: car, isLoading, error } = useGetCarQuery(numericId, {
+    skip: !numericId || isNaN(numericId),
+  });
+
+  if (isLoading) {
     return (
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="flex items-center mb-6">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => router.back()}
-            className="mr-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Error</h1>
-        </div>
-        <Card className="p-6">
-          <p className="text-red-500">{(carError as any)?.data?.message || "Failed to load car information. Please try again."}</p>
-          <Button 
-            className="mt-4" 
-            onClick={() => router.push("/admin/cars")}
-          >
-            Go to Cars List
-          </Button>
-        </Card>
+      <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+        Loading vehicle details...
       </div>
     );
   }
-  
+
+  if (error || !car) {
+    return (
+      <div className="p-8 max-w-xl mx-auto text-center space-y-4">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Vehicle Not Found</h2>
+        <p className="text-slate-500 dark:text-slate-400">
+          The requested vehicle record could not be found or has been removed.
+        </p>
+        <Button onClick={() => router.push("/admin/cars")}>Back to Inventory</Button>
+      </div>
+    );
+  }
+
   const carData = {
-    id: car?.id || carId,
-    make: car?.make || "Unknown",
-    model: car?.model || "Car",
-    year: car?.year || 0,
-    price: car?.price || 0,
-    mileage: car?.mileage || 0,
-    condition: car?.condition || "Unknown",
-    carType: car?.carType || "",
-    fuelType: car?.fuelType || "",
-    transmission: car?.transmission || "",
-    engine: car?.engine || "",
-    exteriorColor: car?.exteriorColor || "",
-    interiorColor: car?.interiorColor || "",
-    description: car?.description || "",
-    features: car?.features || [],
-    photoUrls: car?.photoUrls || [],
-    status: car?.status || "UNKNOWN",
-    postedDate: car?.postedDate || "",
-    updatedAt: car?.updatedAt || "",
-    averageRating: car?.averageRating || 0,
-    numberOfReviews: car?.numberOfReviews || 0,
-    vin: car?.vin || "N/A",
-    dealership: (car as any)?.dealership || { id: 0, name: "Unknown Dealership" },
-    employee: (car as any)?.employee || { id: 0, name: "Unknown Employee" },
+    id: car.id,
+    make: car.make || "Unknown",
+    model: car.model || "Unknown",
+    year: car.year || 0,
+    price: car.price || 0,
+    mileage: car.mileage || 0,
+    condition: car.condition || "Pre-Owned",
+    carType: car.carType || "",
+    fuelType: car.fuelType || "",
+    transmission: car.transmission || "",
+    description: car.description || "",
+    features: car.features || [],
+    photoUrls: car.photoUrls || [],
+    status: car.status || "AVAILABLE",
+    vin: car.vin || "N/A",
+    dealership: (car as any)?.dealership || { name: "AutoFame Flagship Showroom" },
   };
-  
+
+  const primaryImage = resolveCarImageUrl(carData.photoUrls?.[0]);
+
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-center mb-6">
-        <Button 
-          variant="outline" 
-          size="sm" 
+    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => router.back()}
-          className="mr-4"
+          className="rounded-xl border-slate-200 dark:border-slate-800"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <h1 className="text-2xl font-bold">Car Details</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-display">
+          Vehicle Overview
+        </h1>
       </div>
-      
-      
-      <Card className={cn(
-        "p-6 mb-6",
-        isDark ? "bg-slate-800" : "bg-white"
-      )}>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center mb-4 md:mb-0">
-            <div className={cn(
-              "h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold mr-4",
-              isDark ? "bg-blue-800 text-white" : "bg-blue-100 text-blue-800"
-            )}>
-              {carData.make && carData.make.length > 0 ? carData.make.charAt(0).toUpperCase() : "C"}
+
+      {/* Main Header Card */}
+      <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-[#00A211] font-bold text-2xl flex items-center justify-center border border-emerald-500/30">
+              {carData.make.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h2 className="text-xl font-bold">{`${carData.year} ${carData.make} ${carData.model}`}</h2>
-              <div className="flex items-center text-sm mt-1">
-                <Key className="h-4 w-4 mr-1 text-blue-500" />
-                <span>VIN: {carData.vin}</span>
-              </div>
-              <div className="flex items-center text-sm mt-1">
-                <MapPin className="h-4 w-4 mr-1 text-blue-500" />
-                <span>{carData.dealership?.name || "N/A"}</span>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                {carData.year} {carData.make} {carData.model}
+              </h2>
+              <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-500 dark:text-slate-400 mt-1">
+                <span className="flex items-center gap-1">
+                  <Key className="h-3.5 w-3.5 text-[#00A211]" />
+                  VIN: {carData.vin}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-[#00A211]" />
+                  {carData.dealership?.name}
+                </span>
               </div>
             </div>
           </div>
-          
-          <div>
-            <div className={cn(
-              "px-3 py-1 rounded-full inline-block",
-              carData.status === "AVAILABLE" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
-              carData.status === "SOLD" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
-              "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-            )}>
+
+          <div className="flex items-center gap-3">
+            <span
+              className={`px-3.5 py-1.5 rounded-full text-xs font-mono font-bold tracking-wide uppercase border ${
+                carData.status === "AVAILABLE"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                  : carData.status === "SOLD"
+                  ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30"
+                  : "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30"
+              }`}
+            >
               {carData.status}
-            </div>
+            </span>
           </div>
         </div>
       </Card>
-      
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className={cn(
-          "p-4",
-          isDark ? "bg-slate-800" : "bg-white"
-        )}>
-          <div className="flex items-center">
-            <div className={cn(
-              "h-10 w-10 rounded-full flex items-center justify-center mr-3",
-              isDark ? "bg-blue-900/30 text-blue-400" : "bg-blue-100 text-blue-600"
-            )}>
+
+      {/* Highlights Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-[#00A211] flex items-center justify-center">
               <DollarSign className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Price</p>
-              <p className="text-xl font-bold">R{carData.price.toLocaleString()}</p>
+              <p className="text-xs font-mono uppercase text-slate-400">Price</p>
+              <p className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">
+                R {carData.price.toLocaleString()}
+              </p>
             </div>
           </div>
         </Card>
-        
-        <Card className={cn(
-          "p-4",
-          isDark ? "bg-slate-800" : "bg-white"
-        )}>
-          <div className="flex items-center">
-            <div className={cn(
-              "h-10 w-10 rounded-full flex items-center justify-center mr-3",
-              isDark ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-600"
-            )}>
-              <Gauge className="h-5 w-5" />
+
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+              <Car className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Mileage</p>
-              <p className="text-xl font-bold">{carData.mileage.toLocaleString()} km</p>
+              <p className="text-xs font-mono uppercase text-slate-400">Mileage</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white font-mono">
+                {carData.mileage.toLocaleString()} km
+              </p>
             </div>
           </div>
         </Card>
-        
-        <Card className={cn(
-          "p-4",
-          isDark ? "bg-slate-800" : "bg-white"
-        )}>
-          <div className="flex items-center">
-            <div className={cn(
-              "h-10 w-10 rounded-full flex items-center justify-center mr-3",
-              isDark ? "bg-yellow-900/30 text-yellow-400" : "bg-yellow-100 text-yellow-600"
-            )}>
+
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
               <Calendar className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Year</p>
-              <p className="text-xl font-bold">{carData.year}</p>
+              <p className="text-xs font-mono uppercase text-slate-400">Year</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white font-mono">
+                {carData.year}
+              </p>
             </div>
           </div>
         </Card>
-        
-        <Card className={cn(
-          "p-4",
-          isDark ? "bg-slate-800" : "bg-white"
-        )}>
-          <div className="flex items-center">
-            <div className={cn(
-              "h-10 w-10 rounded-full flex items-center justify-center mr-3",
-              isDark ? "bg-purple-900/30 text-purple-400" : "bg-purple-100 text-purple-600"
-            )}>
-              <Users className="h-5 w-5" />
+
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <Shield className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Reviews</p>
-              <p className="text-xl font-bold">{carData.numberOfReviews || 0}</p>
+              <p className="text-xs font-mono uppercase text-slate-400">Condition</p>
+              <p className="text-base font-bold text-slate-900 dark:text-white">
+                {carData.condition}
+              </p>
             </div>
           </div>
         </Card>
       </div>
-      
-      
+
+      {/* Tabs Section */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsList className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
+          <TabsTrigger value="overview">Overview & Specifications</TabsTrigger>
         </TabsList>
-        
-        
-        <TabsContent value="overview" className="mt-4">
-          <div className="space-y-4">
-            <Card className={cn(
-              "p-4 hover:shadow-md transition-shadow",
-              isDark ? "bg-slate-800" : "bg-white"
-            )}>
-              <h3 className="font-medium mb-2">Vehicle Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Condition</p>
-                  <p className="font-medium">{carData.condition}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Car Type</p>
-                  <p className="font-medium">{carData.carType || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Fuel Type</p>
-                  <p className="font-medium">{carData.fuelType || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Transmission</p>
-                  <p className="font-medium">{carData.transmission || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Engine</p>
-                  <p className="font-medium">{carData.engine || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">VIN</p>
-                  <p className="font-medium">{carData.vin}</p>
-                </div>
+
+        <TabsContent value="overview" className="mt-4 space-y-4">
+          <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+              Technical Specifications
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 text-sm">
+              <div>
+                <p className="text-xs text-slate-400 font-mono uppercase">Body Style</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1">
+                  {carData.carType || "N/A"}
+                </p>
               </div>
-            </Card>
-            
-            <Card className={cn(
-              "p-4 hover:shadow-md transition-shadow",
-              isDark ? "bg-slate-800" : "bg-white"
-            )}>
-              <h3 className="font-medium mb-2">Description</h3>
-              <p className="text-sm text-gray-500">{carData.description || "No description available."}</p>
-            </Card>
-            
-            <Card className={cn(
-              "p-4 hover:shadow-md transition-shadow",
-              isDark ? "bg-slate-800" : "bg-white"
-            )}>
-              <h3 className="font-medium mb-2">Features</h3>
-              <div className="flex flex-wrap gap-2">
-                {carData.features.length > 0 ? (
-                  carData.features.map((feature, index) => (
-                    <Badge key={index} variant="secondary">{feature}</Badge>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">No features listed.</p>
-                )}
+              <div>
+                <p className="text-xs text-slate-400 font-mono uppercase">Fuel Type</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1">
+                  {carData.fuelType || "N/A"}
+                </p>
               </div>
-            </Card>
-            
-            <Card className={cn(
-              "p-4 hover:shadow-md transition-shadow",
-              isDark ? "bg-slate-800" : "bg-white"
-            )}>
-              <h3 className="font-medium mb-2">Colors</h3>
-              <p className="text-sm text-gray-500">Exterior: {carData.exteriorColor || "N/A"}, Interior: {carData.interiorColor || "N/A"}</p>
-            </Card>
-          </div>
+              <div>
+                <p className="text-xs text-slate-400 font-mono uppercase">Transmission</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1">
+                  {carData.transmission || "N/A"}
+                </p>
+              </div>
+            </div>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

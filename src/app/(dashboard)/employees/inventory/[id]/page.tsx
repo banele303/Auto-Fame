@@ -89,9 +89,9 @@ const CarDetails = () => {
           <span>Back to Inventory</span>
         </Link>
         
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-700 mb-2">Car Not Found</h2>
-          <p className="text-gray-600 mb-4">The car you&apos;re looking for doesn&apos;t exist or has been removed.</p>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-6 text-center">
+          <h2 className="text-xl font-semibold text-red-700 dark:text-red-300 mb-2">Car Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">The car you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <Button
             onClick={() => router.push('/employees/inventory')}
             className="bg-primary hover:bg-primary/90"

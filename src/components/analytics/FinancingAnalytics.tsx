@@ -75,7 +75,7 @@ export default function FinancingAnalytics() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-md shadow-md">
+        <div className="bg-white dark:bg-slate-900 p-3 border border-gray-200 dark:border-gray-700 rounded-md shadow-md">
           <p className="font-semibold">{`${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={`item-${index}`} style={{ color: entry.color }}>

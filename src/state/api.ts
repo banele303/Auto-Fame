@@ -241,12 +241,17 @@ export const api = createApi({
 
         // --- SALES / TRANSACTIONS ENDPOINTS ---
         } else if (path === "sales" && method === "GET") {
-          data = await convexClient.query("transactions:getSales", {
-            customerId: params?.customerId,
-            employeeId: params?.employeeId,
-            carId: params?.carId ? parseInt(params.carId) : undefined,
-            dealershipId: params?.dealershipId ? parseInt(params.dealershipId) : undefined,
-          });
+          try {
+            data = await convexClient.query("transactions:getSales", {
+              customerId: params?.customerId,
+              employeeId: params?.employeeId,
+              carId: params?.carId ? parseInt(params.carId) : undefined,
+              dealershipId: params?.dealershipId ? parseInt(params.dealershipId) : undefined,
+            });
+          } catch (err) {
+            console.warn("Failed to fetch sales from Convex:", err);
+            data = [];
+          }
         } else if (path === "sales" && method === "POST") {
           data = await convexClient.mutation("transactions:createSale", body);
         } else if (path === "test-drives" && method === "GET") {

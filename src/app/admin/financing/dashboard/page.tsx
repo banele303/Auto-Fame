@@ -289,7 +289,7 @@ export default function FinancingDashboardPage() {
                     {stats && stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0}%
                   </span>
                 </div>
-                <Progress value={stats && stats.total > 0 ? (stats.approved / stats.total) * 100 : 0} className="h-2 bg-gray-200" indicatorClassName="bg-green-600" />
+                <Progress value={stats && stats.total > 0 ? (stats.approved / stats.total) * 100 : 0} className="h-2 bg-gray-200 dark:bg-gray-700" indicatorClassName="bg-green-600" />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -298,7 +298,7 @@ export default function FinancingDashboardPage() {
                     {stats && stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0}%
                   </span>
                 </div>
-                <Progress value={stats && stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0} className="h-2 bg-gray-200" indicatorClassName="bg-red-600" />
+                <Progress value={stats && stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0} className="h-2 bg-gray-200 dark:bg-gray-700" indicatorClassName="bg-red-600" />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -307,7 +307,7 @@ export default function FinancingDashboardPage() {
                     {stats && stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}%
                   </span>
                 </div>
-                <Progress value={stats && stats.total > 0 ? (stats.pending / stats.total) * 100 : 0} className="h-2 bg-gray-200" indicatorClassName="bg-amber-500" />
+                <Progress value={stats && stats.total > 0 ? (stats.pending / stats.total) * 100 : 0} className="h-2 bg-gray-200 dark:bg-gray-700" indicatorClassName="bg-amber-500" />
               </div>
             </div>
           </CardContent>
@@ -340,7 +340,7 @@ export default function FinancingDashboardPage() {
                   value={stats && stats.applicationsByNSFAS && stats.applicationsByNSFAS.total > 0 
                     ? (stats.applicationsByNSFAS.approved / stats.applicationsByNSFAS.total) * 100 
                     : 0} 
-                  className="h-2 bg-gray-200" 
+                  className="h-2 bg-gray-200 dark:bg-gray-700" 
                   indicatorClassName="bg-purple-600" 
                 />
               </div>

@@ -876,7 +876,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
           </Button>
         </div>
         {uploadProgress && (
-          <div className="w-full bg-gray-200 h-2 rounded overflow-hidden">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded overflow-hidden">
             <div className="h-full bg-blue-600 transition-all" style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }} />
           </div>
         )}

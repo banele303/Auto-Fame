@@ -592,11 +592,11 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
               <div className="flex flex-col items-center justify-center py-4">
                 <div className="relative w-36 h-36">
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <BarChart className="w-16 h-16 text-gray-200" />
+                    <BarChart className="w-16 h-16 text-gray-200 dark:text-gray-700" />
                   </div>
                   <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 100 100">
                     <circle
-                      className="text-gray-200"
+                      className="text-gray-200 dark:text-gray-700"
                       strokeWidth="10"
                       stroke="currentColor"
                       fill="transparent"
@@ -632,7 +632,7 @@ export default function FinancingApplicationDetail({ params }: { params: { id: s
                     <span>Good</span>
                     <span>Excellent</span>
                   </div>
-                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       className={`h-full ${
                         creditScore >= 750 ? 'bg-green-500' : 

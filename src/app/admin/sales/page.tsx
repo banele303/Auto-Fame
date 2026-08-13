@@ -64,12 +64,12 @@ const AdminSalesPage = () => {
   
   const { data: sales, isLoading: salesLoading, refetch } = useGetSalesQuery(
     undefined, 
-    { skip: !adminUser?.cognitoId }
+    { skip: !adminUser }
   );
   
   const { data: cars, isLoading: carsLoading } = useGetCarsQuery(
     { showAll: 'true' }, 
-    { skip: !adminUser?.cognitoId }
+    { skip: !adminUser }
   );
 
   

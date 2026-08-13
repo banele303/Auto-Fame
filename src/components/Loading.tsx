@@ -27,7 +27,7 @@ const Loading = () => {
         <p className="mt-4 text-blue-600 font-medium animate-pulse">Loading...</p>
         
         
-        <div className="mt-2 relative h-1 w-40 bg-gray-100 overflow-hidden rounded-full">
+        <div className="mt-2 relative h-1 w-40 bg-gray-100 dark:bg-gray-700 overflow-hidden rounded-full">
           <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-blue-600 w-full animate-progress rounded-full"></div>
         </div>
       </div>
