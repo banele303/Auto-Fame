@@ -40,7 +40,7 @@ export default function AboutUsSection() {
           >
             <h2 id="about-heading" className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(90deg,hsl(var(--primary))_0%,hsl(var(--primary))_100%)]">About Us</h2>
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
-              Advance Auto is a trusted dealership with clients from all corners of the country. Located at 2A Amanda Avenue in Gleneagles - Joburg South, we take pride in selling affordable and quality cars. We are happy to be at your service and look forward to helping you buy your next car with us.
+              Advance Auto is a trusted dealership with clients from all corners of the country. Located at 1 Rifle Range Road in Baragwanath - Joburg South, we take pride in selling affordable and quality cars. We are happy to be at your service and look forward to helping you buy your next car with us.
             </p>
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg max-w-xl">
               We understand that mobility is a need and buying a car is one of the biggest commitments. Buying a car with us unlocks and creates opportunities for you. Mobility provides sense of pride, comfort and convenience. It widens our perspective and also gives us memories to cherish forever.

@@ -23,8 +23,8 @@ interface CarWithRelations {
   photoUrls?: string[]; features?: string[]; dealershipId: number; averageRating?: number;
   dealership?: { phoneNumber?: string } | null;
 }
-const CONTACT_NUMBER_DISPLAY = "068 072 0424"; // user-provided display format
-const CONTACT_NUMBER_RAW = "0680720424"; // sanitized digits for links
+const CONTACT_NUMBER_DISPLAY = "061 225 9884"; // user-provided display format
+const CONTACT_NUMBER_RAW = "0612259884"; // sanitized digits for links
 
 const CarDetailPage = () => {
   const params = useParams();

@@ -127,7 +127,7 @@ export default function ContactUsPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-slate-800 text-lg">Phone</h3>
-                  <p className="text-slate-600 mt-1">+27 68 072 0424</p> 
+                  <p className="text-slate-600 mt-1">061 225 9884</p> 
                   <p className="text-slate-600">Mon - Fri 08:00–17:00 | Sat 08:00–14:00</p>
                 </div>
               </div>
@@ -138,7 +138,7 @@ export default function ContactUsPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-slate-800 text-lg">Email</h3>
-                  <p className="text-slate-600 mt-1">info@advanceauto.co.za</p> 
+                  <p className="text-slate-600 mt-1">info@autofame.co.za</p> 
                   <p className="text-slate-600">We&apos;ll respond as soon as possible</p>
                 </div>
               </div>
@@ -149,14 +149,14 @@ export default function ContactUsPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-slate-800 text-lg">Our Location</h3>
-                  <p className="text-slate-600 mt-1">2A Amanda Ave, Gleneagles</p>
+                  <p className="text-slate-600 mt-1">1 Rifle Range Rd, Baragwanath</p>
                   <p className="text-slate-600">Johannesburg South, 2091, South Africa</p>
                   <a
-                    href="https://www.google.com/maps/dir//2A+Amanda+Ave,+Gleneagles,+Johannesburg+South,+2091" 
+                    href="https://www.google.com/maps/search/?api=1&query=1+Rifle+Range+Rd,+Baragwanath,+Johannesburg+South,+2091" 
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-block text-sm text-blue-600 hover:text-blue-700 hover:underline"
-                    aria-label="Get directions to our only dealership location"
+                    aria-label="Get directions to our dealership location"
                   >
                     Get Directions
                   </a>

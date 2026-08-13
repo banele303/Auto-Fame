@@ -46,15 +46,15 @@ export default function Footer() {
           </div>
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-white uppercase mb-4">Visit Us</h3>
-            <p className="text-sm text-gray-400 font-mono">2A Amanda Ave<br />Gleneagles, Johannesburg South<br />Gauteng 2091</p>
+            <p className="text-sm text-gray-400 font-mono">1 Rifle Range Rd<br />Baragwanath, Johannesburg South<br />Gauteng 2091</p>
             <div className="mt-3 text-xs text-[#00A211] font-mono">
               Mon–Fri 08:00–17:00 | Sat 08:00–14:00
             </div>
           </div>
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-white uppercase mb-4">Contact</h3>
-            <p className="text-sm text-gray-400">Phone: <a href="tel:+27680720424" className="hover:text-white">+27 68 072 0424</a></p>
-            <p className="text-sm text-gray-400 mt-1">WhatsApp: <a href="https://wa.me/27680720424" target="_blank" rel="noopener noreferrer" className="hover:text-white">+27 68 072 0424</a></p>
+            <p className="text-sm text-gray-400">Phone: <a href="tel:0612259884" className="hover:text-white">061 225 9884</a></p>
+            <p className="text-sm text-gray-400 mt-1">WhatsApp: <a href="https://wa.me/27612259884" target="_blank" rel="noopener noreferrer" className="hover:text-white">061 225 9884</a></p>
             <p className="text-sm text-gray-400 mt-1">Email: <a href="mailto:info@autofame.co.za" className="hover:text-white">info@autofame.co.za</a></p>
             <div className="flex items-center gap-4 text-gray-400 mt-4">
               <a href="https://www.facebook.com/share/1Dzk6oHqXE/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-white"><Facebook size={20} /></a>

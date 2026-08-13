@@ -152,7 +152,7 @@ export default function HeroSection() {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00A211]"></span>
           </span>
           <span className="font-mono text-xs text-white/80 tracking-wider uppercase">
-            Johannesburg South · 2A Amanda Ave, Gleneagles
+            Johannesburg South · 1 Rifle Range Rd, Baragwanath
           </span>
         </motion.div>
 

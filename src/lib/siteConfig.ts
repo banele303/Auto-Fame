@@ -5,13 +5,14 @@ export const siteConfig = {
     tagline: 'Cars You Can Trust',
   },
   contact: {
-    phoneDisplay: '+27 68 072 0424',
-    phoneRaw: '+27680720424',
-    whatsappNumberRaw: '+27680720424',
+    phoneDisplay: '061 225 9884',
+    phoneRaw: '+27612259884',
+    whatsappNumberRaw: '27612259884',
     whatsappMessage: "Hi I'm interested in a vehicle",
     emailGeneral: 'info@autofame.co.za',
     emailTradeIn: 'tradein@autofame.co.za',
-    addressLine: '2A Amanda Ave, Gleneagles, Johannesburg South, 2091',
+    addressLine: '1 Rifle Range Rd, Baragwanath, Johannesburg South, 2091',
+    addressLink: 'https://www.google.com/maps/search/?api=1&query=1+Rifle+Range+Rd,+Baragwanath,+Johannesburg+South,+2091',
     hours: {
       weekday: '08:00–17:00',
       saturday: '08:00–14:00',

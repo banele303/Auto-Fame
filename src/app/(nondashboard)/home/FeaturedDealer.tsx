@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 
 // Completely re-imagined single-location section
 const FeaturedDealer = () => {
-  const address = "2A Amanda Ave, Gleneagles, Johannesburg South, 2091";
-  const phone = "+27 68 072 0424"; // updated primary contact number
-  const email = "info@advanceauto.co.za"; // placeholder business email
+  const address = "1 Rifle Range Rd, Baragwanath, Johannesburg South, 2091";
+  const phone = "061 225 9884";
+  const email = "info@autofame.co.za";
   const hours = [
     { label: "Mon - Fri", value: "08:00 - 17:00" },
     { label: "Saturday", value: "08:00 - 14:00" },
