@@ -1,11 +1,25 @@
-"use client";
-
 import React from "react";
 import { siteConfig } from "@/lib/siteConfig";
+import { Metadata } from "next";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
+
+export const metadata: Metadata = {
+  title: "Terms and Conditions | AutoFame Dealership",
+  description: "Terms and conditions for buying, financing, and trading in vehicles at AutoFame Johannesburg South.",
+  alternates: {
+    canonical: "/terms",
+  },
+};
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-slate-50">
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Home', url: '/' },
+          { name: 'Terms and Conditions', url: '/terms' },
+        ]}
+      />
       
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 py-16 px-4">
         <div className="max-w-4xl mx-auto">

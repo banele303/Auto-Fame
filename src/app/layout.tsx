@@ -28,9 +28,71 @@ import ConditionalFooter from "@/components/ConditionalFooter";
 import React, { Suspense } from 'react';
 import PostHogPageView from './PostHogPageView';
 
+import { siteConfig } from "@/lib/siteConfig";
+import AutoDealerJsonLd from "@/components/seo/AutoDealerJsonLd";
+
 export const metadata: Metadata = {
-  title: "AutoFame - Cars You Can Trust",
-  description: "Find your next pre-owned luxury car, SUV, or bakkie at AutoFame. Browse verified inventory, schedule test drives, and get instant bank financing.",
+  metadataBase: new URL(siteConfig.brand.url),
+  title: {
+    default: "AutoFame - Quality Pre-Owned Cars in Johannesburg South",
+    template: "%s | AutoFame Dealership",
+  },
+  description: "Find your next pre-owned car, SUV, or bakkie at AutoFame Johannesburg South. Browse verified inventory at 1 Rifle Range Rd, Baragwanath. Instant bank financing & top trade-in appraisals.",
+  keywords: [
+    "used cars Johannesburg South",
+    "pre-owned cars Baragwanath",
+    "cars for sale Soweto",
+    "AutoFame dealership",
+    "car finance Johannesburg",
+    "bakkies for sale Gauteng",
+    "auto dealers Rifle Range Rd",
+    "second hand cars Johannesburg",
+    "Auto Fame South Africa",
+  ],
+  authors: [{ name: "AutoFame Dealership", url: siteConfig.brand.url }],
+  creator: "AutoFame",
+  publisher: "AutoFame",
+  formatDetection: {
+    email: false,
+    address: true,
+    telephone: true,
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "AutoFame - Quality Pre-Owned Cars in Johannesburg South",
+    description: "Browse verified inventory, schedule test drives, and get instant bank financing at 1 Rifle Range Rd, Baragwanath, Johannesburg South.",
+    url: siteConfig.brand.url,
+    siteName: siteConfig.brand.name,
+    locale: "en_ZA",
+    type: "website",
+    images: [
+      {
+        url: "/about-image.jpeg",
+        width: 1200,
+        height: 630,
+        alt: "AutoFame Dealership Showroom in Johannesburg South",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AutoFame - Quality Pre-Owned Cars in Johannesburg South",
+    description: "Verified pre-owned vehicles, transparent service, and fast vehicle finance in Johannesburg South.",
+    images: ["/about-image.jpeg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -45,6 +107,12 @@ export const metadata: Metadata = {
     shortcut: '/favicon.ico',
   },
   manifest: '/site.webmanifest',
+  other: {
+    'geo.region': 'ZA-GT',
+    'geo.placename': 'Johannesburg South, Baragwanath',
+    'geo.position': `${siteConfig.location.geo.latitude};${siteConfig.location.geo.longitude}`,
+    'ICBM': `${siteConfig.location.geo.latitude}, ${siteConfig.location.geo.longitude}`,
+  },
 };
 
 // Footer visibility handled in client component to avoid hooks in server layout.
@@ -53,6 +121,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} ${montserrat.variable} ${outfit.variable} font-sans antialiased`} suppressHydrationWarning>
+        <AutoDealerJsonLd />
         <Providers>
           <Suspense>
             <PostHogPageView />

@@ -1,11 +1,25 @@
-"use client";
-
 import React from "react";
 import { siteConfig } from "@/lib/siteConfig";
+import { Metadata } from "next";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy | AutoFame Dealership",
+  description: "AutoFame Dealership privacy policy, personal data protection, POPIA compliance, and inquiry handling.",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
+};
 
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-slate-50">
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Home', url: '/' },
+          { name: 'Privacy Policy', url: '/privacy-policy' },
+        ]}
+      />
       
       <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 py-16 px-4">
         <div className="max-w-4xl mx-auto">

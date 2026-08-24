@@ -30,7 +30,7 @@ const cities = [
   {
     name: "Johannesburg",
     shortName: "Jo'burg",
-    description: "Find res in Jo'burg",
+    description: "Browse cars in Johannesburg",
     image:
       "https://images.unsplash.com/photo-1577948000111-9c970dfe3743?q=80&w=1974&auto=format&fit=crop",
     coordinates: [28.042114, -26.204678] as [number, number],
@@ -39,7 +39,7 @@ const cities = [
   },
   {
     name: "Cape Town",
-    description: "Find res in Cape Town",
+    description: "Find vehicles in Cape Town",
     image:
       "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?q=80&w=2071&auto=format&fit=crop",
     coordinates: [18.4241, -33.9249] as [number, number],
@@ -48,7 +48,7 @@ const cities = [
   },
   {
     name: "Durban",
-    description: "Accommodations Durban",
+    description: "Used cars in Durban",
     image:
       "/durban.png",
     coordinates: [31.0218, -29.8587] as [number, number],
@@ -57,7 +57,7 @@ const cities = [
   },
   {
     name: "Pretoria",
-    description: "Find res in Pretoria",
+    description: "Quality cars in Pretoria",
     image:
       "/pretoria.png",
     coordinates: [28.1881, -25.7461] as [number, number],
@@ -66,7 +66,7 @@ const cities = [
   },
   {
     name: "Bloemfontein",
-    description: "Find res in Bloemfontein",
+    description: "Find vehicles in Bloemfontein",
     image:
       "/Bloemfontein.jpg",
     coordinates: [26.2041, -29.0852] as [number, number],
@@ -101,7 +101,7 @@ const CityCard = ({ city, index }: CityCardProps) => {
     });
     
     
-    router.push(`/search?${params.toString()}`);
+    router.push(`/inventory?${params.toString()}`);
   };
 
   return (
@@ -141,7 +141,7 @@ const CityCard = ({ city, index }: CityCardProps) => {
             animate={{ opacity: isHovered ? 1 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <span>Explore properties in {city.name}</span>
+            <span>Explore vehicles in {city.name}</span>
             <ChevronRight className="w-4 h-4 ml-1" />
           </motion.div>
         </div>

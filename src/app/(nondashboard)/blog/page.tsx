@@ -1,32 +1,52 @@
-
-import { prisma } from "@/lib/prisma";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { Metadata } from "next";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
+import { siteConfig } from "@/lib/siteConfig";
+import { convexClient } from "@/lib/convex";
+import { api } from "../../../../convex/_generated/api";
 
 export const metadata: Metadata = {
-  title: "Blog | AutoFame",
-  description: "Latest news, reviews, and insights from the automotive world.",
+  title: "AutoFame Blog | Used Car Advice, News & Guides in South Africa",
+  description: "Read the latest South African car buying guides, vehicle financing tips, maintenance advice, and dealership news from AutoFame Johannesburg South.",
+  alternates: {
+    canonical: "/blog",
+  },
+  openGraph: {
+    title: "AutoFame Automotive Blog | South Africa",
+    description: "Car advice, buying guides, and automotive news in Johannesburg.",
+    url: `${siteConfig.brand.url}/blog`,
+  },
 };
 
-// Force dynamic rendering to ensure latest posts are shown
 export const dynamic = 'force-dynamic';
 
 export default async function BlogPage() {
-  const posts = await prisma.post.findMany({
-    where: { published: true },
-    orderBy: { publishedAt: 'desc' },
-  });
+  let posts: any[] = [];
+  try {
+    const convexPosts = await convexClient.query(api.blogs.list, { publishedOnly: true });
+    if (Array.isArray(convexPosts)) {
+      posts = convexPosts;
+    }
+  } catch (error) {
+    console.warn("Failed to fetch blog posts from Convex, rendering empty state:", error);
+  }
 
   return (
     <div className="min-h-screen bg-background">
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Home', url: '/' },
+          { name: 'Blog', url: '/blog' },
+        ]}
+      />
       {/* Hero Section */}
       <section className="relative py-20 px-4 md:px-6 bg-muted/30 border-b">
         <div className="container mx-auto text-center max-w-4xl">
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-6xl mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            Automotive Insights
+            Automotive Insights & Guides
           </h1>
           <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-            Discover the latest trends, expert reviews, and maintenance tips to keep your journey smooth.
+            Discover car buying advice, vehicle financing tips, and maintenance insights from the AutoFame team in Johannesburg South.
           </p>
         </div>
       </section>
@@ -43,7 +63,7 @@ export default async function BlogPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
             {posts.map((post) => (
-              <BlogCard key={post.id} post={post} />
+              <BlogCard key={post.id || post.slug} post={post} />
             ))}
           </div>
         )}

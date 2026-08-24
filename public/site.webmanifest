@@ -1,6 +1,9 @@
 {
-  "name": "AutoFame - Cars You Can Trust",
+  "name": "AutoFame - Quality Pre-Owned Cars Johannesburg",
   "short_name": "AutoFame",
+  "description": "Find and finance your next verified pre-owned car in Johannesburg South with AutoFame.",
+  "start_url": "/",
+  "id": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

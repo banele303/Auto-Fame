@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 
+import FaqJsonLd from './seo/FaqJsonLd';
+
 export interface SharedFaqItem { q: string; a: string; }
 
 // Unified FAQ list (merge of home + contact unique items, deduped by question)
@@ -19,6 +21,7 @@ export default function FAQShared({ title = 'Frequently Asked Questions', compac
   const toggle = (i: number) => setOpenIndex(prev => prev === i ? null : i);
   return (
     <section className={compact ? "py-12" : "py-20 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-slate-900"} aria-labelledby="shared-faq-heading">
+      <FaqJsonLd faqs={sharedFaqs.map(f => ({ question: f.q, answer: f.a }))} />
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="text-center mb-12">
           <h2 id="shared-faq-heading" className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">{title}</h2>
