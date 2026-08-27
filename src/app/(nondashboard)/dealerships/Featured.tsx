@@ -9,7 +9,7 @@ export default function FeaturesDealershipSection() {
         
         <div className="lg:col-span-5 bg-sky-50 rounded-3xl p-8 md:p-12">
           <div className="mb-2">
-            <span className="text-cyan-500 text-sm font-medium">SaCar Dealership at your service</span>
+            <span className="text-cyan-500 text-sm font-medium">AutoFame Dealership at your service</span>
             <div className="w-16 h-0.5 bg-cyan-500 mt-1"></div>
           </div>
 

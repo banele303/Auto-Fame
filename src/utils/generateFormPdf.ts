@@ -503,7 +503,7 @@ export const generateFormPdf = (application: Application): void => {
   doc.setFontSize(10);
   doc.setTextColor(128, 128, 128);
   doc.setFont('helvetica', 'normal');
-  doc.text('This document was generated automatically by Advance Auto Financing System', margin, currentY + 20);
+  doc.text('This document was generated automatically by AutoFame Financing System', margin, currentY + 20);
   doc.text(`Generated on: ${new Date().toLocaleString('en-ZA')}`, margin, currentY + 35);
 
   // Save the PDF

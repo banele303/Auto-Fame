@@ -129,7 +129,7 @@ const FeaturedDealer = () => {
             <div className="h-[520px] w-full rounded-2xl overflow-hidden ring-1 ring-gray-200/70 dark:ring-slate-700 shadow-md bg-gray-100 dark:bg-slate-800">
               {/* Simple embed without API key: uses public search-based maps embed */}
               <iframe
-                title="Advance Auto Johannesburg Map"
+                title="AutoFame Dealership Johannesburg Map"
                 src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
                 className="w-full h-full border-0"
                 loading="lazy"

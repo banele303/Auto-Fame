@@ -71,7 +71,7 @@ const CallToActionSection = () => {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-300">
                 Find Your Perfect Ride
               </span> <br />
-              Today at SaCar Dealership
+              Today at AutoFame
             </h2>
             
             <p className="text-lg text-gray-300 mb-8 max-w-lg">
@@ -152,7 +152,7 @@ const FeaturedTestimonial = () => (
       </div>
     </div>
     <p className="text-gray-200 italic text-sm">
-    &quot;SaCar helped me find the perfect BMW X5 for my family. Exceptional service and competitive pricing throughout the process!&quot;
+    &quot;AutoFame helped me find the perfect BMW X5 for my family. Exceptional service and competitive pricing throughout the process!&quot;
     </p>
   </motion.div>
 );

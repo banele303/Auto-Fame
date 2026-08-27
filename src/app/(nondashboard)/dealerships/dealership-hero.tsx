@@ -23,7 +23,7 @@ export default function DealershipHero() {
           
           <div className="flex items-center justify-center mb-8">
             <div className="h-px bg-white w-16"></div>
-            <span className="px-4 text-white text-sm font-medium">Partner with SaCar Dealership</span>
+            <span className="px-4 text-white text-sm font-medium">Partner with AutoFame Dealership</span>
             <div className="h-px bg-white w-16"></div>
           </div>
 
@@ -34,7 +34,7 @@ export default function DealershipHero() {
 
           
           <p className="text-white text-lg md:text-xl mb-12 max-w-3xl mx-auto leading-relaxed">
-            Partner with SaCar Dealership to showcase your inventory to a wider audience.
+            Partner with AutoFame Dealership to showcase your inventory to a wider audience.
             Streamline your sales process, connect with qualified buyers, and grow your business.
           </p>
 
