@@ -439,20 +439,22 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="max-w-4xl mx-auto space-y-6 text-[#ededed]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#222] pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Add New Car
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white flex items-center gap-2.5">
+            <Car className="h-7 w-7 text-zinc-300" />
+            Add New Vehicle
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Create a new car listing in the system
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            Create a new verified car listing in the AutoFame showroom database.
           </p>
         </div>
         
         <Button 
           variant="outline" 
           onClick={() => router.push('/admin/cars')}
+          className="bg-[#111] hover:bg-[#1a1a1a] text-zinc-200 border border-[#333] rounded-lg text-xs font-medium"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Cars
@@ -460,12 +462,12 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="border-slate-200 dark:border-slate-700 shadow-md">
-          <CardHeader>
-            <CardTitle>Car Details</CardTitle>
-            <CardDescription>Enter the basic information about the car</CardDescription>
+        <Card className="bg-[#0a0a0a] border border-[#222] rounded-xl text-zinc-200 shadow-sm">
+          <CardHeader className="border-b border-[#222] pb-4">
+            <CardTitle className="text-base font-semibold text-white">Car Details</CardTitle>
+            <CardDescription className="text-xs text-zinc-400">Enter the basic vehicle identification and specifications</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="make">Make</Label>
@@ -767,120 +769,71 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
             </div>
             <div className="space-y-2">
               <Label htmlFor="featured">Featured</Label>
-              <div className="flex items-center gap-3 py-2">
-                <Switch id="featured" checked={formData.featured} onCheckedChange={(v)=>setFormData(prev=>({...prev, featured: v}))} />
-                <span className="text-sm text-slate-600 dark:text-slate-300">Show in Featured Vehicles section</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 dark:border-slate-700 shadow-md">
-          <CardHeader>
-            <CardTitle>Photos</CardTitle>
-            <CardDescription>Upload photos of the car</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="photos">Car Photos</Label>
-              {/* Drag & drop + click uploader */}
-              <div
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const fileList = e.dataTransfer.files;
-                  // Create synthetic event object with target.files for reuse of handler
-                  const input = document.createElement('input');
-                  const dataTransfer = new DataTransfer();
-                  Array.from(fileList).forEach(f => dataTransfer.items.add(f));
-                  input.files = dataTransfer.files;
-                  handleFileChange({ target: input } as any);
-                }}
-                className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4 flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-slate-800/40 cursor-pointer hover:border-blue-400 hover:bg-blue-50/40 dark:hover:border-blue-500/60 transition-colors"
-                onClick={() => document.getElementById('photos')?.click()}
-              >
-                <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Drag & drop images here or click to browse</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">PNG/JPG up to {MAX_SINGLE_FILE_MB}MB each • Max {MAX_PHOTOS} images • {MAX_TOTAL_MB>0 ? `Total ≤ ${MAX_TOTAL_MB}MB` : 'No total size cap'}</p>
-                <Input
-                  id="photos"
-                  type="file"
-                  multiple={true}
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </div>
-              <p className="text-xs text-slate-500 mt-1">You can add up to {MAX_PHOTOS} photos. Add more later to append until the cap.</p>
-              {photoFiles.length >= MAX_PHOTOS && (
-                <p className="text-xs text-amber-600 mt-1">Maximum {MAX_PHOTOS} images reached.</p>
-              )}
-            </div>
-            
-            {photoFiles.length > 0 && (
-              <div className="space-y-2">
-                <Label>Selected Photos ({photoFiles.length})</Label>
-                <div className="flex flex-wrap gap-2">
-                  {photoFiles.map((file, index) => (
-                    <div key={index} className="relative h-20 w-20 rounded-md overflow-hidden border border-slate-200 dark:border-slate-700">
-                      <Image 
-                        src={URL.createObjectURL(file)} 
-                        alt={`Preview ${index}`} 
-                        width={80}
-                        height={80}
-                        className="h-full w-full object-cover" 
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => setPhotoFiles(photoFiles.filter((_, i) => i !== index))}
-                        className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-md p-1"
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+              
+              {photoFiles.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Uploaded Photos ({photoFiles.length}/{MAX_PHOTOS})</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                    {photoFiles.map((file, index) => (
+                      <div key={index} className="relative group rounded-lg overflow-hidden aspect-square border border-[#222] bg-[#111]">
+                        <img 
+                          src={URL.createObjectURL(file)} 
+                          alt={`Car ${index + 1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="absolute top-1 right-1 bg-black/80 hover:bg-rose-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
 
-        <div className="flex justify-end gap-3">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => router.push('/admin/cars')}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit"
-            disabled={isLoading || uploading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {isLoading ? (
-              <>
-                <span className="animate-spin mr-2">⏳</span> Saving...
-              </>
-            ) : uploading && uploadProgress ? (
-              <>
-                <span className="animate-pulse mr-2">⬆️</span>
-                Uploading {uploadProgress.completed}/{uploadProgress.total}
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Car
-              </>
-            )}
-          </Button>
-        </div>
-        {uploadProgress && (
-          <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded overflow-hidden">
-            <div className="h-full bg-blue-600 transition-all" style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }} />
+          <div className="flex justify-end gap-3 pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => router.push('/admin/cars')}
+              disabled={isLoading}
+              className="bg-[#111] hover:bg-[#1a1a1a] text-zinc-200 border border-[#333] rounded-lg text-xs"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              disabled={isLoading || uploading}
+              className="bg-white hover:bg-zinc-200 text-black font-medium text-xs rounded-lg px-5 shadow-sm"
+            >
+              {isLoading ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span> Saving...
+                </>
+              ) : uploading && uploadProgress ? (
+                <>
+                  <span className="animate-pulse mr-2">⬆️</span>
+                  Uploading {uploadProgress.completed}/{uploadProgress.total}
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Vehicle
+                </>
+              )}
+            </Button>
           </div>
-        )}
-      </form>
-    </div>
+          {uploadProgress && (
+            <div className="w-full bg-[#111] border border-[#222] h-2 rounded-full overflow-hidden">
+              <div className="h-full bg-white transition-all" style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }} />
+            </div>
+          )}
+        </form>
+      </div>
   );
 }

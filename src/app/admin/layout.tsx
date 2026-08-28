@@ -147,32 +147,23 @@ const AdminDashboardContent = ({ children }: { children: React.ReactNode }) => {
   }, [open, setOpen]);
   
   return (
-    <div className={cn(
-      "min-h-screen w-full",
-      isDark ? "bg-slate-950" : "bg-slate-50"
-    )}>
+    <div className="min-h-screen w-full bg-black text-[#ededed] selection:bg-white selection:text-black">
       <AdminNavbar />
       <div style={{ paddingTop: `${NAVBAR_HEIGHT}px` }}>
         <div className="flex">
-          
           {isMobile && open && (
             <div 
-              className="fixed inset-0 bg-black/50 z-30 backdrop-blur-sm" 
+              className="fixed inset-0 bg-black/70 z-30 backdrop-blur-sm" 
               onClick={() => setOpen(false)}
             />
           )}
           
-          
-          <div className="top-0 h-[calc(100vh-var(--navbar-height))]">
+          <div className="top-0 h-[calc(100vh-var(--navbar-height))] bg-black border-r border-[#222]">
             <AppSidebar userType="admin" />
           </div>
           
-          
           <div 
-            className={cn(
-              "flex-grow p-3 sm:p-4 md:p-6",
-              isDark ? "text-slate-50" : "text-slate-900"
-            )}
+            className="flex-grow p-4 sm:p-6 md:p-8 bg-black min-h-[calc(100vh-var(--navbar-height))]"
             style={{
               '--navbar-height': `${NAVBAR_HEIGHT}px`,
               marginLeft: isMobile ? 0 : (open ? 'var(--sidebar-width)' : 'var(--sidebar-width-icon)'),

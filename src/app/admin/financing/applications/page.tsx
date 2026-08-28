@@ -140,146 +140,128 @@ export default function FinancingApplicationsPage() {
   };
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto space-y-6 text-[#ededed]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#222] pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Financing Applications</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Manage and review customer financing applications
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">Financing Applications</h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">Review and manage vehicle loan and financing requests</p>
           {authError && (
-            <p className="mt-2 text-sm text-red-600 font-medium">{authError}</p>
+            <p className="mt-2 text-xs font-mono text-rose-400">{authError}</p>
           )}
         </div>
-        <Button asChild>
+        <Button asChild className="bg-white hover:bg-zinc-200 text-black rounded-lg px-4 text-xs font-medium shadow-sm">
           <Link href="/admin/financing/applications/new">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-1.5" />
             New Application
           </Link>
         </Button>
       </div>
       
-      <Card className="mb-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Filter Applications</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <form onSubmit={handleSearch} className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <Input 
-                  type="search"
-                  placeholder="Search by customer name or vehicle model..."
-                  className="pl-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </form>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="APPROVED">Approved</SelectItem>
-                <SelectItem value="REJECTED">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 shadow-sm flex flex-col sm:flex-row gap-3">
+        <form onSubmit={handleSearch} className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Input 
+              type="search"
+              placeholder="Search by customer name or vehicle model..."
+              className="pl-9 h-10 bg-[#050505] border border-[#222] text-zinc-200 placeholder:text-zinc-500 rounded-lg text-sm focus-visible:ring-1 focus-visible:ring-zinc-700"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </form>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-10 w-[160px] rounded-lg bg-[#050505] border border-[#222] text-xs font-medium text-zinc-200">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#0a0a0a] border border-[#222] text-zinc-200 rounded-lg">
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="APPROVED">Approved</SelectItem>
+            <SelectItem value="REJECTED">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       
-      <Card>
-        <CardContent className="p-6">
-          <div className="block md:hidden space-y-4">
-            {isLoading ? (
-              [...Array(4)].map((_,i)=>(
-                <div key={i} className="border rounded-lg p-4 space-y-2 animate-pulse">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                </div>
-              ))
-            ) : applications.length === 0 ? (
-              <p className="text-center text-sm text-gray-500 py-8">{searchTerm || statusFilter !== 'all' ? 'No applications match your search criteria' : 'No financing applications found'}</p>
-            ) : (
-              applications.map(app => (
-                <div key={app.id} className="border rounded-lg p-4 bg-white dark:bg-gray-900 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{app.customerName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{app.carModel || 'Vehicle not specified'}</p>
-                    </div>
-                    {getStatusBadge(app.status)}
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <p className="text-gray-500 dark:text-gray-400">Date</p>
-                      <p className="font-medium">{new Date(app.applicationDate).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 dark:text-gray-400">Amount</p>
-                      <p className="font-medium">R{app.amount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 dark:text-gray-400">Credit</p>
-                      <p className="font-medium flex items-center gap-1">
-                        <span className={`h-2 w-2 rounded-full ${getCreditScoreColor(app.creditScore ?? 0)}`}></span>
-                        {app.creditScore || 'N/A'}
-                      </p>
-                    </div>
-                    <div className="col-span-2">
-                      <Button variant="outline" size="sm" asChild className="w-full mt-1">
-                        <Link href={`/admin/financing/applications/${app.id}`}>View Details</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-            {!isLoading && applications.length > 0 && (
-              <div className="pt-4">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={totalApplications}
-                  itemsPerPage={applicationsPerPage}
-                  onPageChange={setCurrentPage}
-                />
+      <div className="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden shadow-sm">
+        <div className="block md:hidden space-y-3 p-4">
+          {isLoading ? (
+            [...Array(4)].map((_,i)=>(
+              <div key={i} className="border border-[#222] bg-[#050505] rounded-xl p-4 space-y-2 animate-pulse">
+                <div className="h-4 bg-[#1a1a1a] rounded w-1/2" />
+                <div className="h-3 bg-[#1a1a1a] rounded w-1/3" />
+                <div className="h-3 bg-[#1a1a1a] rounded w-1/4" />
               </div>
-            )}
-          </div>
-          <div className="hidden md:block overflow-x-auto px-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Credit Score</TableHead>
-                  <TableHead>Docs</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  // Loading skeleton rows
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-8" /></TableCell>
-                    </TableRow>
-                  ))
+            ))
+          ) : applications.length === 0 ? (
+            <p className="text-center text-xs font-mono text-zinc-500 py-8">{searchTerm || statusFilter !== 'all' ? 'No applications match your search criteria' : 'No financing applications found'}</p>
+          ) : (
+            applications.map(app => (
+              <div key={app.id} className="border border-[#222] rounded-xl p-4 bg-[#050505]">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium text-sm text-white">{app.customerName}</p>
+                    <p className="text-xs text-zinc-400 font-mono mt-0.5">{app.carModel || 'Vehicle not specified'}</p>
+                  </div>
+                  {getStatusBadge(app.status)}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-zinc-500 font-mono text-[10px]">Date</p>
+                    <p className="font-mono text-zinc-300">{new Date(app.applicationDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500 font-mono text-[10px]">Amount</p>
+                    <p className="font-mono text-white font-semibold">R{app.amount.toLocaleString()}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Button variant="outline" size="sm" asChild className="w-full mt-1 bg-[#111] hover:bg-[#1a1a1a] text-zinc-200 border-[#333] rounded-lg text-xs">
+                      <Link href={`/admin/financing/applications/${app.id}`}>View Details</Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+          {!isLoading && applications.length > 0 && (
+            <div className="pt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalApplications}
+                itemsPerPage={applicationsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-black border-b border-[#222]">
+              <TableRow className="border-b border-[#222] hover:bg-transparent">
+                <TableHead className="py-3.5 pl-5 text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Customer</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Vehicle</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Date</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Amount</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Credit</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Docs</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Status</TableHead>
+                <TableHead className="w-10 pr-5"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={i} className="border-b border-[#1c1c1c]">
+                    <TableCell className="pl-5"><Skeleton className="h-5 w-32 bg-[#111]" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40 bg-[#111]" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24 bg-[#111]" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24 bg-[#111]" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20 bg-[#111]" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20 bg-[#111]" /></TableCell>
+                    <TableCell className="pr-5"><Skeleton className="h-5 w-8 bg-[#111]" /></TableCell>
+                  </TableRow>
+                ))
                 ) : applications.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-gray-500">

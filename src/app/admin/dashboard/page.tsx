@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import SalesChart from '@/components/analytics/SalesChart';
 import EmployeePerformance from '@/components/analytics/EmployeePerformance';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowUpRight, ArrowDownRight, Car, DollarSign, Users, Calendar, PieChart, TrendingUp, FileText, ClipboardCheck } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Car, DollarSign, Users, Calendar, FileText, ClipboardCheck, Sparkles } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const [summaryStats, setSummaryStats] = useState<any>(null);
@@ -15,7 +14,6 @@ export default function AdminDashboardPage() {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-        // Fetch real dashboard summary data
         const response = await fetch('/api/admin/dashboard/summary');
         if (!response.ok) throw new Error('Failed to fetch dashboard data');
         
@@ -23,7 +21,6 @@ export default function AdminDashboardPage() {
         setSummaryStats(data);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        // Provide fallback data structure if API fails
         setSummaryStats({
           salesCount: 0,
           revenue: 0,
@@ -48,180 +45,171 @@ export default function AdminDashboardPage() {
   
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Skeleton className="h-8 w-64 mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Skeleton className="h-8 w-64 bg-[#111] border border-[#222]" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-20" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16 mb-2" />
-                <Skeleton className="h-3 w-24" />
-              </CardContent>
-            </Card>
+            <div key={i} className="h-32 bg-[#0a0a0a] border border-[#222] rounded-xl p-5" />
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80" />
-          <Skeleton className="h-80" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="h-80 bg-[#0a0a0a] border border-[#222] rounded-xl" />
+          <div className="h-80 bg-[#0a0a0a] border border-[#222] rounded-xl" />
         </div>
       </div>
     );
   }
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Dashboard Overview</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Total Sales
-            </CardTitle>
-            <Car className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{summaryStats.salesCount}</div>
-            <p className="text-xs flex items-center text-gray-600 dark:text-gray-400">
-              {summaryStats.monthlyGrowth?.sales > 0 ? (
-                <>
-                  <ArrowUpRight className="text-green-500 mr-1 h-3 w-3" />
-                  <span className="text-green-500">{summaryStats.monthlyGrowth.sales}%</span>
-                </>
-              ) : (
-                <>
-                  <ArrowDownRight className="text-red-500 mr-1 h-3 w-3" />
-                  <span className="text-red-500">{Math.abs(summaryStats.monthlyGrowth?.sales || 0)}%</span>
-                </>
-              )}
-              <span className="ml-1">vs. last month</span>
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Total Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              R{summaryStats.revenue.toLocaleString()}
-            </div>
-            <p className="text-xs flex items-center text-gray-600 dark:text-gray-400">
-              {summaryStats.monthlyGrowth?.revenue > 0 ? (
-                <>
-                  <ArrowUpRight className="text-green-500 mr-1 h-3 w-3" />
-                  <span className="text-green-500">{summaryStats.monthlyGrowth.revenue}%</span>
-                </>
-              ) : (
-                <>
-                  <ArrowDownRight className="text-red-500 mr-1 h-3 w-3" />
-                  <span className="text-red-500">{Math.abs(summaryStats.monthlyGrowth?.revenue || 0)}%</span>
-                </>
-              )}
-              <span className="ml-1">vs. last month</span>
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Total Customers
-            </CardTitle>
-            <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{summaryStats.customers}</div>
-            <p className="text-xs flex items-center text-gray-600 dark:text-gray-400">
-              {summaryStats.monthlyGrowth?.customers > 0 ? (
-                <>
-                  <ArrowUpRight className="text-green-500 mr-1 h-3 w-3" />
-                  <span className="text-green-500">{summaryStats.monthlyGrowth.customers}%</span>
-                </>
-              ) : (
-                <>
-                  <ArrowDownRight className="text-red-500 mr-1 h-3 w-3" />
-                  <span className="text-red-500">{Math.abs(summaryStats.monthlyGrowth?.customers || 0)}%</span>
-                </>
-              )}
-              <span className="ml-1">vs. last month</span>
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Vehicles in Inventory
-            </CardTitle>
-            <Car className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{summaryStats.inventory}</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Across all dealerships
-            </p>
-          </CardContent>
-        </Card>
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#222] pb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+            Dashboard Overview
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            Real-time telemetry, vehicle transactions, and operational metrics.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-medium">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Live Systems Active
+          </span>
+        </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Active Inquiries
-            </CardTitle>
-            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{summaryStats.inquiries}</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Customer inquiries pending follow-up
-            </p>
-          </CardContent>
-        </Card>
+      {/* Primary Metric Cards (Geist / Vercel style) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Sales */}
+        <div className="bg-[#0a0a0a] border border-[#222] hover:border-zinc-700 transition-all rounded-xl p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between text-zinc-400 text-xs font-mono uppercase tracking-wider mb-3">
+            <span>Total Sales</span>
+            <Car className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+          </div>
+          <div className="text-3xl font-semibold text-white tracking-tight font-mono mb-2">
+            {summaryStats.salesCount}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            {summaryStats.monthlyGrowth?.sales >= 0 ? (
+              <span className="inline-flex items-center text-emerald-400 font-mono">
+                <ArrowUpRight className="h-3.5 w-3.5 mr-0.5" />
+                +{summaryStats.monthlyGrowth?.sales || 0}%
+              </span>
+            ) : (
+              <span className="inline-flex items-center text-rose-400 font-mono">
+                <ArrowDownRight className="h-3.5 w-3.5 mr-0.5" />
+                {summaryStats.monthlyGrowth?.sales}%
+              </span>
+            )}
+            <span className="text-zinc-500">vs last month</span>
+          </div>
+        </div>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Test Drives
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{summaryStats.testDrives}</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Scheduled in the next 7 days
-            </p>
-          </CardContent>
-        </Card>
+        {/* Total Revenue */}
+        <div className="bg-[#0a0a0a] border border-[#222] hover:border-zinc-700 transition-all rounded-xl p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between text-zinc-400 text-xs font-mono uppercase tracking-wider mb-3">
+            <span>Total Revenue</span>
+            <DollarSign className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+          </div>
+          <div className="text-3xl font-semibold text-white tracking-tight font-mono mb-2 truncate">
+            R {summaryStats.revenue.toLocaleString()}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            {summaryStats.monthlyGrowth?.revenue >= 0 ? (
+              <span className="inline-flex items-center text-emerald-400 font-mono">
+                <ArrowUpRight className="h-3.5 w-3.5 mr-0.5" />
+                +{summaryStats.monthlyGrowth?.revenue || 0}%
+              </span>
+            ) : (
+              <span className="inline-flex items-center text-rose-400 font-mono">
+                <ArrowDownRight className="h-3.5 w-3.5 mr-0.5" />
+                {summaryStats.monthlyGrowth?.revenue}%
+              </span>
+            )}
+            <span className="text-zinc-500">vs last month</span>
+          </div>
+        </div>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Financing Applications
-            </CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{summaryStats.financingApplications}</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Pending approval
-            </p>
-          </CardContent>
-        </Card>
+        {/* Total Customers */}
+        <div className="bg-[#0a0a0a] border border-[#222] hover:border-zinc-700 transition-all rounded-xl p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between text-zinc-400 text-xs font-mono uppercase tracking-wider mb-3">
+            <span>Total Customers</span>
+            <Users className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+          </div>
+          <div className="text-3xl font-semibold text-white tracking-tight font-mono mb-2">
+            {summaryStats.customers}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            {summaryStats.monthlyGrowth?.customers >= 0 ? (
+              <span className="inline-flex items-center text-emerald-400 font-mono">
+                <ArrowUpRight className="h-3.5 w-3.5 mr-0.5" />
+                +{summaryStats.monthlyGrowth?.customers || 0}%
+              </span>
+            ) : (
+              <span className="inline-flex items-center text-rose-400 font-mono">
+                <ArrowDownRight className="h-3.5 w-3.5 mr-0.5" />
+                {summaryStats.monthlyGrowth?.customers}%
+              </span>
+            )}
+            <span className="text-zinc-500">vs last month</span>
+          </div>
+        </div>
+        
+        {/* Vehicles in Inventory */}
+        <div className="bg-[#0a0a0a] border border-[#222] hover:border-zinc-700 transition-all rounded-xl p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between text-zinc-400 text-xs font-mono uppercase tracking-wider mb-3">
+            <span>Vehicles Listed</span>
+            <Sparkles className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+          </div>
+          <div className="text-3xl font-semibold text-white tracking-tight font-mono mb-2">
+            {summaryStats.inventory}
+          </div>
+          <p className="text-xs text-zinc-500">
+            Across active dealerships
+          </p>
+        </div>
       </div>
       
+      {/* Secondary Quick Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5">
+          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono uppercase tracking-wider mb-2">
+            <span>Active Inquiries</span>
+            <FileText className="h-4 w-4 text-zinc-400" />
+          </div>
+          <div className="text-2xl font-semibold text-white font-mono">{summaryStats.inquiries}</div>
+          <p className="text-xs text-zinc-500 mt-1">Pending client follow-up</p>
+        </div>
+        
+        <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5">
+          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono uppercase tracking-wider mb-2">
+            <span>Test Drives</span>
+            <Calendar className="h-4 w-4 text-zinc-400" />
+          </div>
+          <div className="text-2xl font-semibold text-white font-mono">{summaryStats.testDrives}</div>
+          <p className="text-xs text-zinc-500 mt-1">Scheduled next 7 days</p>
+        </div>
+        
+        <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5">
+          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono uppercase tracking-wider mb-2">
+            <span>Finance Applications</span>
+            <ClipboardCheck className="h-4 w-4 text-zinc-400" />
+          </div>
+          <div className="text-2xl font-semibold text-white font-mono">{summaryStats.financingApplications}</div>
+          <p className="text-xs text-zinc-500 mt-1">Pending banking review</p>
+        </div>
+      </div>
+      
+      {/* Charts Section in Dark Containers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SalesChart />
-        <EmployeePerformance />
+        <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-6 shadow-sm">
+          <SalesChart />
+        </div>
+        <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-6 shadow-sm">
+          <EmployeePerformance />
+        </div>
       </div>
     </div>
   );

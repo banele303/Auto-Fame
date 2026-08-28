@@ -81,10 +81,10 @@ function Skeleton({ className }: { className?: string }) {
 function DarkTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3 shadow-xl text-white text-sm">
-      <p className="font-bold mb-1 text-slate-300">{label}</p>
+    <div className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 shadow-2xl text-white text-xs font-mono">
+      <p className="font-semibold mb-1 text-zinc-300">{label}</p>
       {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color }} className="font-semibold">
+        <p key={i} style={{ color: p.color }} className="font-medium">
           {p.name}: {Number(p.value).toLocaleString()}
         </p>
       ))}
@@ -97,36 +97,29 @@ function StatCard({ title, value, description, icon: Icon, color, pulse = false,
   icon: any; color: 'indigo'|'cyan'|'amber'|'emerald'|'purple';
   pulse?: boolean; trend?: string; trendUp?: boolean;
 }) {
-  const bg: Record<string, string> = {
-    indigo:  'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
-    cyan:    'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400',
-    amber:   'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
-    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
-    purple:  'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-  };
   return (
-    <Card className="p-6 rounded-3xl border-none shadow-sm dark:bg-slate-900 hover:shadow-lg transition-all group overflow-hidden">
+    <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5 hover:border-zinc-700 transition-all group overflow-hidden">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>
+          <p className="text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white">{value}</h3>
+            <h3 className="text-2xl sm:text-3xl font-semibold font-mono text-white tracking-tight">{value}</h3>
             {trend && (
-              <span className={cn("text-xs font-bold flex items-center px-1.5 py-0.5 rounded-md",
-                trendUp ? "text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" : "text-rose-500 bg-rose-50 dark:bg-rose-900/20")}>
+              <span className={cn("text-xs font-mono font-medium flex items-center px-1.5 py-0.5 rounded-full border",
+                trendUp ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : "text-rose-400 bg-rose-500/10 border-rose-500/20")}>
                 {trendUp ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
                 {trend}
               </span>
             )}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1 font-medium italic">{description}</p>
+          <p className="text-[11px] text-zinc-500 mt-1 font-mono">{description}</p>
         </div>
-        <div className={cn("p-4 rounded-2xl relative flex-shrink-0", bg[color])}>
-          {pulse && <span className="absolute inset-0 rounded-2xl bg-current opacity-20 animate-ping" />}
-          <Icon className="w-6 h-6 group-hover:scale-110 transition-transform" />
+        <div className="p-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 relative flex-shrink-0">
+          {pulse && <span className="absolute inset-0 rounded-lg bg-emerald-500 opacity-20 animate-ping" />}
+          <Icon className="w-5 h-5 group-hover:scale-105 transition-transform" />
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -254,27 +247,27 @@ export default function TrafficAnalyticsPage() {
       {/* ── Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Visitor Traffic</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Real-time insights via PostHog
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Visitor Traffic</h1>
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
+            Real-time insights and visitor telemetry via PostHog
             {lastUpdated && ` · Updated ${lastUpdated.toLocaleTimeString()}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isLoading && (
-            <div className="flex items-center gap-2 text-sm text-slate-400 animate-pulse">
-              <Globe className="w-4 h-4 animate-spin" /> Fetching…
+            <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 animate-pulse">
+              <Globe className="w-3.5 h-3.5 animate-spin" /> Fetching…
             </div>
           )}
-          <Button variant="outline" size="icon" className="rounded-xl border-slate-200 dark:border-slate-800 w-9 h-9"
+          <Button variant="outline" size="icon" className="rounded-lg bg-[#0a0a0a] border-[#222] text-zinc-400 hover:text-white w-8 h-8"
             onClick={() => fetchData(range)} disabled={isLoading}>
-            <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+            <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
           </Button>
-          <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 font-semibold"
+          <Button className="rounded-lg bg-white hover:bg-zinc-200 text-black font-medium text-xs px-3 py-1.5 shadow-sm"
             onClick={() => window.open('https://us.posthog.com', '_blank')}>
-            <ExternalLink className="w-4 h-4 mr-2" /> Open PostHog
+            <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open PostHog
           </Button>
-          <Button variant="outline" className="rounded-xl border-slate-200 dark:border-slate-800"
+          <Button variant="outline" className="rounded-lg bg-[#0a0a0a] border-[#222] text-zinc-300 hover:text-white text-xs"
             onClick={() => router.push('/admin/analytics')}>
             Business Analytics
           </Button>
@@ -283,32 +276,34 @@ export default function TrafficAnalyticsPage() {
 
       {/* ── Date Range Selector */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mr-1">
-          <Calendar className="w-4 h-4" /> Range:
+        <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 mr-1">
+          <Calendar className="w-3.5 h-3.5" /> Range:
         </div>
-        {RANGES.map(r => (
-          <button
-            key={r.value}
-            onClick={() => handleRangeChange(r.value)}
-            disabled={isLoading}
-            className={cn(
-              "px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border",
-              range === r.value
-                ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20"
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
-            )}
-          >
-            {r.label}
-          </button>
-        ))}
+        <div className="flex items-center gap-1 bg-[#0a0a0a] border border-[#222] rounded-lg p-1">
+          {RANGES.map(r => (
+            <button
+              key={r.value}
+              onClick={() => handleRangeChange(r.value)}
+              disabled={isLoading}
+              className={cn(
+                "px-3 py-1 rounded-md text-xs font-mono font-medium transition-all",
+                range === r.value
+                  ? "bg-white/[0.1] text-white border border-white/[0.12] shadow-sm"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Error Banner */}
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-sm font-medium">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-950/20 border border-rose-800 text-rose-400 text-xs font-mono">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
-          <Button size="sm" variant="ghost" className="ml-auto rounded-xl" onClick={() => fetchData(range)}>Retry</Button>
+          <Button size="sm" variant="ghost" className="ml-auto rounded-lg text-xs" onClick={() => fetchData(range)}>Retry</Button>
         </div>
       )}
 
@@ -330,13 +325,13 @@ export default function TrafficAnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-3">
 
         {/* Traffic Chart */}
-        <Card className="lg:col-span-2 p-6 rounded-3xl border-none shadow-sm dark:bg-slate-900">
+        <div className="lg:col-span-2 p-6 rounded-xl border border-[#222] bg-[#0a0a0a]">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Visitor Traffic</h2>
-              <p className="text-sm text-slate-500">Daily pageviews &amp; unique visitors</p>
+              <h2 className="text-base font-semibold text-white">Visitor Traffic</h2>
+              <p className="text-xs text-zinc-500 font-mono mt-0.5">Daily pageviews &amp; unique visitors</p>
             </div>
-            <span className="flex items-center text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg">
+            <span className="flex items-center text-xs font-mono font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
               <TrendingUp className="w-3 h-3 mr-1" /> Live
             </span>
           </div>

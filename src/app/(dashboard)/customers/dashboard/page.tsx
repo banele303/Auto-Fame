@@ -1,17 +1,15 @@
 "use client";
 
-import Header from "@/components/Header";
-import { Car, FileText, Heart, MessageSquare, Calendar, DollarSign, CreditCard } from "lucide-react";
+import { Car, FileText, Heart, MessageSquare, Calendar } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
 const CustomerDashboard = () => {
-  
   const mockCustomer = {
     id: 1,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    favorites: [1, 2, 3], // Car IDs
+    name: "Customer",
+    email: "customer@example.com",
+    favorites: [1, 2, 3],
     purchases: [1],
     inquiries: [1, 2],
     testDrives: [1],
@@ -41,202 +39,192 @@ const CustomerDashboard = () => {
       make: "Toyota",
       model: "Camry",
       year: 2024,
-      price: 35000,
-      mileage: 0,
+      price: 350000,
+      mileage: 12000,
       condition: "NEW",
       carType: "SEDAN",
-  fuelType: "FUEL",
+      fuelType: "PETROL",
       transmission: "AUTOMATIC",
-      engine: "2.5L 4-Cylinder",
-      exteriorColor: "Silver",
-      interiorColor: "Black",
-      description: "Brand new Toyota Camry with excellent fuel efficiency",
-      features: ["Backup Camera", "Bluetooth", "Lane Assist"],
       photoUrls: ["/placeholder.svg"],
       status: "AVAILABLE",
-      postedDate: "2024-01-01",
-      updatedAt: "2024-01-01",
-      dealershipId: 1,
-      dealership: {
-        id: 1,
-        name: "Toyota Downtown",
-        address: "123 Main St",
-        city: "Johannesburg",
-        state: "Gauteng",
-        country: "South Africa",
-        postalCode: "2000",
-        phoneNumber: "+27 11 123 4567",
-        email: "info@toyotadowntown.co.za",
-        website: "https://toyotadowntown.co.za"
-      }
     },
     {
       id: 2,
       make: "Honda",
       model: "Accord",
       year: 2023,
-      price: 32000,
-      mileage: 15000,
+      price: 320000,
+      mileage: 25000,
       condition: "USED",
       carType: "SEDAN",
-  fuelType: "FUEL",
+      fuelType: "PETROL",
       transmission: "AUTOMATIC",
-      engine: "1.5L Turbo",
-      exteriorColor: "White",
-      interiorColor: "Beige",
-      description: "Well-maintained Honda Accord with low mileage",
-      features: ["Sunroof", "Heated Seats", "Navigation"],
       photoUrls: ["/placeholder.svg"],
       status: "AVAILABLE",
-      postedDate: "2024-01-05",
-      updatedAt: "2024-01-05",
-      dealershipId: 2,
-      dealership: {
-        id: 2,
-        name: "Honda Central",
-        address: "456 Oak Ave",
-        city: "Cape Town",
-        state: "Western Cape",
-        country: "South Africa",
-        postalCode: "8000",
-        phoneNumber: "+27 21 987 6543",
-        email: "info@hondacentral.co.za",
-        website: "https://hondacentral.co.za"
-      }
     }
   ];
 
-  
-  const newInquiriesCount = mockInquiries.filter(
-    (inq) => inq.status === "NEW"
-  ).length;
+  const newInquiriesCount = mockInquiries.filter(i => i.status === "NEW").length;
 
   return (
-    <div className="dashboard-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Header
-        title="Customer Dashboard"
-        subtitle="Welcome back! Here's an overview of your car journey"
-      />
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#222] pb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+            Customer Dashboard
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            Welcome back. Manage your saved vehicles, test drive requests, and inquiries.
+          </p>
+        </div>
+        <div>
+          <Link
+            href="/inventory"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white hover:bg-zinc-200 text-black text-xs font-medium shadow-sm transition-all"
+          >
+            <Car className="w-3.5 h-3.5" />
+            Browse Inventory
+          </Link>
+        </div>
+      </div>
       
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 my-8">
+      {/* Vercel Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <DashboardCard
-          title="Favorites"
+          title="Saved Favorites"
           count={mockCustomer.favorites.length}
-          icon={<Heart className="h-6 w-6" />}
+          icon={<Heart className="h-4 w-4 text-zinc-400" />}
           link="/customers/favorites"
-          color="bg-gradient-to-br from-rose-500 to-pink-600"
+          description="Vehicles in wishlist"
         />
         <DashboardCard
-          title="My Cars"
+          title="Purchased Cars"
           count={mockCustomer.purchases.length}
-          icon={<Car className="h-6 w-6" />}
+          icon={<Car className="h-4 w-4 text-zinc-400" />}
           link="/customers/purchases"
-          color="bg-gradient-to-br from-blue-500 to-cyan-600"
+          description="Verified orders"
         />
         <DashboardCard
-          title="Inquiries"
+          title="All Inquiries"
           count={mockCustomer.inquiries.length}
-          icon={<MessageSquare className="h-6 w-6" />}
+          icon={<MessageSquare className="h-4 w-4 text-zinc-400" />}
           link="/customers/inquiries"
-          color="bg-gradient-to-br from-amber-500 to-orange-600"
+          description="Direct dealer chats"
         />
         <DashboardCard
-          title="New Inquiries"
+          title="Active Inquiries"
           count={newInquiriesCount}
-          icon={<FileText className="h-6 w-6" />}
+          icon={<FileText className="h-4 w-4 text-zinc-400" />}
           link="/customers/inquiries"
-          color="bg-gradient-to-br from-emerald-500 to-teal-600"
+          description="Awaiting response"
         />
       </div>
       
-      
-      <div className="mt-12">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Recent Favorite Cars</h2>
-          <Link href="/customers/favorites" className="text-blue-500 hover:underline">View all</Link>
+      {/* Favorite Cars */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-base font-semibold text-white">Saved Vehicles</h2>
+            <p className="text-xs text-zinc-500 font-mono">Vehicles you have bookmarked for review</p>
+          </div>
+          <Link href="/customers/favorites" className="text-xs font-mono text-zinc-400 hover:text-white transition-colors">
+            View all →
+          </Link>
         </div>
         
         {mockFavoriteCars && mockFavoriteCars.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-            {mockFavoriteCars.slice(0, 3).map((car) => (
-              <div key={car.id} className="bg-[#0F1112] border border-[#333] rounded-xl p-6 hover:border-[#555] transition-colors">
-                <div className="aspect-video bg-gray-800 rounded-lg mb-4 flex items-center justify-center">
-                  <Car className="h-12 w-12 text-gray-500" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {mockFavoriteCars.slice(0, 2).map((car) => (
+              <div key={car.id} className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5 hover:border-zinc-700 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                        {car.status}
+                      </span>
+                      <h3 className="text-base font-semibold text-white mt-2">
+                        {car.year} {car.make} {car.model}
+                      </h3>
+                    </div>
+                    <span className="text-lg font-mono font-semibold text-white">
+                      R {car.price.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-xs text-zinc-400 font-mono space-x-3 mb-4">
+                    <span>{car.mileage.toLocaleString()} km</span>
+                    <span>•</span>
+                    <span>{car.fuelType}</span>
+                    <span>•</span>
+                    <span>{car.transmission}</span>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {car.year} {car.make} {car.model}
-                </h3>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-2xl font-bold text-blue-400">
-                    R{car.price.toLocaleString()}
-                  </span>
-                  <span className="text-sm text-gray-400">
-                    {car.mileage.toLocaleString()} km
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-white bg-green-600 px-2 py-1 rounded">
-                    Available
-                  </span>
+                
+                <div className="pt-3 border-t border-[#1c1c1c] flex items-center justify-between">
+                  <span className="text-xs text-zinc-500">AutoFame Certified</span>
                   <Link 
                     href={`/cars/${car.id}`}
-                    className="text-blue-500 hover:underline text-sm"
+                    className="text-xs font-medium text-white hover:underline"
                   >
-                    View Details
+                    View Vehicle →
                   </Link>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center p-8 bg-[#0F1112] border border-[#333] rounded-xl text-center">
-            <Heart className="h-8 w-8 text-gray-500 mb-3" />
-            <h3 className="text-lg font-medium text-white mb-2">No Favorite Cars Yet</h3>
-            <p className="text-gray-400">Start adding cars to your favorites to see them here.</p>
+          <div className="flex flex-col items-center justify-center p-8 bg-[#0a0a0a] border border-[#222] rounded-xl text-center">
+            <Heart className="h-6 w-6 text-zinc-600 mb-2" />
+            <h3 className="text-sm font-medium text-white">No Favorite Cars Yet</h3>
+            <p className="text-xs text-zinc-500 mt-1">Start adding cars to your favorites to see them here.</p>
           </div>
         )}
       </div>
 
-      
-      <div className="mt-12">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Recent Inquiries</h2>
-          <Link href="/customers/inquiries" className="text-blue-500 hover:underline">View all</Link>
+      {/* Inquiries Table */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-base font-semibold text-white">Recent Inquiries</h2>
+            <p className="text-xs text-zinc-500 font-mono">Your latest questions and dealership requests</p>
+          </div>
+          <Link href="/customers/inquiries" className="text-xs font-mono text-zinc-400 hover:text-white transition-colors">
+            View all →
+          </Link>
         </div>
         
         {mockInquiries && mockInquiries.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#0F1112] text-gray-300">
-                  <th className="p-4 border-b border-[#333]">Car</th>
-                  <th className="p-4 border-b border-[#333]">Status</th>
-                  <th className="p-4 border-b border-[#333]">Inquiry Date</th>
-                  <th className="p-4 border-b border-[#333]">Action</th>
+                <tr className="bg-black border-b border-[#222] text-zinc-400 font-mono uppercase tracking-wider">
+                  <th className="py-3 px-4">Car</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Inquiry Date</th>
+                  <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {mockInquiries.slice(0, 3).map((inquiry) => (
-                  <tr key={inquiry.id} className="border-b border-[#222] hover:bg-[#1A1B1E]">
-                    <td className="p-4">{`${inquiry.car?.make} ${inquiry.car?.model}` || "Unknown Car"}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        inquiry.status === "COMPLETED" ? "bg-green-900 text-green-300" :
-                        inquiry.status === "CANCELLED" ? "bg-red-900 text-red-300" :
-                        inquiry.status === "NEW" ? "bg-yellow-900 text-yellow-300" :
-                        "bg-blue-900 text-blue-300"
+                  <tr key={inquiry.id} className="border-b border-[#1c1c1c] hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3 px-4 font-medium text-white">{`${inquiry.car?.make} ${inquiry.car?.model}` || "Unknown Car"}</td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono border ${
+                        inquiry.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                        inquiry.status === "CANCELLED" ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
+                        inquiry.status === "NEW" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                        "bg-blue-500/10 text-blue-400 border-blue-500/20"
                       }`}>
-                        {inquiry.status?.charAt(0).toUpperCase() + inquiry.status?.slice(1).toLowerCase()}
+                        {inquiry.status}
                       </span>
                     </td>
-                    <td className="p-4">{new Date(inquiry.inquiryDate).toLocaleDateString()}</td>
-                    <td className="p-4">
+                    <td className="py-3 px-4 font-mono text-zinc-400">{new Date(inquiry.inquiryDate).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-right">
                       <Link 
                         href={`/cars/${inquiry.carId}`}
-                        className="text-blue-500 hover:underline"
+                        className="text-xs font-medium text-white hover:underline"
                       >
-                        View Car
+                        View Details →
                       </Link>
                     </td>
                   </tr>
@@ -245,66 +233,71 @@ const CustomerDashboard = () => {
             </table>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center p-8 bg-[#0F1112] border border-[#333] rounded-xl text-center">
-            <FileText className="h-8 w-8 text-gray-500 mb-3" />
-            <h3 className="text-lg font-medium text-white mb-2">No Inquiries</h3>
-            <p className="text-gray-400">You haven&apos;t submitted any car inquiries yet.</p>
+          <div className="flex flex-col items-center justify-center p-8 bg-[#0a0a0a] border border-[#222] rounded-xl text-center">
+            <FileText className="h-6 w-6 text-zinc-600 mb-2" />
+            <h3 className="text-sm font-medium text-white">No Inquiries</h3>
+            <p className="text-xs text-zinc-500 mt-1">You haven&apos;t submitted any car inquiries yet.</p>
           </div>
         )}
       </div>
 
-      
-      <div className="mt-12">
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Quick Actions */}
+      <div className="space-y-4">
+        <h2 className="text-base font-semibold text-white">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link 
             href="/inventory"
-            className="bg-[#0F1112] border border-[#333] rounded-xl p-6 hover:border-[#555] transition-colors text-center"
+            className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5 hover:border-zinc-700 transition-all flex items-center gap-4 group"
           >
-            <Car className="h-8 w-8 text-blue-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-white mb-2">Browse Cars</h3>
-            <p className="text-gray-400 text-sm">Explore our inventory of available vehicles</p>
+            <div className="p-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 group-hover:text-white">
+              <Car className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-white">Browse Showroom</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">Explore available verified pre-owned vehicles</p>
+            </div>
           </Link>
           
           <Link 
-            href="/customers/test-drives"
-            className="bg-[#0F1112] border border-[#333] rounded-xl p-6 hover:border-[#555] transition-colors text-center"
+            href="/contact-us"
+            className="bg-[#0a0a0a] border border-[#222] rounded-xl p-5 hover:border-zinc-700 transition-all flex items-center gap-4 group"
           >
-            <Calendar className="h-8 w-8 text-green-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-white mb-2">Schedule Test Drive</h3>
-            <p className="text-gray-400 text-sm">Book a test drive for your favorite cars</p>
+            <div className="p-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 group-hover:text-white">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-white">Schedule Test Drive</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">Book a test drive at 1 Rifle Range Rd, Baragwanath</p>
+            </div>
           </Link>
-          {/* Financing quick action removed per request */}
         </div>
       </div>
     </div>
   );
 };
 
-
 const DashboardCard = ({ 
   title, 
   count, 
   icon, 
   link, 
-  color 
+  description 
 }: { 
   title: string; 
   count: number; 
   icon: React.ReactNode; 
   link: string; 
-  color: string;
+  description?: string;
 }) => {
   return (
     <Link href={link}>
-      <div className={`${color} rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300`}>
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium text-white">{title}</h3>
-          <div className="p-2 bg-white/20 rounded-full">
-            {icon}
-          </div>
+      <div className="bg-[#0a0a0a] border border-[#222] hover:border-zinc-700 transition-all rounded-xl p-5 group">
+        <div className="flex items-center justify-between text-zinc-400 text-xs font-mono uppercase tracking-wider mb-2">
+          <span>{title}</span>
+          <div className="group-hover:text-white transition-colors">{icon}</div>
         </div>
-        <p className="text-3xl font-semibold text-white mt-4">{count}</p>
+        <p className="text-3xl font-semibold text-white font-mono tracking-tight mb-1">{count}</p>
+        {description && <p className="text-[11px] text-zinc-500 font-mono">{description}</p>}
       </div>
     </Link>
   );

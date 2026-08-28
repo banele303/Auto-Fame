@@ -103,42 +103,33 @@ const DashboardContent = ({ userRole, children }: { userRole: "customer" | "empl
   }, [open, setOpen]);
   
   return (
-      <div className={cn(
-        "min-h-screen w-full",
-        isDark ? "bg-slate-950" : "bg-slate-50"
-      )}>
-        <Navbar />
-        <div style={{ paddingTop: `${NAVBAR_HEIGHT}px` }}>
-          <div className="flex relative">
-            
-            {isMobile && open && (
-              <div 
-                className="fixed inset-0 bg-black/50 z-30 backdrop-blur-sm" 
-                onClick={() => setOpen(false)}
-              />
-            )}
-            
-            
-            <div className="sticky top-0 h-[calc(100vh-var(--navbar-height))] z-40">
-              <Sidebar userType={userRole} />
-            </div>
-            
-            
+    <div className="min-h-screen w-full bg-black text-[#ededed] selection:bg-white selection:text-black">
+      <Navbar />
+      <div style={{ paddingTop: `${NAVBAR_HEIGHT}px` }}>
+        <div className="flex relative">
+          {isMobile && open && (
             <div 
-              className={cn(
-                "flex-grow transition-all duration-300 ease-in-out p-3 sm:p-4 md:p-6 overflow-x-hidden",
-                isDark ? "text-slate-50" : "text-slate-900"
-              )}
-              style={{
-                '--navbar-height': `${NAVBAR_HEIGHT}px`,
-                marginLeft: isMobile ? 0 : (open ? 'var(--sidebar-width)' : 'var(--sidebar-width-icon)'),
-              } as React.CSSProperties}
-            >
-              {children}
-            </div>
+              className="fixed inset-0 bg-black/70 z-30 backdrop-blur-sm" 
+              onClick={() => setOpen(false)}
+            />
+          )}
+          
+          <div className="sticky top-0 h-[calc(100vh-var(--navbar-height))] z-40 bg-black border-r border-[#222]">
+            <Sidebar userType={userRole} />
+          </div>
+          
+          <div 
+            className="flex-grow transition-all duration-300 ease-in-out p-4 sm:p-6 md:p-8 overflow-x-hidden bg-black min-h-[calc(100vh-var(--navbar-height))]"
+            style={{
+              '--navbar-height': `${NAVBAR_HEIGHT}px`,
+              marginLeft: isMobile ? 0 : (open ? 'var(--sidebar-width)' : 'var(--sidebar-width-icon)'),
+            } as React.CSSProperties}
+          >
+            {children}
           </div>
         </div>
       </div>
+    </div>
   );
 };
 

@@ -259,3 +259,78 @@ body,
 .font-script {
   font-family: "Brush Script MT", cursive;
 }
+
+/* Vercel Dark Theme Design Utilities */
+.vercel-dark-shell {
+  background-color: #000000 !important;
+  color: #ededed !important;
+  color-scheme: dark;
+}
+
+.vercel-card {
+  background-color: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  color: #ededed;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vercel-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.vercel-card-gradient {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03) 0%, #0a0a0a 75%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+
+.vercel-border {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.vercel-badge {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d4d4d8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.vercel-btn-primary {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.vercel-btn-primary:hover {
+  background-color: #e4e4e7 !important;
+}
+
+.vercel-btn-secondary {
+  background-color: #111111 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ededed !important;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.vercel-btn-secondary:hover {
+  background-color: #1a1a1a !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.vercel-input {
+  background-color: #0a0a0a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ededed !important;
+  border-radius: 0.5rem;
+}
+
+.vercel-input:focus {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+}

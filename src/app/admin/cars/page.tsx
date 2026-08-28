@@ -573,143 +573,112 @@ export default function AdminCarsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950 p-6 lg:p-10">
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header Section */}
-      <div className="max-w-7xl mx-auto mb-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
-              <Car className="h-10 w-10 text-[#00A211]" />
-              Cars Showcase
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">
-              Manage your inventory with precision and style.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => router.push('/admin')}
-              className="rounded-2xl border-gray-200 dark:border-gray-800 font-semibold"
-            >
-              Dashboard
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/cars/add')} 
-              className="bg-[#00A211] hover:bg-[#009210] text-white rounded-2xl px-6 font-bold shadow-lg shadow-[#00A211]/20 flex items-center gap-2"
-            >
-              <Plus className="h-5 w-5" />
-              New Entry
-            </Button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#222] pb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight flex items-center gap-2.5">
+            <Car className="h-7 w-7 text-zinc-300" />
+            Cars Showcase
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            Manage your vehicle fleet, pricing, status, and showroom listings.
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push('/admin')}
+            className="bg-[#111] hover:bg-[#1a1a1a] text-zinc-200 border border-[#333] rounded-lg text-xs font-medium"
+          >
+            Dashboard
+          </Button>
+          <Button
+            onClick={() => router.push('/admin/cars/add')} 
+            className="bg-white hover:bg-zinc-200 text-black rounded-lg px-4 text-xs font-medium shadow-sm flex items-center gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            New Entry
+          </Button>
         </div>
       </div>
 
       {/* Modern Filter Shelf */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-100 dark:border-gray-800 rounded-3xl p-4 shadow-sm flex flex-col lg:flex-row items-center gap-4">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              placeholder="Search make, model, or VIN..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-12 bg-transparent border-none focus-visible:ring-0 text-lg font-medium"
-            />
-          </div>
-          
-          <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
-            <Select value={filterStatus || 'ALL'} onValueChange={(v) => setFilterStatus(v === 'ALL' ? '' : v)}>
-              <SelectTrigger className="h-12 w-[160px] rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800">
-                <span className="font-semibold">{filterStatus || 'All Status'}</span>
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="ALL">All Status</SelectItem>
-                <SelectItem value="AVAILABLE">Available</SelectItem>
-                <SelectItem value="SOLD">Sold</SelectItem>
-                <SelectItem value="INACTIVE">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 shadow-sm flex flex-col lg:flex-row items-center gap-3">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+          <Input
+            placeholder="Search make, model, or VIN..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-10 bg-[#050505] border border-[#222] text-zinc-200 placeholder:text-zinc-500 rounded-lg text-sm focus-visible:ring-1 focus-visible:ring-zinc-700"
+          />
+        </div>
+        
+        <div className="flex items-center gap-2.5 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0">
+          <Select value={filterStatus || 'ALL'} onValueChange={(v) => setFilterStatus(v === 'ALL' ? '' : v)}>
+            <SelectTrigger className="h-10 w-[140px] rounded-lg bg-[#050505] border border-[#222] text-xs font-medium text-zinc-200">
+              <span>{filterStatus || 'All Status'}</span>
+            </SelectTrigger>
+            <SelectContent className="bg-[#0a0a0a] border border-[#222] text-zinc-200 rounded-lg">
+              <SelectItem value="ALL">All Status</SelectItem>
+              <SelectItem value="AVAILABLE">Available</SelectItem>
+              <SelectItem value="SOLD">Sold</SelectItem>
+              <SelectItem value="INACTIVE">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-              <SelectTrigger className="h-12 w-[160px] rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800">
-                <span className="font-semibold">Sort: {sortBy}</span>
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="make">Make</SelectItem>
-                <SelectItem value="price">Price</SelectItem>
-                <SelectItem value="year">Year</SelectItem> 
-              </SelectContent>
-            </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="h-10 w-[140px] rounded-lg bg-[#050505] border border-[#222] text-xs font-medium text-zinc-200">
+              <span>Sort: {sortBy}</span>
+            </SelectTrigger>
+            <SelectContent className="bg-[#0a0a0a] border border-[#222] text-zinc-200 rounded-lg">
+              <SelectItem value="make">Make</SelectItem>
+              <SelectItem value="price">Price</SelectItem>
+              <SelectItem value="year">Year</SelectItem> 
+            </SelectContent>
+          </Select>
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleSortOrder}
-              className="h-12 w-12 rounded-2xl border-gray-100 dark:border-gray-800"
-            >
-              {sortOrder === "asc" ? "↑" : "↓"}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleSortOrder}
+            className="h-10 w-10 rounded-lg bg-[#050505] border border-[#222] text-zinc-400 hover:text-white"
+          >
+            {sortOrder === "asc" ? "↑" : "↓"}
+          </Button>
         </div>
       </div>
 
       {/* Main Content Grid */}
-      <div className="max-w-7xl mx-auto">
+      <div>
         {carsLoading ? (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm rounded-3xl">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
-                  <TableRow>
-                     <TableHead className="w-[80px]">Image</TableHead>
-                     <TableHead>Make & Model</TableHead>
-                     <TableHead>Price</TableHead>
-                     <TableHead>Year</TableHead>
-                     <TableHead>Status</TableHead>
-                     <TableHead>Location</TableHead>
-                     <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...Array(5)].map((_, i) => (
-                    <TableRow key={i}>
-                       <TableCell><Skeleton className="h-12 w-12 rounded-md" /></TableCell>
-                       <TableCell>
-                         <Skeleton className="h-4 w-32 mb-1" />
-                         <Skeleton className="h-3 w-20" />
-                       </TableCell>
-                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                       <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                       <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                       <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
+          <div className="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden p-6 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-[#111] rounded-lg animate-pulse" />
+            ))}
+          </div>
         ) : paginatedCars.length > 0 ? (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm rounded-3xl">
+          <div className="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto min-h-[400px]">
               <Table>
-                <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
-                  <TableRow>
-                    <TableHead className="py-5 pl-6 font-semibold text-gray-900 dark:text-white">Car Details</TableHead>
-                    <TableHead className="font-semibold text-gray-900 dark:text-white">Price</TableHead>
-                    <TableHead className="font-semibold text-gray-900 dark:text-white">Year</TableHead>
-                    <TableHead className="font-semibold text-gray-900 dark:text-white">Status</TableHead>
-                    <TableHead className="font-semibold text-gray-900 dark:text-white">Location / Employee</TableHead>
-                    <TableHead className="text-right pr-6 font-semibold text-gray-900 dark:text-white">Actions</TableHead>
+                <TableHeader className="bg-black border-b border-[#222]">
+                  <TableRow className="border-b border-[#222] hover:bg-transparent">
+                    <TableHead className="py-3.5 pl-5 text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Car Details</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Price (ZAR)</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Year</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Status</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Location</TableHead>
+                    <TableHead className="text-right pr-5 text-xs uppercase tracking-wider font-mono text-zinc-400 font-medium">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedCars.map((car: EnhancedCar) => (
-                    <TableRow key={car.id} className="group hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
-                      <TableCell className="py-4 pl-6">
-                        <div className="flex items-center gap-4">
-                          <div className="relative h-16 w-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <TableRow key={car.id} className="border-b border-[#1c1c1c] hover:bg-white/[0.02] transition-colors">
+                      <TableCell className="py-3 pl-5">
+                        <div className="flex items-center gap-3.5">
+                          <div className="relative h-14 w-14 rounded-lg overflow-hidden flex-shrink-0 bg-[#111] border border-[#222]">
                              {car.photoUrls?.[0] ? (
                                 <Image
                                   src={resolveCarImageUrl(car.photoUrls[0])}
@@ -723,40 +692,40 @@ export default function AdminCarsPage() {
                                   unoptimized
                                 />
                              ) : (
-                                <div className="h-full w-full flex items-center justify-center text-gray-300">
-                                   <Car size={24} />
+                                <div className="h-full w-full flex items-center justify-center text-zinc-600">
+                                   <Car size={20} />
                                 </div>
                              )}
                           </div>
                           <div>
-                            <div className="font-bold text-gray-900 dark:text-white text-base">{car.make} {car.model}</div>
-                            <div className="text-xs text-gray-500 font-mono mt-1">VIN: {car.vin}</div>
+                            <div className="font-medium text-white text-sm">{car.make} {car.model}</div>
+                            <div className="text-[11px] text-zinc-500 font-mono mt-0.5">VIN: {car.vin}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-bold text-gray-900 dark:text-white">
+                      <TableCell className="font-mono text-sm font-semibold text-white">
                         {new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(car.price)}
                       </TableCell>
-                      <TableCell className="font-medium text-gray-600 dark:text-gray-400">
+                      <TableCell className="font-mono text-xs text-zinc-400">
                         {car.year}
                       </TableCell>
                       <TableCell>
                          <Badge 
                             variant="outline"
-                            className={`rounded-full px-3 py-1 border-none font-medium ${
-                              car.status === "AVAILABLE" ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400" : 
-                              car.status === "SOLD" ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400" : 
-                              "bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                            className={`rounded-full px-2.5 py-0.5 font-mono text-[11px] font-medium border ${
+                              car.status === "AVAILABLE" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : 
+                              car.status === "SOLD" ? "bg-rose-500/10 text-rose-400 border-rose-500/20" : 
+                              "bg-zinc-800 text-zinc-400 border-zinc-700"
                             }`}
                           >
                             {car.status || "AVAILABLE"}
                           </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <MapPin size={14} className="text-[#00A211]" />
-                            {car.dealership?.city || "Local"}
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-300">
+                            <MapPin size={12} className="text-zinc-500" />
+                            {car.dealership?.city || "Johannesburg South"}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <User size={12} />
