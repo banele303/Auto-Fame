@@ -769,32 +769,78 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
             </div>
             <div className="space-y-2">
               <Label htmlFor="featured">Featured</Label>
-              
-              {photoFiles.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Uploaded Photos ({photoFiles.length}/{MAX_PHOTOS})</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                    {photoFiles.map((file, index) => (
-                      <div key={index} className="relative group rounded-lg overflow-hidden aspect-square border border-[#222] bg-[#111]">
-                        <img 
-                          src={URL.createObjectURL(file)} 
-                          alt={`Car ${index + 1}`} 
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(index)}
-                          className="absolute top-1 right-1 bg-black/80 hover:bg-rose-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div className="flex items-center gap-3 py-2">
+                <Switch id="featured" checked={formData.featured} onCheckedChange={(v)=>setFormData(prev=>({...prev, featured: v}))} />
+                <span className="text-xs text-zinc-400">Show in Featured Vehicles section</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#0a0a0a] border border-[#222] rounded-xl text-zinc-200 shadow-sm">
+          <CardHeader className="border-b border-[#222] pb-4">
+            <CardTitle className="text-base font-semibold text-white">Photos</CardTitle>
+            <CardDescription className="text-xs text-zinc-400">Upload photos of the vehicle for the showroom</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-5">
+            <div className="space-y-2">
+              <Label htmlFor="photos">Car Photos</Label>
+              <div
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const fileList = e.dataTransfer.files;
+                  const input = document.createElement('input');
+                  const dataTransfer = new DataTransfer();
+                  Array.from(fileList).forEach(f => dataTransfer.items.add(f));
+                  input.files = dataTransfer.files;
+                  handleFileChange({ target: input } as any);
+                }}
+                className="border-2 border-dashed border-[#333] hover:border-zinc-500 rounded-xl p-6 flex flex-col items-center justify-center gap-2 bg-[#050505] cursor-pointer hover:bg-white/[0.02] transition-colors"
+                onClick={() => document.getElementById('photos')?.click()}
+              >
+                <p className="text-sm text-zinc-300 font-medium">Drag & drop images here or click to browse</p>
+                <p className="text-xs text-zinc-500 font-mono">PNG/JPG up to {MAX_SINGLE_FILE_MB}MB each • Max {MAX_PHOTOS} images</p>
+                <Input
+                  id="photos"
+                  type="file"
+                  multiple={true}
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-xs text-zinc-500 font-mono mt-1">You can add up to {MAX_PHOTOS} photos.</p>
+              {photoFiles.length >= MAX_PHOTOS && (
+                <p className="text-xs text-amber-500 font-mono mt-1">Maximum {MAX_PHOTOS} images reached.</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+              
+            {photoFiles.length > 0 && (
+              <div className="space-y-2">
+                <Label>Uploaded Photos ({photoFiles.length}/{MAX_PHOTOS})</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {photoFiles.map((file, index) => (
+                    <div key={index} className="relative group rounded-lg overflow-hidden aspect-square border border-[#222] bg-[#111]">
+                      <img 
+                        src={URL.createObjectURL(file)} 
+                        alt={`Car ${index + 1}`} 
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute top-1 right-1 bg-black/80 hover:bg-rose-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
           <div className="flex justify-end gap-3 pt-2">
             <Button 

@@ -325,7 +325,7 @@ export default function TrafficAnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-3">
 
         {/* Traffic Chart */}
-        <div className="lg:col-span-2 p-6 rounded-xl border border-[#222] bg-[#0a0a0a]">
+        <Card className="lg:col-span-2 p-6 rounded-xl border border-[#222] bg-[#0a0a0a]">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h2 className="text-base font-semibold text-white">Visitor Traffic</h2>

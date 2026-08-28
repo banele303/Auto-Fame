@@ -573,7 +573,6 @@ export default function AdminCarsPage() {
   }
 
   return (
-  return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#222] pb-6">
