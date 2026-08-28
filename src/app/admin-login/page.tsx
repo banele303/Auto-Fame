@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Lock, Mail } from "lucide-react";
-import { loginAsAdmin, checkAdminAuth, ALLOWED_ADMIN_EMAILS } from "../admin/adminAuth";
+import { loginAsAdmin, checkAdminAuth } from "../admin/adminAuth";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("autofame1@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -112,7 +112,7 @@ export default function AdminLogin() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="alexsouthflow@gmail.com"
+                  placeholder="admin@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
@@ -137,15 +137,6 @@ export default function AdminLogin() {
                   required
                 />
               </div>
-            </div>
-
-            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 space-y-1">
-              <p className="font-semibold">Authorized Admin Emails:</p>
-              <ul className="list-disc pl-4 space-y-0.5">
-                {ALLOWED_ADMIN_EMAILS.map((addr) => (
-                  <li key={addr} className="font-mono">{addr}</li>
-                ))}
-              </ul>
             </div>
           </CardContent>
           

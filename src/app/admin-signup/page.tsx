@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Lock, Mail, User, Check } from "lucide-react";
-import { registerAdmin, ALLOWED_ADMIN_EMAILS } from "../admin/adminAuth";
+import { registerAdmin } from "../admin/adminAuth";
 
 export default function AdminSignup() {
-  const [email, setEmail] = useState("alexsouthflow@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
@@ -108,7 +108,7 @@ export default function AdminSignup() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="alexsouthflow@gmail.com"
+                  placeholder="admin@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
