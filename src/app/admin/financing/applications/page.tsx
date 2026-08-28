@@ -314,6 +314,5 @@ export default function FinancingApplicationsPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

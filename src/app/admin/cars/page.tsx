@@ -24,7 +24,7 @@ import {
   ShoppingCart,
   CheckCircle
 } from 'lucide-react'; 
-interface Car {
+interface CarData {
   id: number;
   make: string;
   model: string;
@@ -106,7 +106,7 @@ export default function AdminCarsPage() {
   });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [selectedCar, setSelectedCar] = useState<CarData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
@@ -315,7 +315,7 @@ export default function AdminCarsPage() {
   };
 
   
-  const openDeleteDialog = (car: Car) => {
+  const openDeleteDialog = (car: CarData) => {
     setSelectedCar(car);
     setIsDeleteDialogOpen(true);
   };
@@ -801,7 +801,7 @@ export default function AdminCarsPage() {
                 </TableBody>
               </Table>
             </div>
-          </Card>
+          </div>
         ) : (
           <div className="text-center py-20 bg-white dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-800">
             <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800 mb-6">
@@ -842,9 +842,7 @@ export default function AdminCarsPage() {
           </div>
         )}
       </div>
-      
-      
-  {/* Stats cards removed per request */}
+      {/* Stats cards removed per request */}
 
       
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
