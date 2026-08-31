@@ -91,7 +91,16 @@ export const api = createApi({
         body = args.body;
       }
 
-      const rawPath = url.replace(/^\/+|\/+$/g, "");
+      let cleanUrl = url;
+      if (cleanUrl.includes("?")) {
+        const [pathPart, queryPart] = cleanUrl.split("?");
+        cleanUrl = pathPart;
+        if (queryPart && !params) {
+          params = Object.fromEntries(new URLSearchParams(queryPart));
+        }
+      }
+
+      const rawPath = cleanUrl.replace(/^\/+|\/+$/g, "");
       const path = rawPath.startsWith("admin/") ? rawPath.substring(6) : rawPath;
 
       try {
@@ -771,7 +780,8 @@ export const api = createApi({
         if (params.employeeId) searchParams.append('employeeId', params.employeeId);
         if (params.carId) searchParams.append('carId', params.carId);
         if (params.dealershipId) searchParams.append('dealershipId', params.dealershipId);
-        return `sales?${searchParams.toString()}`;
+        const queryString = searchParams.toString();
+        return `sales${queryString ? `?${queryString}` : ''}`;
       },
       providesTags: (result) =>
         result
