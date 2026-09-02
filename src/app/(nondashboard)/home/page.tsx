@@ -7,17 +7,19 @@ import FeaturedCars from "./FeaturedCars";
 import ReferralCalloutSection from "./ReferralCalloutSection";
 import BlogSection from "./BlogSection";
 import StatsSection from "./StatsSection";
+import GallerySection from "./GallerySection";
 
 function Home() { 
   return (
     <div>
-  <HeroSection />
-  <FeaturedCars />
-  <ReferralCalloutSection />
-  <StatsSection />
+      <HeroSection />
+      <FeaturedCars />
+      <ReferralCalloutSection />
+      <StatsSection />
+      <GallerySection compact={true} />
       <TestimonialsSection />
       <BlogSection />
-  <FAQShared />
+      <FAQShared />
     </div>
   );
 }
