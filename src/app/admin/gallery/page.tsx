@@ -303,17 +303,17 @@ export default function AdminGalleryPage() {
   });
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl w-full min-w-0 mx-auto pb-12">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/40 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Gallery Management</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">Gallery Management</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
               Convex Cloud: {items.length} Photos
             </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Real-time Convex gallery engine. Upload, organize, and delete photos displayed across AutoFame.
           </p>
         </div>
@@ -331,15 +331,15 @@ export default function AdminGalleryPage() {
       </div>
 
       {/* ── SECTION 1: ADD NEW IMAGES SECTION (Directly on Dashboard via Convex) ── */}
-      <Card className="border-emerald-500/20 shadow-lg bg-gradient-to-br from-card via-card to-emerald-500/[0.03]">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+      <Card className="border-emerald-500/20 shadow-md bg-gradient-to-br from-card via-card to-emerald-500/[0.03] overflow-hidden">
+        <CardHeader className="p-4 sm:p-6 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
                 <Upload className="h-4 w-4" />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold">Add Images to Gallery</CardTitle>
+                <CardTitle className="text-base sm:text-lg font-bold">Add Images to Gallery</CardTitle>
                 <CardDescription className="text-xs">
                   Upload showroom, vehicle inventory, or customer delivery photos directly to Convex Storage.
                 </CardDescription>
@@ -351,7 +351,7 @@ export default function AdminGalleryPage() {
                 size="sm"
                 onClick={resetUploadForm}
                 disabled={uploading}
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="self-end sm:self-auto text-xs h-8 text-muted-foreground hover:text-foreground"
               >
                 Clear Selection
               </Button>
@@ -359,8 +359,8 @@ export default function AdminGalleryPage() {
           </div>
         </CardHeader>
 
-        <CardContent>
-          <form onSubmit={handleUploadSubmit} className="space-y-5">
+        <CardContent className="p-4 sm:p-6 pt-1">
+          <form onSubmit={handleUploadSubmit} className="space-y-4">
             {/* Drag & Drop Zone */}
             <div
               onDragOver={(e) => {
@@ -371,11 +371,11 @@ export default function AdminGalleryPage() {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={cn(
-                "relative rounded-xl border-2 border-dashed p-6 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center",
+                "relative rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center px-4",
                 isDragOver
                   ? "border-emerald-500 bg-emerald-500/5 scale-[0.99]"
                   : "border-border hover:border-emerald-500/50 hover:bg-muted/40",
-                selectedFiles.length > 0 ? "py-4 bg-muted/20" : "py-8"
+                selectedFiles.length > 0 ? "py-3 sm:py-4 bg-muted/20" : "py-5 sm:py-7"
               )}
             >
               <input
@@ -388,27 +388,27 @@ export default function AdminGalleryPage() {
                 disabled={uploading}
               />
 
-              <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-3">
-                <Upload className="h-6 w-6" />
+              <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
+                <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-xs sm:text-sm font-semibold text-foreground">
                 Click to browse or drag &amp; drop images here
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Supports JPG, PNG, WebP up to 15MB • Uploads directly to Convex Cloud CDN
+              <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 max-w-sm">
+                Supports JPG, PNG, WebP up to 15MB • Uploads directly to Convex CDN
               </p>
             </div>
 
             {/* Selected Previews Grid */}
             {previewUrls.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
                   <span>
-                    Selected {selectedFiles.length} {selectedFiles.length === 1 ? "image" : "images"} to upload
+                    Selected {selectedFiles.length} {selectedFiles.length === 1 ? "image" : "images"}
                   </span>
-                  <span>Click ✕ on any thumbnail to remove</span>
+                  <span className="text-[11px]">Click ✕ to remove</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-48 overflow-y-auto p-2 bg-muted/30 rounded-xl border">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-40 overflow-y-auto p-2 bg-muted/30 rounded-xl border">
                   {previewUrls.map((url, idx) => (
                     <div
                       key={idx}
@@ -427,12 +427,12 @@ export default function AdminGalleryPage() {
                           removeSelectedFile(idx);
                         }}
                         disabled={uploading}
-                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/75 hover:bg-red-600 text-white flex items-center justify-center transition shadow"
+                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/75 hover:bg-red-600 text-white flex items-center justify-center transition shadow z-10"
                         title="Remove"
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      <span className="absolute bottom-1 left-1 bg-black/70 text-[9px] text-white px-1 rounded truncate max-w-[85%]">
+                      <span className="absolute bottom-1 left-1 bg-black/75 text-[9px] text-white px-1 rounded truncate max-w-[85%]">
                         {selectedFiles[idx]?.name}
                       </span>
                     </div>
@@ -442,8 +442,8 @@ export default function AdminGalleryPage() {
             )}
 
             {/* Metadata inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-              <div className="sm:col-span-7 space-y-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div className="sm:col-span-7 space-y-1">
                 <label className="text-xs font-semibold text-foreground">
                   Image Title / Caption <span className="text-muted-foreground font-normal">(optional)</span>
                 </label>
@@ -457,11 +457,11 @@ export default function AdminGalleryPage() {
                       : "e.g. 2024 Toyota Hilux Double Cab"
                   }
                   disabled={uploading}
-                  className="w-full px-3.5 py-2 text-sm rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
+                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
                 />
               </div>
 
-              <div className="sm:col-span-5 space-y-1.5">
+              <div className="sm:col-span-5 space-y-1">
                 <label className="text-xs font-semibold text-foreground">
                   Gallery Category
                 </label>
@@ -469,7 +469,7 @@ export default function AdminGalleryPage() {
                   value={uploadCategory}
                   onChange={(e) => setUploadCategory(e.target.value)}
                   disabled={uploading}
-                  className="w-full px-3.5 py-2 text-sm rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition cursor-pointer"
+                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition cursor-pointer"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat.value} value={cat.value}>
@@ -481,31 +481,31 @@ export default function AdminGalleryPage() {
             </div>
 
             {/* Submit Button & Progress */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-              <div className="text-xs text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="text-xs text-muted-foreground order-2 sm:order-1">
                 {uploadProgress ? (
                   <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
                     Uploading image {uploadProgress.current} of {uploadProgress.total} to Convex...
                   </span>
                 ) : (
-                  <span>Photos will be instantly published to Convex upon upload.</span>
+                  <span className="text-[11px] sm:text-xs">Photos are published immediately upon upload.</span>
                 )}
               </div>
 
               <Button
                 type="submit"
                 disabled={uploading || selectedFiles.length === 0}
-                className="w-full sm:w-auto px-6 font-semibold flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md"
+                className="w-full sm:w-auto px-5 h-9 font-semibold flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md text-xs sm:text-sm order-1 sm:order-2"
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                     Uploading ({uploadProgress?.current}/{uploadProgress?.total})...
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4 shrink-0" />
                     Upload {selectedFiles.length > 0 ? `${selectedFiles.length} ` : ""}to Convex Gallery
                   </>
                 )}
@@ -520,11 +520,11 @@ export default function AdminGalleryPage() {
         {/* Filters and Search Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card p-3 rounded-xl border">
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 md:pb-0 scrollbar-none w-full md:w-auto -mx-1 px-1">
             <button
               onClick={() => setSelectedCategoryFilter("all")}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition",
+                "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition",
                 selectedCategoryFilter === "all"
                   ? "bg-emerald-600 text-white shadow-sm"
                   : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -541,7 +541,7 @@ export default function AdminGalleryPage() {
                   key={cat.value}
                   onClick={() => setSelectedCategoryFilter(cat.value)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition",
+                    "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition",
                     selectedCategoryFilter === cat.value
                       ? "bg-emerald-600 text-white shadow-sm"
                       : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -554,14 +554,14 @@ export default function AdminGalleryPage() {
           </div>
 
           {/* Search Input */}
-          <div className="relative min-w-[220px]">
+          <div className="relative w-full md:w-64 shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by title or filename..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
+              placeholder="Search title..."
+              className="w-full pl-9 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
             />
             {searchQuery && (
               <button
@@ -576,16 +576,16 @@ export default function AdminGalleryPage() {
 
         {/* Gallery Grid */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3 bg-card rounded-2xl border">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
-            <p className="text-sm text-muted-foreground">Loading Convex gallery...</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-3 bg-card rounded-2xl border">
+            <Loader2 className="h-7 w-7 animate-spin text-emerald-400" />
+            <p className="text-xs text-muted-foreground">Loading Convex gallery...</p>
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-2xl border border-dashed text-center px-4">
-            <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground mb-3">
-              <ImageIcon className="h-7 w-7 opacity-75" />
+          <div className="flex flex-col items-center justify-center py-16 bg-muted/20 rounded-2xl border border-dashed text-center px-4">
+            <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground mb-2.5">
+              <ImageIcon className="h-6 w-6 opacity-75" />
             </div>
-            <h3 className="font-semibold text-base">No images found</h3>
+            <h3 className="font-semibold text-sm">No images found</h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-sm">
               {searchQuery || selectedCategoryFilter !== "all"
                 ? "No photos match your current search or category filter. Try clearing filters."
@@ -599,14 +599,14 @@ export default function AdminGalleryPage() {
                   setSearchQuery("");
                   setSelectedCategoryFilter("all");
                 }}
-                className="mt-4 text-xs"
+                className="mt-3 text-xs h-8"
               >
                 Reset Filters
               </Button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {filteredItems.map((item) => {
               const catConfig = CATEGORIES.find(
                 (c) => c.value === (item.category || "showroom").toLowerCase()
