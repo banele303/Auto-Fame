@@ -26,6 +26,8 @@ import {
   DollarSign,
   Building,
   Activity,
+  Sparkles,
+  ImageIcon,
 } from "lucide-react";
 import { NAVBAR_HEIGHT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -73,6 +75,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
     { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
     { icon: Activity, label: "Web Traffic", href: "/admin/analytics/traffic" },
     { icon: Car, label: "Cars", href: "/admin/cars" },
+    { icon: Sparkles, label: "Omnichannel Studio", href: "/admin/cars/quick-publish" },
     { icon: Users, label: "Employees", href: "/admin/employees" },
     { icon: UserCheck, label: "Customers", href: "/admin/customers" },
     { icon: MessageSquare, label: "Inquiries", href: "/admin/inquiries" },
@@ -80,7 +83,7 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
     { icon: CreditCard, label: "Financing", href: "/admin/financing" },
     { icon: Building, label: "Dealerships", href: "/admin/dealerships" },
     { icon: FileText, label: "Blog", href: "/admin/blog" },
-    { icon: LayoutDashboard, label: "Gallery", href: "/admin/gallery" },
+    { icon: ImageIcon, label: "Gallery", href: "/admin/gallery" },
   ];
 
   const navLinks = 

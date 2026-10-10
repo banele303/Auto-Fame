@@ -28,13 +28,46 @@ export default defineSchema({
     dealershipId: v.number(), // references dealerships.id
     employeeId: v.optional(v.union(v.string(), v.null())), // references employees.cognitoId
     featured: v.boolean(),
+    // Omnichannel & AI Enrichment fields
+    videoUrl: v.optional(v.string()),
+    processedPhotoUrls: v.optional(v.array(v.string())),
+    model3dUrl: v.optional(v.string()),
+    trimLevel: v.optional(v.string()),
+    adCopy: v.optional(
+      v.object({
+        website: v.string(),
+        facebook: v.string(),
+        instagram: v.string(),
+        classifieds: v.string(),
+      })
+    ),
+    publishingStatus: v.optional(v.string()), // "DRAFT" | "PROCESSING" | "ENRICHED" | "PUBLISHED" | "FAILED"
+    channels: v.optional(
+      v.object({
+        website: v.object({ status: v.string(), publishedAt: v.optional(v.string()) }),
+        facebook: v.object({ status: v.string(), postId: v.optional(v.string()), publishedAt: v.optional(v.string()) }),
+        instagram: v.object({ status: v.string(), postId: v.optional(v.string()), publishedAt: v.optional(v.string()) }),
+        classifieds: v.object({ status: v.string(), feedId: v.optional(v.string()), publishedAt: v.optional(v.string()) }),
+      })
+    ),
+    enrichmentLog: v.optional(
+      v.array(
+        v.object({
+          step: v.string(),
+          timestamp: v.string(),
+          status: v.string(),
+          details: v.optional(v.string()),
+        })
+      )
+    ),
   })
   .index("by_numeric_id", ["id"])
   .index("by_vin", ["vin"])
   .index("by_status", ["status"])
   .index("by_featured", ["featured"])
   .index("by_dealershipId", ["dealershipId"])
-  .index("by_employeeId", ["employeeId"]),
+  .index("by_employeeId", ["employeeId"])
+  .index("by_publishingStatus", ["publishingStatus"]),
 
   dealerships: defineTable({
     id: v.number(), // Keep original numeric ID
@@ -284,4 +317,31 @@ export default defineSchema({
   })
   .index("by_token", ["token"])
   .index("by_userId", ["userId"]),
-  });
+
+  omnichannelJobs: defineTable({
+    carId: v.number(),
+    vin: v.string(),
+    dealershipId: v.number(),
+    currentStep: v.string(), // "INSPECTION" | "VISION_AI" | "BACKGROUND_REMOVAL" | "GAUSSIAN_3D" | "DISTRIBUTION" | "COMPLETED" | "FAILED"
+    progressPercent: v.number(), // 0 to 100
+    status: v.string(), // "PENDING" | "RUNNING" | "COMPLETED" | "FAILED"
+    error: v.optional(v.string()),
+    channelsTargeted: v.array(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+  .index("by_carId", ["carId"])
+  .index("by_status", ["status"]),
+
+  intakeWebhooks: defineTable({
+    source: v.string(), // "WHATSAPP" | "PWA" | "API"
+    sender: v.string(),
+    vin: v.optional(v.string()),
+    photoCount: v.number(),
+    status: v.string(), // "PROCESSED" | "FAILED"
+    carId: v.optional(v.number()),
+    payload: v.optional(v.any()),
+    receivedAt: v.string(),
+  })
+  .index("by_sender", ["sender"]),
+});

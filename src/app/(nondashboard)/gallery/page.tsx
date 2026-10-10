@@ -30,6 +30,14 @@ export default function GalleryPage() {
         <div className="container mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">Vehicle & Showroom Gallery</h1>
           <p className="text-[#c6f9ce] max-w-2xl mx-auto">Browse highlights from our Johannesburg South showroom, featured stock, interiors, and customer deliveries.</p>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <a
+              href="/admin/gallery"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/15 hover:bg-white/25 border border-white/25 text-white transition backdrop-blur-sm"
+            >
+              <span>⚙️ Admin: Manage &amp; Add Photos</span>
+            </a>
+          </div>
         </div>
       </section>
       <GallerySection compact={false} />

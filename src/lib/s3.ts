@@ -1,19 +1,37 @@
 import { convexClient } from "./convex";
 
 /**
- * Uploads a file directly to Convex CDN storage as clean raw binary
+ * Uploads a file/buffer directly to Convex CDN storage as clean raw binary
  */
-export async function uploadToConvex(file: File): Promise<string> {
+export async function uploadToConvex(
+  file: File | Blob | Buffer | Uint8Array,
+  mimeType = "image/jpeg"
+): Promise<string> {
   try {
     const postUrl = await (convexClient as any).mutation("files:generateUploadUrl");
 
-    const arrayBuffer = await file.arrayBuffer();
+    let bodyData: any;
+    let contentType = mimeType;
+
+    if (file instanceof Buffer) {
+      bodyData = file;
+    } else if (file instanceof Uint8Array) {
+      bodyData = file;
+    } else if (typeof (file as any).arrayBuffer === "function") {
+      bodyData = await (file as any).arrayBuffer();
+      if ((file as any).type) {
+        contentType = (file as any).type;
+      }
+    } else {
+      bodyData = file;
+    }
+
     const response = await fetch(postUrl, {
       method: "POST",
       headers: {
-        "Content-Type": file.type || "image/jpeg",
+        "Content-Type": contentType || "image/jpeg",
       },
-      body: arrayBuffer,
+      body: bodyData,
     });
 
     if (!response.ok) {
@@ -29,7 +47,10 @@ export async function uploadToConvex(file: File): Promise<string> {
       }
     } catch {}
 
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "https://reliable-sturgeon-574.convex.cloud";
+    const convexUrl =
+      process.env.NEXT_PUBLIC_CONVEX_URL ||
+      process.env.CONVEX_URL ||
+      "https://reliable-sturgeon-574.convex.cloud";
     return `${convexUrl}/api/storage/${storageId}`;
   } catch (error: any) {
     console.error("Error uploading file to Convex:", error);
@@ -40,6 +61,9 @@ export async function uploadToConvex(file: File): Promise<string> {
 /**
  * Upload helper - uploads to Convex storage
  */
-export async function uploadToS3(file: File, _folder = "cars"): Promise<string> {
+export async function uploadToS3(
+  file: File | Blob | Buffer | Uint8Array,
+  _folder = "cars"
+): Promise<string> {
   return await uploadToConvex(file);
 }

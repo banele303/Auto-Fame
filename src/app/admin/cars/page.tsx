@@ -22,7 +22,8 @@ import {
   Power,
   PowerOff,
   ShoppingCart,
-  CheckCircle
+  CheckCircle,
+  Sparkles,
 } from 'lucide-react'; 
 interface CarData {
   id: number;
@@ -592,6 +593,13 @@ export default function AdminCarsPage() {
             className="bg-[#111] hover:bg-[#1a1a1a] text-zinc-200 border border-[#333] rounded-lg text-xs font-medium"
           >
             Dashboard
+          </Button>
+          <Button
+            onClick={() => router.push('/admin/cars/quick-publish')} 
+            className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3.5 text-xs font-medium shadow-sm flex items-center gap-1.5"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            ⚡ Omnichannel Studio
           </Button>
           <Button
             onClick={() => router.push('/admin/cars/add')} 

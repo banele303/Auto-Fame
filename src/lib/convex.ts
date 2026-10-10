@@ -1,9 +1,8 @@
 import { ConvexHttpClient } from "convex/browser";
 
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+const convexUrl =
+  process.env.NEXT_PUBLIC_CONVEX_URL ||
+  process.env.CONVEX_URL ||
+  "https://reliable-sturgeon-574.convex.cloud";
 
-if (!convexUrl) {
-  console.warn("WARNING: NEXT_PUBLIC_CONVEX_URL is not set in environment variables.");
-}
-
-export const convexClient: any = new ConvexHttpClient(convexUrl || "");
+export const convexClient: any = new ConvexHttpClient(convexUrl);

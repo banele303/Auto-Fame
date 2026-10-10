@@ -1,7 +1,13 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import { ConvexProvider, ConvexReactClient } from "convex/react"
 import { convexClient } from "@/lib/convex"
+
+const convexUrl =
+  process.env.NEXT_PUBLIC_CONVEX_URL || "https://reliable-sturgeon-574.convex.cloud"
+
+const convexReactClient = new ConvexReactClient(convexUrl)
 
 type AuthUser = { id: string; email: string; name: string; role: string } | null
 
@@ -63,9 +69,11 @@ export function ConvexAuthProvider({ children }: { children: React.ReactNode }) 
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
-      {children}
-    </AuthContext.Provider>
+    <ConvexProvider client={convexReactClient}>
+      <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+        {children}
+      </AuthContext.Provider>
+    </ConvexProvider>
   )
 }
 

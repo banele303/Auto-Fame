@@ -25,7 +25,8 @@ import {
   CheckCircle,
   AlertCircle,
   Calculator,
-  Star
+  Star,
+  ImageIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -651,6 +652,22 @@ export default function AdminDashboard() {
                     <div className="text-left">
                       <p className="font-medium">Add New Car</p>
                       <p className="text-xs text-muted-foreground">Add a new vehicle to inventory</p>
+                    </div>
+                  </div>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="justify-start h-auto py-4 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors"
+                  onClick={() => router.push('/admin/gallery')}
+                >
+                  <div className="flex items-center">
+                    <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-full mr-3">
+                      <ImageIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium">Manage Gallery</p>
+                      <p className="text-xs text-muted-foreground">Add and delete showroom photos</p>
                     </div>
                   </div>
                 </Button>

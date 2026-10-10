@@ -1,6 +1,43 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+async function resolvePhotoArray(ctx: any, urls: string[] | undefined): Promise<string[]> {
+  if (!urls || !Array.isArray(urls)) return [];
+  const out: string[] = [];
+  for (const p of urls) {
+    if (!p || typeof p !== "string") continue;
+    const prefix = "/api/storage/";
+    const idx = p.indexOf(prefix);
+    if (idx !== -1) {
+      const tail = p.slice(idx + prefix.length).trim();
+      if (tail && !tail.includes("-")) {
+        try {
+          const resolved = await ctx.storage.getUrl(tail as any);
+          if (resolved) {
+            out.push(resolved);
+            continue;
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    if (!p.startsWith("http://") && !p.startsWith("https://") && !p.startsWith("/")) {
+      try {
+        const resolved = await ctx.storage.getUrl(p as any);
+        if (resolved) {
+          out.push(resolved);
+          continue;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    out.push(p);
+  }
+  return out;
+}
+
 export const list = query({
   args: {
     limit: v.optional(v.number()),
@@ -44,15 +81,19 @@ export const list = query({
     // Sort by updatedAt descending
     cars.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-    // Resolve dealership relations
+    // Resolve dealership relations & storage photo URLs
     const carsWithRelations = [];
     for (const car of cars) {
       const dealership = await ctx.db
         .query("dealerships")
         .withIndex("by_numeric_id", q => q.eq("id", car.dealershipId))
         .first();
+      const photoUrls = await resolvePhotoArray(ctx, car.photoUrls);
+      const processedPhotoUrls = await resolvePhotoArray(ctx, car.processedPhotoUrls);
       carsWithRelations.push({
         ...car,
+        photoUrls,
+        processedPhotoUrls: processedPhotoUrls.length > 0 ? processedPhotoUrls : photoUrls,
         dealership,
       });
     }
@@ -88,8 +129,13 @@ export const get = query({
       .withIndex("by_carId", q => q.eq("carId", car.id))
       .collect();
 
+    const photoUrls = await resolvePhotoArray(ctx, car.photoUrls);
+    const processedPhotoUrls = await resolvePhotoArray(ctx, car.processedPhotoUrls);
+
     return {
       ...car,
+      photoUrls,
+      processedPhotoUrls: processedPhotoUrls.length > 0 ? processedPhotoUrls : photoUrls,
       dealership,
       employee,
       reviews,

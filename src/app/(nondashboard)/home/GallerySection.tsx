@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, ImageIcon, Loader2, ArrowRight, Maximize2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 
 interface GalleryImage {
   src: string;
@@ -47,19 +49,41 @@ export default function GallerySection({ compact = false, initialCategory = 'all
   const pageSize = compact ? 8 : 24;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const convexItems = useQuery(api.gallery.list, {});
+
+  useEffect(() => {
+    if (convexItems && Array.isArray(convexItems)) {
+      const mapped = convexItems
+        .filter((item: any) => item && item.url)
+        .map((item: any) => ({
+          src: item.url,
+          alt: item.title || "Auto Fame Gallery Image",
+          category: item.category || "showroom",
+          label: item.title || "Auto Fame Vehicle"
+        }));
+      setImages(mapped);
+      setLoading(false);
+    }
+  }, [convexItems]);
+
   useEffect(() => {
     async function fetchGallery() {
+      if (convexItems !== undefined) return;
       try {
         const res = await fetch('/api/gallery');
         if (res.ok) {
           const data = await res.json();
-          const mapped = data.map((item: any) => ({
-            src: item.url,
-            alt: item.title || "Auto Fame Gallery Image",
-            category: item.category || "showroom",
-            label: item.title || "Auto Fame Vehicle"
-          }));
-          setImages(mapped);
+          if (Array.isArray(data)) {
+            const mapped = data
+              .filter((item: any) => item && item.url)
+              .map((item: any) => ({
+                src: item.url,
+                alt: item.title || "Auto Fame Gallery Image",
+                category: item.category || "showroom",
+                label: item.title || "Auto Fame Vehicle"
+              }));
+            setImages(mapped);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch gallery:", error);
@@ -68,7 +92,7 @@ export default function GallerySection({ compact = false, initialCategory = 'all
       }
     }
     fetchGallery();
-  }, []);
+  }, [convexItems]);
 
   const categories = deriveCategories(images);
 
