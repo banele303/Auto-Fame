@@ -519,12 +519,12 @@ export default function AdminGalleryPage() {
       <div className="space-y-4">
         {/* Filters and Search Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card p-3 rounded-xl border">
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 md:pb-0 scrollbar-none w-full md:w-auto -mx-1 px-1">
+          {/* Category Filter Pills (Wrapping, No Scroll) */}
+          <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
             <button
               onClick={() => setSelectedCategoryFilter("all")}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition",
+                "px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition",
                 selectedCategoryFilter === "all"
                   ? "bg-emerald-600 text-white shadow-sm"
                   : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -541,7 +541,7 @@ export default function AdminGalleryPage() {
                   key={cat.value}
                   onClick={() => setSelectedCategoryFilter(cat.value)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition",
+                    "px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition",
                     selectedCategoryFilter === cat.value
                       ? "bg-emerald-600 text-white shadow-sm"
                       : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"

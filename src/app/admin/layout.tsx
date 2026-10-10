@@ -163,7 +163,7 @@ const AdminDashboardContent = ({ children }: { children: React.ReactNode }) => {
           </div>
           
           <div 
-            className="flex-grow p-4 sm:p-6 md:p-8 bg-black min-h-[calc(100vh-var(--navbar-height))]"
+            className="flex-grow min-w-0 max-w-full p-4 sm:p-6 md:p-8 bg-black min-h-[calc(100vh-var(--navbar-height))] overflow-x-hidden"
             style={{
               '--navbar-height': `${NAVBAR_HEIGHT}px`,
               marginLeft: isMobile ? 0 : (open ? 'var(--sidebar-width)' : 'var(--sidebar-width-icon)'),
