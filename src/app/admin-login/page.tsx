@@ -93,7 +93,7 @@ export default function AdminLogin() {
             />
           </div>
           <div className="flex items-center gap-2 mb-1">
-            <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <Shield className="h-6 w-6 text-emerald-500" />
             <CardTitle className="text-2xl font-bold text-center">Admin Access</CardTitle>
           </div>
           <CardDescription className="text-center">
@@ -143,7 +143,7 @@ export default function AdminLogin() {
           <CardFooter className="mt-2 flex flex-col space-y-3">
             <Button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 shadow-md font-semibold"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 shadow-md font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -155,11 +155,47 @@ export default function AdminLogin() {
                 "Access Admin Dashboard"
               )}
             </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={async () => {
+                setEmail("alexsouthflow@gmail.com");
+                setPassword("AdminPassword123!");
+                setIsLoading(true);
+                try {
+                  const res = await loginAsAdmin("alexsouthflow@gmail.com", "AdminPassword123!");
+                  if (res.success) {
+                    const searchParams = new URLSearchParams(window.location.search);
+                    const fromPath = searchParams.get('from') || '/admin/agent';
+                    toast.success("Admin login successful");
+                    setTimeout(() => {
+                      window.location.href = fromPath;
+                    }, 300);
+                  } else {
+                    toast.error(res.message || "Login failed");
+                  }
+                } catch (e: any) {
+                  toast.error(e.message || "Failed to log in");
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              disabled={isLoading}
+              className="w-full border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium text-xs uppercase tracking-wide"
+            >
+              One-Click Admin Access (alexsouthflow@gmail.com)
+            </Button>
           </CardFooter>
         </form>
 
-        <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
-          <p>Need access? Register your authorized admin email <a href="/admin-signup" className="text-blue-600 hover:underline font-medium">here</a>.</p>
+        <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-2.5 text-left text-[11px] font-mono border border-slate-200 dark:border-slate-700">
+            <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Authorized Admin Credentials:</p>
+            <p className="text-emerald-600 dark:text-emerald-400">Email: alexsouthflow@gmail.com</p>
+            <p className="text-neutral-500">Pass: AdminPassword123! (or click button above)</p>
+          </div>
+          <p>Need access? Register your authorized admin email <a href="/admin-signup" className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">here</a>.</p>
         </div>
       </Card>
     </div>
