@@ -56,7 +56,7 @@ Would you like me to dispatch this link directly to **Thabo Mokoena**'s WhatsApp
         customerName: "Thabo Mokoena",
         carName: "2018 BMW X2 sDrive20i M Sport",
         carId: 5,
-        link: "https://www.autofame.co.za/customers/financing",
+        link: "https://www.autofame.co.za/financing",
       };
     } else if (
       lowerQuery.includes("repair") ||

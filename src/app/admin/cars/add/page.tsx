@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Plus, XCircle, Car } from "lucide-react";
+import { ArrowLeft, Save, Plus, XCircle, Car, Sparkles, Loader2 } from "lucide-react";
 import { concurrentUpload } from "@/lib/concurrentUploads";
 import { batchCompress } from "@/lib/imageCompression";
 import { CAR_UPLOAD_SINGLE_MAX_MB, CAR_UPLOAD_TOTAL_MAX_MB, CAR_UPLOAD_MAX_FILES } from "@/config/uploadLimits";
@@ -31,6 +31,52 @@ export default function AddCarPage() {
   const [uploading, setUploading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState<{done:number,total:number,name:string}|null>(null);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
+  const handleGenerateAiDescription = async () => {
+    if (!formData.make && !formData.model) {
+      toast.error("Please enter Make and Model first so AI can formulate the description.");
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    try {
+      const res = await fetch("/api/agent/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          make: formData.make,
+          model: formData.model,
+          year: formData.year,
+          price: formData.price,
+          mileage: formData.mileage,
+          transmission: formData.transmission,
+          fuelType: formData.fuelType,
+          engine: formData.engine,
+          exteriorColor: formData.exteriorColor,
+          features: selectedFeatures,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Generation failed with HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.description) {
+        setFormData(prev => ({
+          ...prev,
+          description: data.description,
+        }));
+        toast.success("AI generated vehicle description added!");
+      }
+    } catch (err: any) {
+      console.error("AI Description error:", err);
+      toast.error("Failed to generate AI description: " + err.message);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
 
   
   const [formData, setFormData] = useState({
@@ -679,14 +725,43 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
 
             {/* VIN & Interior Color removed (server-generated / deprecated) */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="description" className="flex items-center gap-1.5 font-semibold">
+                  <span>Description</span>
+                  <span className="text-[10px] font-mono uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded border border-amber-500/20">
+                    AI Enhanced
+                  </span>
+                </Label>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateAiDescription}
+                  disabled={isGeneratingDescription || !formData.make}
+                  className="h-7 px-2.5 text-xs font-semibold bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center gap-1.5 shadow-sm transition"
+                >
+                  {isGeneratingDescription ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3" />
+                      AI Auto-Generate
+                    </>
+                  )}
+                </Button>
+              </div>
               <Textarea 
                 id="description" 
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Detailed information about the car..."
-                rows={4}
+                placeholder="Click 'AI Auto-Generate' to create high-converting sales copy or type your custom description..."
+                rows={5}
+                className="leading-relaxed text-xs sm:text-sm font-sans"
               />
             </div>
           </CardContent>

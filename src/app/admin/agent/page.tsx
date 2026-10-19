@@ -97,7 +97,7 @@ export default function AdminClaudeAgentPage() {
   const [whatsAppTarget, setWhatsAppTarget] = useState({
     to: "+27 83 492 1109",
     name: "Thabo Mokoena",
-    message: "Hi Thabo, here is your vehicle finance application link for AutoFame: https://www.autofame.co.za/customers/financing. Pre-approval arranged with WesBank, Standard Bank, and Absa MFC.",
+    message: "Hi Thabo, here is your vehicle finance application link for AutoFame: https://www.autofame.co.za/financing. Pre-approval arranged with WesBank, Standard Bank, and Absa MFC.",
     carName: "2018 BMW X2 sDrive20i M Sport",
   });
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
@@ -597,7 +597,7 @@ export default function AdminClaudeAgentPage() {
                               setWhatsAppTarget({
                                 to: msg.actionPayload?.customerPhone || "+27 83 492 1109",
                                 name: msg.actionPayload?.customerName || "Thabo Mokoena",
-                                message: `Hi ${msg.actionPayload?.customerName || "Customer"}, here is your vehicle finance application link for the ${msg.actionPayload?.carName || "Vehicle"}: https://www.autofame.co.za/customers/financing. Pre-approved across WesBank & Standard Bank Auto.`,
+                                message: `Hi ${msg.actionPayload?.customerName || "Customer"}, here is your vehicle finance application link for the ${msg.actionPayload?.carName || "Vehicle"}: https://www.autofame.co.za/financing. Pre-approved across WesBank & Standard Bank Auto.`,
                                 carName: msg.actionPayload?.carName || "Vehicle",
                               });
                               setWhatsAppModalOpen(true);
@@ -610,7 +610,7 @@ export default function AdminClaudeAgentPage() {
                           </Button>
 
                           <a
-                            href="/customers/financing"
+                            href="/financing"
                             target="_blank"
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs bg-white/5 hover:bg-white/10 text-zinc-300 transition"
                           >
@@ -966,16 +966,47 @@ export default function AdminClaudeAgentPage() {
               <div>
                 <label className="text-[#8e8a82] font-semibold block mb-1">Message Content</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={whatsAppTarget.message}
                   onChange={(e) => setWhatsAppTarget({ ...whatsAppTarget, message: e.target.value })}
                   className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 resize-none leading-relaxed"
                 />
               </div>
 
+              {/* PDF Attachment Option */}
+              <div className="p-3 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
+                    <FileText className="h-4 w-4 text-[#d97757]" />
+                    Attach Official Application Document (PDF)
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    Auto-Attached
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#8e8a82]">
+                  Attachment: <span className="text-zinc-300 font-mono">AutoFame_Vehicle_Finance_Application_PreApproval.pdf</span>
+                </p>
+              </div>
+
+              {/* Forward to Dealership Email */}
+              <div>
+                <label className="text-[#8e8a82] font-semibold block mb-1">
+                  Forward Intake Packet To Dealership Email
+                </label>
+                <input
+                  type="email"
+                  defaultValue="finance@autofame.co.za"
+                  className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                />
+                <span className="text-[10px] text-[#706c64] mt-0.5 block">
+                  When customer replies or submits on WhatsApp, full FICA documents and bank statements are sent directly to this address.
+                </span>
+              </div>
+
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-400 flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span>NCA compliant • Integrated via Whapi.cloud gateway panel.</span>
+                <span>NCA compliant • Integrated via Whapi.cloud gateway &amp; Gemini AI Document Parser.</span>
               </div>
             </div>
 
