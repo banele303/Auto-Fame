@@ -44,7 +44,7 @@ export const createSession = mutation({
     const now = new Date().toISOString();
     const sessionId = await ctx.db.insert("chatSessions", {
       title: args.title || "New Dealership Session",
-      model: args.model || "claude-3-5-sonnet",
+      model: args.model || "autofame-copilot",
       category: args.category || "general",
       lastMessageAt: now,
       createdAt: now,

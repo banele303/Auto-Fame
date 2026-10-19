@@ -345,10 +345,10 @@ export default defineSchema({
   })
   .index("by_sender", ["sender"]),
 
-  // ── AI Dealership Agent Tables (Claude-style Copilot) ──
+  // ── AI Dealership Agent Tables (AutoFame Copilot) ──
   chatSessions: defineTable({
     title: v.string(),
-    model: v.string(), // e.g. "puter:claude-3-5-sonnet" | "puter:gpt-4o"
+    model: v.string(), // e.g. "autofame-copilot" | "gpt-4o"
     category: v.optional(v.string()), // "inventory", "sales", "finance", "repairs", "general"
     systemPrompt: v.optional(v.string()),
     lastMessageAt: v.string(),

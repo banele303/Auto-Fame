@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Streaming Server-Sent Events (SSE) AI Completion Endpoint for AutoFame Copilot
- * Streams markdown formatted tokens token-by-token matching Claude Code timing & precision.
+ * Streams markdown formatted tokens token-by-token with real-time dealership precision.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -56,7 +56,7 @@ ${
 | Action | Purpose | Execution |
 | :--- | :--- | :---: |
 | **Link to Showroom Car** | Associate file with active vehicle inventory (e.g. *BMW X2* or *Hilux*) | 🟡 In Review |
-| **Forward via WhatsApp** | Deliver to buyer or finance desk via **Whapi.Cloud** gateway | 🟢 Ready |
+| **Forward via WhatsApp** | Deliver to buyer or finance desk via **WhatsApp** gateway | 🟢 Ready |
 | **Generate Vehicle Listing** | Automatically compile vehicle specs into social media copy | 🟢 Ready |`;
 
       actionPayload = {
@@ -77,15 +77,15 @@ Here is the current priority follow-up queue with customer contact info and dire
 
 | Priority | Customer / Contact | Vehicle Interest | Current Stage | Recommended Action | WhatsApp Channel |
 | :---: | :--- | :--- | :--- | :--- | :---: |
-| 🔴 **URGENT** | **Thabo Mokoena**<br/>📱 \`+27 83 492 1109\` | **2018 BMW X2 M Sport**<br/>*(R299,900 ZAR)* | Pre-Approval Requested | Dispatch WesBank & MFC Form Link | 🟢 Whapi Ready |
-| 🟠 **HIGH** | **Dr. Anelisa Sithole**<br/>📱 \`+27 82 555 8921\` | **2024 Toyota Hilux Legend**<br/>*(R649,900 ZAR)* | Trade-in Valuation Pending | Schedule Physical Appraisal at Sandton | 🟢 Whapi Ready |
-| 🟡 **MEDIUM** | **Johan Botha**<br/>📱 \`+27 71 884 9022\` | **Volkswagen Golf 8 GTI**<br/>*(R489,000 ZAR)* | Saturday Test Drive Booked | Confirm Appointment with Sales Rep | 🟢 Whapi Ready |
-| 🟢 **NEW** | **Kagiso Ndlovu**<br/>📱 \`+27 79 312 8844\` | **Mercedes-Benz C200 AMG**<br/>*(R419,000 ZAR)* | Online Finance Inquiry | Send FICA Checklist & Monthly Quote | 🟢 Whapi Ready |
+| 🔴 **URGENT** | **Thabo Mokoena**<br/>📱 \`+27 83 492 1109\` | **2018 BMW X2 M Sport**<br/>*(R299,900 ZAR)* | Pre-Approval Requested | Dispatch WesBank & MFC Form Link | 🟢 Ready |
+| 🟠 **HIGH** | **Dr. Anelisa Sithole**<br/>📱 \`+27 82 555 8921\` | **2024 Toyota Hilux Legend**<br/>*(R649,900 ZAR)* | Trade-in Valuation Pending | Schedule Physical Appraisal at Sandton | 🟢 Ready |
+| 🟡 **MEDIUM** | **Johan Botha**<br/>📱 \`+27 71 884 9022\` | **Volkswagen Golf 8 GTI**<br/>*(R489,000 ZAR)* | Saturday Test Drive Booked | Confirm Appointment with Sales Rep | 🟢 Ready |
+| 🟢 **NEW** | **Kagiso Ndlovu**<br/>📱 \`+27 79 312 8844\` | **Mercedes-Benz C200 AMG**<br/>*(R419,000 ZAR)* | Online Finance Inquiry | Send FICA Checklist & Monthly Quote | 🟢 Ready |
 
 #### 📋 Follow-Up Task Summary:
 * **Immediate Attention:** 2 clients requested instant WhatsApp vehicle finance applications.
 * **Showroom Visits:** 1 physical appraisal and 1 weekend test drive pending confirmation.
-* **Omnichannel Status:** Whapi.Cloud WhatsApp channel is synced and ready for one-click dispatches.`;
+* **Omnichannel Status:** WhatsApp channel is synced and ready for one-click dispatches.`;
 
       actionPayload = {
         actionType: "SEND_FINANCE_LINK",
@@ -288,7 +288,7 @@ I am connected to your live South African dealership operational database. Here 
 | **Showroom Inventory** | **14 Vehicles** *(10 Active, 2 Sold)* | 2 incoming trade-ins awaiting preparation |
 | **Workshop Repairs** | **2 Job Cards** *(BMW & Toyota)* | BMW X2 Dekra 101-point test scheduled |
 | **Vehicle Financing** | **3 Live NCA Applications** | WesBank & Standard Bank review underway |
-| **WhatsApp Gateway** | **Whapi.Cloud Active** | Automated brochures & pre-approval links |
+| **WhatsApp Gateway** | **AutoFame WhatsApp Active** | Automated brochures & pre-approval links |
 | **CRM Hot Leads** | **4 Priority Inquiries** | Thabo Mokoena & Johan Botha scheduled |
 
 #### 🚀 Recommended One-Click Actions:
@@ -309,7 +309,7 @@ I am connected to your live South African dealership operational database. Here 
           );
         }
 
-        // Stream text chunks smoothly (simulating Claude Code streaming cadence)
+        // Stream text chunks smoothly (simulating AutoFame Copilot streaming cadence)
         const words = responseText.split(/(\s+)/);
         for (let i = 0; i < words.length; i++) {
           const chunk = words[i];

@@ -59,7 +59,7 @@ const DEALERSHIP_LINKS = [
 ];
 
 // ──────────────────────────────────────────────
-// Custom Markdown Components for Claude Terminal Tables & Code
+// Custom Markdown Components for AutoFame Terminal Tables & Code
 // ──────────────────────────────────────────────
 const markdownComponents = {
   table: ({ node, ...props }: any) => (
@@ -71,7 +71,7 @@ const markdownComponents = {
     <thead className="bg-[#24221e] text-[#eae7e1] border-b border-[#3d3931] font-mono uppercase tracking-wider text-[10.5px]" {...props} />
   ),
   th: ({ node, ...props }: any) => (
-    <th className="px-3.5 py-2.5 font-semibold text-[#d97757] whitespace-nowrap" {...props} />
+    <th className="px-3.5 py-2.5 font-semibold text-emerald-400 whitespace-nowrap" {...props} />
   ),
   td: ({ node, ...props }: any) => (
     <td className="px-3.5 py-2.5 border-t border-[#2e2b26] text-[#c9c5bd] align-middle" {...props} />
@@ -81,7 +81,7 @@ const markdownComponents = {
   ),
 };
 
-export default function AdminClaudeAgentPage() {
+export default function AdminAutoFameAgentPage() {
   // ── Realtime Convex Queries & Mutations ──
   const sessions = useQuery(api.agent.listSessions, {});
   const dealershipContext = useQuery(api.agent.getDealershipContext, {});
@@ -167,16 +167,16 @@ export default function AdminClaudeAgentPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeSessionData?.messages, streamingText, isStreaming]);
 
-  // Create New Claude Session
+  // Create New AutoFame Session
   const handleNewSession = async () => {
     try {
       const newId = await createSession({
         title: "New Dealership Task",
-        model: "claude-3-5-sonnet",
+        model: "autofame-copilot",
       });
       setSelectedSessionId(newId);
       setActiveWorkspaceView("chat");
-      toast.success("New Claude session initialized");
+      toast.success("New AutoFame session initialized");
     } catch (err: any) {
       toast.error("Failed to create session: " + err.message);
     }
@@ -413,12 +413,12 @@ export default function AdminClaudeAgentPage() {
       });
 
       if (res.ok) {
-        toast.success(`Dispatched via Whapi.Cloud to ${whatsAppTarget.name}!`);
+        toast.success(`Dispatched via WhatsApp to ${whatsAppTarget.name}!`);
         await recordCrmEvent({
           eventType: "WHATSAPP_SENT",
           recipient: whatsAppTarget.to,
           customerName: whatsAppTarget.name,
-          summary: `Vehicle finance link sent to ${whatsAppTarget.name} (${whatsAppTarget.to}) via Whapi.cloud`,
+          summary: `Vehicle finance link sent to ${whatsAppTarget.name} (${whatsAppTarget.to}) via WhatsApp`,
           status: "SUCCESS",
         });
         setWhatsAppModalOpen(false);
@@ -435,7 +435,7 @@ export default function AdminClaudeAgentPage() {
   return (
     <div className="flex h-[calc(100vh-var(--navbar-height))] w-full overflow-hidden bg-[#1f1e1b] text-[#eae7e1] font-sans">
       {/* ────────────────────────────────────────────────────────── */}
-      {/* CLAUDE CODE DEDICATED SIDEBAR (Warm Terracotta / Anthropic) */}
+      {/* AUTOFAME COPILOT SIDEBAR (Emerald Green / AutoFame)        */}
       {/* ────────────────────────────────────────────────────────── */}
       <aside
         className={cn(
@@ -446,12 +446,12 @@ export default function AdminClaudeAgentPage() {
         {/* Sidebar Header */}
         <div className="p-3.5 border-b border-[#2d2a26] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-[#c96442]/20 border border-[#c96442]/40 flex items-center justify-center text-[#d97757]">
+            <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#d97757] font-mono">
-                Claude Code
+              <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                AutoFame Copilot
               </h2>
               <span className="text-[10px] text-[#8e8a82]">AutoFame Dealership OS</span>
             </div>
@@ -460,7 +460,7 @@ export default function AdminClaudeAgentPage() {
           <Button
             onClick={handleNewSession}
             size="sm"
-            className="h-7 px-2.5 rounded-lg bg-[#c96442] hover:bg-[#b85635] text-white font-semibold text-xs flex items-center gap-1 shadow-sm"
+            className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1 shadow-sm"
           >
             <Plus className="h-3.5 w-3.5" />
             New Chat
@@ -482,11 +482,11 @@ export default function AdminClaudeAgentPage() {
                   className="w-full flex items-center justify-between p-2 rounded-lg text-xs text-[#c2bdb4] hover:bg-[#262420] hover:text-[#f4f2ee] transition group text-left"
                 >
                   <div className="flex items-center gap-2.5 truncate">
-                    <Icon className="h-3.5 w-3.5 text-[#d97757] shrink-0" />
+                    <Icon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                     <span className="truncate font-medium">{link.label}</span>
                   </div>
                   {link.badge && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-[#c96442]/20 text-[#d97757] border border-[#c96442]/30 shrink-0">
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
                       {link.badge}
                     </span>
                   )}
@@ -523,7 +523,7 @@ export default function AdminClaudeAgentPage() {
                   className={cn(
                     "group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition text-xs border",
                     isSelected
-                      ? "bg-[#282622] text-[#f4f2ee] border-[#c96442]/40 shadow-sm"
+                      ? "bg-[#282622] text-[#f4f2ee] border-emerald-500/40 shadow-sm"
                       : "bg-transparent hover:bg-[#23211e] text-[#a6a197] hover:text-[#dedad2] border-transparent"
                   )}
                 >
@@ -538,7 +538,7 @@ export default function AdminClaudeAgentPage() {
                         onChange={(e) => setEditTitleInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSaveTitle(s._id)}
                         autoFocus
-                        className="w-full bg-[#141311] border border-[#c96442]/50 rounded px-2 py-0.5 text-xs text-white focus:outline-none"
+                        className="w-full bg-[#141311] border border-emerald-500/50 rounded px-2 py-0.5 text-xs text-white focus:outline-none"
                       />
                       <button
                         onClick={() => handleSaveTitle(s._id)}
@@ -602,7 +602,7 @@ export default function AdminClaudeAgentPage() {
       </aside>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* MAIN WORKSPACE AREA (Claude Terminal & Editorial Layout)   */}
+      {/* MAIN WORKSPACE AREA (AutoFame Copilot & Editorial Layout)  */}
       {/* ────────────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#1f1e1b]">
         {/* Top Header Bar */}
@@ -620,8 +620,8 @@ export default function AdminClaudeAgentPage() {
               <span className="font-serif text-sm sm:text-base font-bold text-[#f5f2eb]">
                 {activeSessionData?.session?.title || "AutoFame Dealership Copilot"}
               </span>
-              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#c96442]/15 text-[#d97757] border border-[#c96442]/25">
-                Anthropic Claude 3.5 Sonnet
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                AutoFame AI Engine
               </span>
             </div>
           </div>
@@ -634,19 +634,19 @@ export default function AdminClaudeAgentPage() {
                 className={cn(
                   "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
                   activeWorkspaceView === "chat"
-                    ? "bg-[#c96442] text-white shadow-sm"
+                    ? "bg-emerald-600 text-white shadow-sm"
                     : "text-[#8e8a82] hover:text-white"
                 )}
               >
                 <Terminal className="h-3.5 w-3.5" />
-                Claude Terminal
+                AutoFame Terminal
               </button>
               <button
                 onClick={() => setActiveWorkspaceView("repairs")}
                 className={cn(
                   "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
                   activeWorkspaceView === "repairs"
-                    ? "bg-[#c96442] text-white shadow-sm"
+                    ? "bg-emerald-600 text-white shadow-sm"
                     : "text-[#8e8a82] hover:text-white"
                 )}
               >
@@ -663,7 +663,7 @@ export default function AdminClaudeAgentPage() {
                 className={cn(
                   "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
                   activeWorkspaceView === "crm"
-                    ? "bg-[#c96442] text-white shadow-sm"
+                    ? "bg-emerald-600 text-white shadow-sm"
                     : "text-[#8e8a82] hover:text-white"
                 )}
               >
@@ -674,7 +674,7 @@ export default function AdminClaudeAgentPage() {
           </div>
         </header>
 
-        {/* ── WORKSPACE VIEW 1: CLAUDE CHAT TERMINAL ── */}
+        {/* ── WORKSPACE VIEW 1: AUTOFAME CHAT TERMINAL ── */}
         {activeWorkspaceView === "chat" && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Scrollable Conversation Stream */}
@@ -691,7 +691,7 @@ export default function AdminClaudeAgentPage() {
                     )}
                   >
                     {isAssistant && (
-                      <div className="h-8 w-8 rounded-xl bg-[#c96442]/20 border border-[#c96442]/40 flex items-center justify-center text-[#d97757] shrink-0 mt-0.5">
+                      <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
                         <Sparkles className="h-4 w-4" />
                       </div>
                     )}
@@ -701,7 +701,7 @@ export default function AdminClaudeAgentPage() {
                         "rounded-2xl p-4 sm:p-5 text-xs sm:text-sm leading-relaxed",
                         isAssistant
                           ? "bg-[#252320] text-[#eae7e1] border border-[#35312b] shadow-sm max-w-2xl w-full"
-                          : "bg-[#d97757] text-white font-medium max-w-lg shadow-sm"
+                          : "bg-emerald-600 text-white font-medium max-w-lg shadow-sm"
                       )}
                     >
                       {/* Markdown Formatted Text (Headings, Bullet points, Code blocks) */}
@@ -781,7 +781,7 @@ export default function AdminClaudeAgentPage() {
                             className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 h-8 text-xs shadow-sm"
                           >
                             <PhoneCall className="h-3.5 w-3.5" />
-                            Dispatch via WhatsApp (Whapi.Cloud)
+                            Dispatch via WhatsApp (Whapi)
                           </Button>
 
                           <a
@@ -800,7 +800,7 @@ export default function AdminClaudeAgentPage() {
                           <Button
                             onClick={() => setActiveWorkspaceView("repairs")}
                             size="sm"
-                            className="bg-[#c96442] hover:bg-[#b85635] text-white font-semibold text-xs h-8 flex items-center gap-1.5"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 flex items-center gap-1.5"
                           >
                             <Wrench className="h-3.5 w-3.5" />
                             Open Workshop Repairs Dashboard
@@ -838,7 +838,7 @@ export default function AdminClaudeAgentPage() {
               {/* Streaming Real-Time Token Generation Bubble */}
               {isStreaming && (
                 <div className="flex gap-4 max-w-3xl mr-auto animate-in fade-in duration-150">
-                  <div className="h-8 w-8 rounded-xl bg-[#c96442]/20 border border-[#c96442]/40 flex items-center justify-center text-[#d97757] shrink-0 mt-0.5">
+                  <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </div>
 
@@ -851,8 +851,8 @@ export default function AdminClaudeAgentPage() {
 
                     {streamingActionPayload?.actionType === "SEND_FINANCE_LINK" && (
                       <div className="mt-3 pt-3 border-t border-[#3a362f]">
-                        <span className="text-[11px] text-[#d97757] font-semibold animate-pulse">
-                          Generating WhatsApp Whapi.cloud dispatch package...
+                        <span className="text-[11px] text-emerald-400 font-semibold animate-pulse">
+                          Generating WhatsApp dispatch package...
                         </span>
                       </div>
                     )}
@@ -863,7 +863,7 @@ export default function AdminClaudeAgentPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Claude-style Composer Input Box */}
+            {/* AutoFame Composer Input Box */}
             <div className="p-4 sm:p-6 bg-[#181715] border-t border-[#2d2a26]">
               <div className="max-w-3xl mx-auto">
                 <form
@@ -871,7 +871,7 @@ export default function AdminClaudeAgentPage() {
                     e.preventDefault();
                     handleSendMessage();
                   }}
-                  className="relative rounded-2xl border border-[#38342d] bg-[#22201c] shadow-lg focus-within:border-[#c96442] focus-within:ring-1 focus-within:ring-[#c96442]/30 transition"
+                  className="relative rounded-2xl border border-[#38342d] bg-[#22201c] shadow-lg focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30 transition"
                 >
                   {/* File Attachment Chip Previews */}
                   {attachedFiles.length > 0 && (
@@ -884,7 +884,7 @@ export default function AdminClaudeAgentPage() {
                           {f.type.startsWith("image/") ? (
                             <img src={f.previewUrl} alt={f.name} className="h-6 w-6 object-cover rounded" />
                           ) : (
-                            <FileText className="h-4 w-4 text-[#d97757]" />
+                            <FileText className="h-4 w-4 text-emerald-400" />
                           )}
                           <span className="max-w-[140px] truncate text-[11px] font-medium">{f.name}</span>
                           <button
@@ -911,7 +911,7 @@ export default function AdminClaudeAgentPage() {
                       }
                     }}
                     rows={2}
-                    placeholder="Ask Claude Code about dealership inventory, financing, workshop repairs, or attach vehicle photos/PDFs..."
+                    placeholder="Ask AutoFame Copilot about dealership inventory, financing, workshop repairs, or attach vehicle photos/PDFs..."
                     className="w-full bg-transparent p-4 pb-12 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed"
                   />
 
@@ -936,7 +936,7 @@ export default function AdminClaudeAgentPage() {
                         className="h-7 px-2.5 text-[#a6a197] hover:text-[#f4f2ee] hover:bg-[#2e2b26] flex items-center gap-1.5 rounded-lg text-xs"
                         title="Attach vehicle photos, FICA documents or PDFs"
                       >
-                        <Paperclip className="h-3.5 w-3.5 text-[#d97757]" />
+                        <Paperclip className="h-3.5 w-3.5 text-emerald-400" />
                         <span className="text-[11px] font-medium">Attach</span>
                       </Button>
 
@@ -949,7 +949,7 @@ export default function AdminClaudeAgentPage() {
                       type="submit"
                       disabled={(!inputValue.trim() && attachedFiles.length === 0) || isStreaming || isUploadingFiles}
                       size="sm"
-                      className="h-8 px-4 rounded-xl bg-[#c96442] hover:bg-[#b85635] text-white font-semibold text-xs flex items-center gap-1.5 shadow transition disabled:opacity-30"
+                      className="h-8 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow transition disabled:opacity-30"
                     >
                       {isStreaming || isUploadingFiles ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -971,14 +971,14 @@ export default function AdminClaudeAgentPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2d2a26] pb-4">
               <div>
                 <h3 className="text-lg font-bold text-[#f5f2eb] flex items-center gap-2">
-                  <Wrench className="h-5 w-5 text-[#d97757]" />
+                  <Wrench className="h-5 w-5 text-emerald-400" />
                   Workshop Repair &amp; Service Control Center
                 </h3>
                 <p className="text-xs text-[#8e8a82] mt-0.5">
                   Track vehicles currently undergoing major mechanical repairs, panel work, or roadworthy testing.
                 </p>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-mono bg-[#c96442]/15 text-[#d97757] border border-[#c96442]/30">
+              <span className="px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 {carRepairs?.length || 0} Registered Job Cards
               </span>
             </div>
@@ -991,7 +991,7 @@ export default function AdminClaudeAgentPage() {
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[#d97757]">
+                      <span className="font-mono text-xs font-bold text-emerald-400">
                         {r.repairNumber}
                       </span>
                       <span
@@ -1028,7 +1028,7 @@ export default function AdminClaudeAgentPage() {
                       {r.estimatedCompletionDate && (
                         <div className="flex justify-between text-[#8e8a82]">
                           <span>Estimated Ready:</span>
-                          <span className="text-[#d97757] font-medium">
+                          <span className="text-emerald-400 font-medium">
                             {new Date(r.estimatedCompletionDate).toLocaleDateString()}
                           </span>
                         </div>
@@ -1067,9 +1067,9 @@ export default function AdminClaudeAgentPage() {
                         )
                       }
                       size="sm"
-                      className="bg-[#c96442]/20 hover:bg-[#c96442]/30 text-[#d97757] border border-[#c96442]/40 text-xs h-8"
+                      className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs h-8"
                     >
-                      Ask Claude
+                      Ask AutoFame
                     </Button>
                   </div>
                 </div>
@@ -1085,7 +1085,7 @@ export default function AdminClaudeAgentPage() {
               <div>
                 <h3 className="text-lg font-bold text-[#f5f2eb] flex items-center gap-2">
                   <PhoneCall className="h-5 w-5 text-emerald-400" />
-                  Whapi.Cloud WhatsApp &amp; Customer Activity Stream
+                  AutoFame WhatsApp &amp; Customer Activity Stream
                 </h3>
                 <p className="text-xs text-[#8e8a82] mt-0.5">
                   Audit log of outbound WhatsApp finance links, vehicle brochures, and customer follow-ups.
@@ -1138,7 +1138,7 @@ export default function AdminClaudeAgentPage() {
         )}
       </main>
 
-      {/* ── MODAL: WHATSAPP DISPATCH VIA WHAPI.CLOUD ── */}
+      {/* ── MODAL: WHATSAPP DISPATCH ── */}
       {whatsAppModalOpen && (
         <div
           onClick={() => setWhatsAppModalOpen(false)}
@@ -1154,7 +1154,7 @@ export default function AdminClaudeAgentPage() {
                   <PhoneCall className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Whapi.Cloud WhatsApp Gateway</h3>
+                  <h3 className="text-sm font-bold text-white">AutoFame WhatsApp Gateway</h3>
                   <p className="text-[11px] text-[#8e8a82]">South Africa Vehicle Finance Pre-Approval</p>
                 </div>
               </div>
@@ -1203,7 +1203,7 @@ export default function AdminClaudeAgentPage() {
               <div className="p-3 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
-                    <FileText className="h-4 w-4 text-[#d97757]" />
+                    <FileText className="h-4 w-4 text-emerald-400" />
                     Attach Official Application Document (PDF)
                   </span>
                   <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
@@ -1232,7 +1232,7 @@ export default function AdminClaudeAgentPage() {
 
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-400 flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span>NCA compliant • Integrated via Whapi.cloud gateway &amp; Gemini AI Document Parser.</span>
+                <span>NCA compliant • Integrated via WhatsApp gateway &amp; Gemini AI Document Parser.</span>
               </div>
             </div>
 
@@ -1259,7 +1259,7 @@ export default function AdminClaudeAgentPage() {
                 ) : (
                   <>
                     <Send className="h-3.5 w-3.5" />
-                    Dispatch via Whapi.Cloud
+                    Dispatch via WhatsApp
                   </>
                 )}
               </Button>
