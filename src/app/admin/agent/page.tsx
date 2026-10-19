@@ -62,22 +62,61 @@ const DEALERSHIP_LINKS = [
 // Custom Markdown Components for AutoFame Terminal Tables & Code
 // ──────────────────────────────────────────────
 const markdownComponents = {
+  h1: ({ node, ...props }: any) => (
+    <h1 className="text-base sm:text-lg font-bold text-[#f5f2eb] font-serif mt-5 mb-2.5 pb-1 border-b border-[#38342d]" {...props} />
+  ),
+  h2: ({ node, ...props }: any) => (
+    <h2 className="text-sm sm:text-base font-bold text-emerald-400 mt-4 mb-2 flex items-center gap-2" {...props} />
+  ),
+  h3: ({ node, ...props }: any) => (
+    <h3 className="text-xs sm:text-sm font-semibold text-[#f5f2eb] mt-3 mb-1.5" {...props} />
+  ),
+  p: ({ node, ...props }: any) => (
+    <p className="text-xs sm:text-sm leading-relaxed text-[#dedad2] mb-3 last:mb-0" {...props} />
+  ),
+  ul: ({ node, ...props }: any) => (
+    <ul className="list-disc list-outside pl-5 space-y-1.5 my-3 text-xs sm:text-sm text-[#dedad2]" {...props} />
+  ),
+  ol: ({ node, ...props }: any) => (
+    <ol className="list-decimal list-outside pl-5 space-y-1.5 my-3 text-xs sm:text-sm text-[#dedad2]" {...props} />
+  ),
+  li: ({ node, ...props }: any) => (
+    <li className="leading-relaxed" {...props} />
+  ),
+  blockquote: ({ node, ...props }: any) => (
+    <blockquote className="border-l-2 border-emerald-500/60 pl-4 py-1.5 my-3 italic text-neutral-300 text-xs sm:text-sm bg-emerald-950/10 rounded-r-lg" {...props} />
+  ),
+  code: ({ node, inline, ...props }: any) => {
+    if (inline) {
+      return (
+        <code className="px-1.5 py-0.5 rounded bg-[#161513] border border-[#38342d] text-emerald-300 font-mono text-[11px] sm:text-xs" {...props} />
+      );
+    }
+    return (
+      <code className="block text-xs font-mono text-[#eae7e1] leading-relaxed" {...props} />
+    );
+  },
+  pre: ({ node, ...props }: any) => (
+    <div className="my-4 rounded-xl border border-[#38342d] bg-[#141311] p-4 overflow-x-auto shadow-sm">
+      <pre className="text-xs font-mono text-[#eae7e1]" {...props} />
+    </div>
+  ),
   table: ({ node, ...props }: any) => (
-    <div className="overflow-x-auto my-3 rounded-xl border border-[#3d3931] bg-[#171614] shadow-md">
-      <table className="w-full text-left text-xs border-collapse min-w-[560px]" {...props} />
+    <div className="overflow-x-auto my-4 rounded-xl border border-[#38342d] bg-[#161513] shadow-md">
+      <table className="w-full text-left text-xs border-collapse min-w-[620px]" {...props} />
     </div>
   ),
   thead: ({ node, ...props }: any) => (
-    <thead className="bg-[#24221e] text-[#eae7e1] border-b border-[#3d3931] font-mono uppercase tracking-wider text-[10.5px]" {...props} />
+    <thead className="bg-[#22201c] text-[#eae7e1] border-b border-[#38342d] font-mono uppercase tracking-wider text-[11px]" {...props} />
   ),
   th: ({ node, ...props }: any) => (
-    <th className="px-3.5 py-2.5 font-semibold text-emerald-400 whitespace-nowrap" {...props} />
+    <th className="px-4 py-3 font-semibold text-emerald-400 whitespace-nowrap" {...props} />
   ),
   td: ({ node, ...props }: any) => (
-    <td className="px-3.5 py-2.5 border-t border-[#2e2b26] text-[#c9c5bd] align-middle" {...props} />
+    <td className="px-4 py-3 border-t border-[#2b2823] text-[#c9c5bd] align-middle" {...props} />
   ),
   tr: ({ node, ...props }: any) => (
-    <tr className="hover:bg-[#201e1a] transition-colors" {...props} />
+    <tr className="hover:bg-[#1f1d19] transition-colors" {...props} />
   ),
 };
 
@@ -678,219 +717,273 @@ export default function AdminAutoFameAgentPage() {
         {activeWorkspaceView === "chat" && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Scrollable Conversation Stream */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-12 md:px-24 py-6 space-y-6">
-              {activeSessionData?.messages?.map((msg: any) => {
-                const isAssistant = msg.role === "assistant";
+            <div className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-12 py-8">
+              <div className="max-w-6xl w-full mx-auto space-y-8">
+                {/* Clean Empty / Welcome State when no conversation history */}
+                {(!activeSessionData?.messages || activeSessionData.messages.length === 0) && !isStreaming && (
+                  <div className="py-10 sm:py-16 text-center max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
+                    <div className="inline-flex items-center justify-center h-16 w-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-xl shadow-emerald-950/40">
+                      <Sparkles className="h-8 w-8" />
+                    </div>
 
-                return (
-                  <div
-                    key={msg._id}
-                    className={cn(
-                      "flex gap-4 max-w-3xl",
-                      isAssistant ? "mr-auto" : "ml-auto justify-end"
-                    )}
-                  >
-                    {isAssistant && (
-                      <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                        <Sparkles className="h-4 w-4" />
-                      </div>
-                    )}
+                    <div className="space-y-2.5">
+                      <h2 className="text-xl sm:text-2xl font-bold text-[#f5f2eb] font-serif tracking-tight">
+                        AutoFame Dealership Copilot
+                      </h2>
+                      <p className="text-xs sm:text-sm text-[#8e8a82] max-w-xl mx-auto leading-relaxed">
+                        Autonomous dealership intelligence for live inventory analysis, customer finance pre-approvals via WhatsApp, AI vehicle descriptions, and workshop service tracking.
+                      </p>
+                    </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-left pt-2">
+                      {DEALERSHIP_LINKS.slice(0, 6).map((link, idx) => {
+                        const Icon = link.icon;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handleSendMessage(link.prompt)}
+                            className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282520] border border-[#35312a] hover:border-emerald-500/40 transition group flex flex-col justify-between shadow-sm"
+                          >
+                            <div className="flex items-center justify-between w-full mb-3">
+                              <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 transition">
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              {link.badge && (
+                                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                  {link.badge}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-[#f5f2eb] group-hover:text-emerald-400 transition">
+                                {link.label}
+                              </p>
+                              <p className="text-[11px] text-[#8e8a82] mt-1 line-clamp-2 leading-relaxed">
+                                {link.prompt}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Conversation History */}
+                {activeSessionData?.messages?.map((msg: any) => {
+                  const isAssistant = msg.role === "assistant";
+
+                  return (
                     <div
+                      key={msg._id}
                       className={cn(
-                        "rounded-2xl p-4 sm:p-5 text-xs sm:text-sm leading-relaxed",
-                        isAssistant
-                          ? "bg-[#252320] text-[#eae7e1] border border-[#35312b] shadow-sm max-w-2xl w-full"
-                          : "bg-emerald-600 text-white font-medium max-w-lg shadow-sm"
+                        "flex gap-4 sm:gap-5 w-full",
+                        isAssistant ? "justify-start" : "justify-end"
                       )}
                     >
-                      {/* Markdown Formatted Text (Headings, Bullet points, Code blocks) */}
-                      {isAssistant ? (
-                        <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                            {msg.content}
-                          </ReactMarkdown>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="whitespace-pre-wrap">{msg.content}</div>
-                          {/* Attachments rendering */}
-                          {msg.attachments && msg.attachments.length > 0 && (
-                            <div className="mt-3 pt-2.5 border-t border-white/20 flex flex-wrap gap-2">
-                              {msg.attachments.map((att: any, idx: number) => {
-                                const isImg =
-                                  att.type?.startsWith("image/") ||
-                                  /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(att.name);
-                                return (
-                                  <div
-                                    key={idx}
-                                    className="group relative rounded-xl overflow-hidden border border-white/25 bg-black/25 backdrop-blur-sm p-1.5 transition hover:border-white/50"
-                                  >
-                                    {isImg ? (
-                                      <a
-                                        href={att.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="block"
-                                        title={`View full image: ${att.name}`}
-                                      >
-                                        <img
-                                          src={att.url}
-                                          alt={att.name}
-                                          className="h-24 w-auto max-w-[220px] object-cover rounded-lg border border-white/10"
-                                        />
-                                        <span className="block text-[10px] truncate max-w-[200px] mt-1 text-white/90 font-mono">
-                                          {att.name}
-                                        </span>
-                                      </a>
-                                    ) : (
-                                      <a
-                                        href={att.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:underline"
-                                        title={`View document: ${att.name}`}
-                                      >
-                                        <FileText className="h-4 w-4 text-white/80 shrink-0" />
-                                        <span className="truncate max-w-[180px] font-mono text-[11px]">{att.name}</span>
-                                        <ExternalLink className="h-3 w-3 opacity-70" />
-                                      </a>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                      {isAssistant && (
+                        <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-1 shadow-sm">
+                          <Sparkles className="h-4 w-4" />
                         </div>
                       )}
 
-                      {/* Interactive Action Cards */}
-                      {msg.actionType === "SEND_FINANCE_LINK" && (
-                        <div className="mt-4 pt-3.5 border-t border-[#3a362f] flex flex-wrap items-center gap-2">
-                          <Button
-                            onClick={() => {
-                              setWhatsAppTarget({
-                                to: msg.actionPayload?.customerPhone || "+27 83 492 1109",
-                                name: msg.actionPayload?.customerName || "Thabo Mokoena",
-                                message: `Hi ${msg.actionPayload?.customerName || "Customer"}, here is your vehicle finance application link for the ${msg.actionPayload?.carName || "Vehicle"}: https://www.autofame.co.za/financing. Pre-approved across WesBank & Standard Bank Auto.`,
-                                carName: msg.actionPayload?.carName || "Vehicle",
-                              });
-                              setWhatsAppModalOpen(true);
-                            }}
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 h-8 text-xs shadow-sm"
-                          >
+                      <div
+                        className={cn(
+                          "rounded-2xl sm:rounded-3xl text-xs sm:text-sm leading-relaxed transition-all shadow-md",
+                          isAssistant
+                            ? "bg-[#24221e] text-[#eae7e1] border border-[#38342d] w-full max-w-5xl p-5 sm:p-7"
+                            : "bg-emerald-600 text-white font-medium max-w-2xl sm:max-w-3xl ml-auto p-4 sm:p-5 px-6 shadow-emerald-950/20"
+                        )}
+                      >
+                        {/* Markdown Formatted Text (Headings, Bullet points, Code blocks, Tables) */}
+                        {isAssistant ? (
+                          <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                            {/* Attachments rendering */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className="mt-3 pt-2.5 border-t border-white/20 flex flex-wrap gap-2">
+                                {msg.attachments.map((att: any, idx: number) => {
+                                  const isImg =
+                                    att.type?.startsWith("image/") ||
+                                    /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(att.name);
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="group relative rounded-xl overflow-hidden border border-white/25 bg-black/25 backdrop-blur-sm p-1.5 transition hover:border-white/50"
+                                    >
+                                      {isImg ? (
+                                        <a
+                                          href={att.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="block"
+                                          title={`View full image: ${att.name}`}
+                                        >
+                                          <img
+                                            src={att.url}
+                                            alt={att.name}
+                                            className="h-24 w-auto max-w-[220px] object-cover rounded-lg border border-white/10"
+                                          />
+                                          <span className="block text-[10px] truncate max-w-[200px] mt-1 text-white/90 font-mono">
+                                            {att.name}
+                                          </span>
+                                        </a>
+                                      ) : (
+                                        <a
+                                          href={att.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:underline"
+                                          title={`View document: ${att.name}`}
+                                        >
+                                          <FileText className="h-4 w-4 text-white/80 shrink-0" />
+                                          <span className="truncate max-w-[180px] font-mono text-[11px]">{att.name}</span>
+                                          <ExternalLink className="h-3 w-3 opacity-70" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Interactive Action Cards */}
+                        {msg.actionType === "SEND_FINANCE_LINK" && (
+                          <div className="mt-4 pt-3.5 border-t border-[#38342d] flex flex-wrap items-center gap-2">
+                            <Button
+                              onClick={() => {
+                                setWhatsAppTarget({
+                                  to: msg.actionPayload?.customerPhone || "+27 83 492 1109",
+                                  name: msg.actionPayload?.customerName || "Thabo Mokoena",
+                                  message: `Hi ${msg.actionPayload?.customerName || "Customer"}, here is your vehicle finance application link for the ${msg.actionPayload?.carName || "Vehicle"}: https://www.autofame.co.za/financing. Pre-approved across WesBank & Standard Bank Auto.`,
+                                  carName: msg.actionPayload?.carName || "Vehicle",
+                                });
+                                setWhatsAppModalOpen(true);
+                              }}
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 h-8 text-xs shadow-sm"
+                            >
+                              <PhoneCall className="h-3.5 w-3.5" />
+                              Dispatch via WhatsApp (Whapi)
+                            </Button>
+
+                            <a
+                              href="/financing"
+                              target="_blank"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs bg-white/5 hover:bg-white/10 text-zinc-300 transition"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Open Customer Application Form
+                            </a>
+                          </div>
+                        )}
+
+                        {msg.actionType === "CAR_REPAIR_STATUS" && (
+                          <div className="mt-4 pt-3.5 border-t border-[#38342d]">
+                            <Button
+                              onClick={() => setActiveWorkspaceView("repairs")}
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 flex items-center gap-1.5"
+                            >
+                              <Wrench className="h-3.5 w-3.5" />
+                              Open Workshop Repairs Dashboard
+                            </Button>
+                          </div>
+                        )}
+
+                        {msg.actionType === "AUTO_GENERATE_DESCRIPTION" && (
+                          <div className="mt-4 pt-3.5 border-t border-[#38342d] flex items-center gap-2">
+                            <Button
+                              onClick={() => {
+                                navigator.clipboard.writeText(msg.content);
+                                toast.success("Description copied to clipboard!");
+                              }}
+                              size="sm"
+                              variant="secondary"
+                              className="h-8 text-xs flex items-center gap-1.5 bg-[#33302a] hover:bg-[#3f3b33] text-[#f4f2ee]"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              Copy Formatted Description
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {!isAssistant && (
+                        <div className="h-9 w-9 rounded-2xl bg-[#33302a] border border-[#444037] flex items-center justify-center text-[#eae7e1] shrink-0 mt-1 shadow-sm">
+                          <User className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Streaming Real-Time Token Generation Bubble */}
+                {isStreaming && (
+                  <div className="flex gap-4 sm:gap-5 w-full justify-start animate-in fade-in duration-150">
+                    <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-1 shadow-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+
+                    <div className="bg-[#24221e] text-[#eae7e1] border border-[#38342d] rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-xs sm:text-sm leading-relaxed shadow-md w-full max-w-5xl">
+                      <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                          {streamingText + " ▍"}
+                        </ReactMarkdown>
+                      </div>
+
+                      {streamingActionPayload?.actionType === "SEND_FINANCE_LINK" && (
+                        <div className="mt-4 pt-3.5 border-t border-[#38342d]">
+                          <span className="text-xs text-emerald-400 font-semibold animate-pulse flex items-center gap-2">
                             <PhoneCall className="h-3.5 w-3.5" />
-                            Dispatch via WhatsApp (Whapi)
-                          </Button>
-
-                          <a
-                            href="/financing"
-                            target="_blank"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs bg-white/5 hover:bg-white/10 text-zinc-300 transition"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            Open Customer Application Form
-                          </a>
-                        </div>
-                      )}
-
-                      {msg.actionType === "CAR_REPAIR_STATUS" && (
-                        <div className="mt-4 pt-3.5 border-t border-[#3a362f]">
-                          <Button
-                            onClick={() => setActiveWorkspaceView("repairs")}
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 flex items-center gap-1.5"
-                          >
-                            <Wrench className="h-3.5 w-3.5" />
-                            Open Workshop Repairs Dashboard
-                          </Button>
-                        </div>
-                      )}
-
-                      {msg.actionType === "AUTO_GENERATE_DESCRIPTION" && (
-                        <div className="mt-4 pt-3.5 border-t border-[#3a362f] flex items-center gap-2">
-                          <Button
-                            onClick={() => {
-                              navigator.clipboard.writeText(msg.content);
-                              toast.success("Description copied to clipboard!");
-                            }}
-                            size="sm"
-                            variant="secondary"
-                            className="h-8 text-xs flex items-center gap-1.5 bg-[#33302a] hover:bg-[#3f3b33] text-[#f4f2ee]"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                            Copy Formatted Description
-                          </Button>
+                            Generating WhatsApp dispatch package...
+                          </span>
                         </div>
                       )}
                     </div>
-
-                    {!isAssistant && (
-                      <div className="h-8 w-8 rounded-xl bg-[#33302a] border border-[#444037] flex items-center justify-center text-[#eae7e1] shrink-0 mt-0.5">
-                        <User className="h-4 w-4" />
-                      </div>
-                    )}
                   </div>
-                );
-              })}
+                )}
 
-              {/* Streaming Real-Time Token Generation Bubble */}
-              {isStreaming && (
-                <div className="flex gap-4 max-w-3xl mr-auto animate-in fade-in duration-150">
-                  <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-
-                  <div className="bg-[#252320] text-[#eae7e1] border border-[#35312b] rounded-2xl p-4 sm:p-5 text-xs sm:text-sm leading-relaxed shadow-sm max-w-2xl w-full">
-                    <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                        {streamingText + " ▍"}
-                      </ReactMarkdown>
-                    </div>
-
-                    {streamingActionPayload?.actionType === "SEND_FINANCE_LINK" && (
-                      <div className="mt-3 pt-3 border-t border-[#3a362f]">
-                        <span className="text-[11px] text-emerald-400 font-semibold animate-pulse">
-                          Generating WhatsApp dispatch package...
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {/* AutoFame Composer Input Box */}
-            <div className="p-4 sm:p-6 bg-[#181715] border-t border-[#2d2a26]">
-              <div className="max-w-3xl mx-auto">
+            <div className="p-4 sm:p-6 bg-[#181715]/95 backdrop-blur border-t border-[#2d2a26] shrink-0">
+              <div className="max-w-6xl w-full mx-auto">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleSendMessage();
                   }}
-                  className="relative rounded-2xl border border-[#38342d] bg-[#22201c] shadow-lg focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30 transition"
+                  className="relative rounded-2xl sm:rounded-3xl border border-[#38342d] bg-[#22201c] shadow-2xl focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all duration-200"
                 >
                   {/* File Attachment Chip Previews */}
                   {attachedFiles.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-3 border-b border-[#2e2b26] bg-[#1a1916]/70 rounded-t-2xl">
+                    <div className="flex flex-wrap gap-2.5 p-3.5 border-b border-[#2e2b26] bg-[#1a1916]/80 rounded-t-2xl sm:rounded-t-3xl">
                       {attachedFiles.map((f, i) => (
                         <div
                           key={i}
-                          className="relative flex items-center gap-2 bg-[#282521] border border-[#3d3931] rounded-lg px-2.5 py-1.5 text-xs text-[#eae7e1] animate-in fade-in"
+                          className="relative flex items-center gap-2.5 bg-[#282521] border border-[#3d3931] rounded-xl px-3 py-1.5 text-xs text-[#eae7e1] animate-in fade-in"
                         >
                           {f.type.startsWith("image/") ? (
-                            <img src={f.previewUrl} alt={f.name} className="h-6 w-6 object-cover rounded" />
+                            <img src={f.previewUrl} alt={f.name} className="h-7 w-7 object-cover rounded-lg border border-white/10" />
                           ) : (
                             <FileText className="h-4 w-4 text-emerald-400" />
                           )}
-                          <span className="max-w-[140px] truncate text-[11px] font-medium">{f.name}</span>
+                          <span className="max-w-[200px] truncate text-xs font-medium">{f.name}</span>
                           <button
                             type="button"
                             onClick={() => removeAttachedFile(i)}
-                            className="text-[#8e8a82] hover:text-white p-0.5 rounded-full hover:bg-white/10 transition"
+                            className="text-[#8e8a82] hover:text-white p-1 rounded-full hover:bg-white/10 transition"
                             title="Remove attachment"
                           >
                             <X className="h-3.5 w-3.5" />
@@ -910,9 +1003,9 @@ export default function AdminAutoFameAgentPage() {
                         handleSendMessage();
                       }
                     }}
-                    rows={2}
-                    placeholder="Ask AutoFame Copilot about dealership inventory, financing, workshop repairs, or attach vehicle photos/PDFs..."
-                    className="w-full bg-transparent p-4 pb-12 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed"
+                    rows={3}
+                    placeholder="Ask AutoFame Copilot about dealership inventory, financing pre-approvals, customer follow-ups, workshop repairs, or attach vehicle photos & docs..."
+                    className="w-full bg-transparent p-4 sm:p-5 pb-14 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed min-h-[92px]"
                   />
 
                   {/* Hidden File Input */}
@@ -926,22 +1019,22 @@ export default function AdminAutoFameAgentPage() {
                   />
 
                   {/* Composer Footer Actions */}
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
                       <Button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2.5 text-[#a6a197] hover:text-[#f4f2ee] hover:bg-[#2e2b26] flex items-center gap-1.5 rounded-lg text-xs"
+                        className="h-8 px-3 text-[#a6a197] hover:text-[#f4f2ee] hover:bg-[#2e2b26] flex items-center gap-2 rounded-xl text-xs border border-transparent hover:border-[#38342d]"
                         title="Attach vehicle photos, FICA documents or PDFs"
                       >
-                        <Paperclip className="h-3.5 w-3.5 text-emerald-400" />
-                        <span className="text-[11px] font-medium">Attach</span>
+                        <Paperclip className="h-4 w-4 text-emerald-400" />
+                        <span className="text-xs font-medium">Attach Files</span>
                       </Button>
 
-                      <span className="hidden md:inline text-[11px] text-[#706c64]">
-                        Press Enter to send • Shift+Enter for new line
+                      <span className="hidden md:inline text-xs text-[#706c64]">
+                        Press <kbd className="px-1.5 py-0.5 rounded bg-[#181715] border border-[#35312b] text-[10px] font-mono text-[#a6a197]">Enter</kbd> to run • <kbd className="px-1.5 py-0.5 rounded bg-[#181715] border border-[#35312b] text-[10px] font-mono text-[#a6a197]">Shift+Enter</kbd> for new line
                       </span>
                     </div>
 
@@ -949,7 +1042,7 @@ export default function AdminAutoFameAgentPage() {
                       type="submit"
                       disabled={(!inputValue.trim() && attachedFiles.length === 0) || isStreaming || isUploadingFiles}
                       size="sm"
-                      className="h-8 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow transition disabled:opacity-30"
+                      className="h-8 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition disabled:opacity-30"
                     >
                       {isStreaming || isUploadingFiles ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
