@@ -38,6 +38,8 @@ import {
   CheckCircle2,
   HelpCircle,
   Menu,
+  Paperclip,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -56,6 +58,29 @@ const DEALERSHIP_LINKS = [
   { icon: DollarSign, label: "Sales & Profit Pipeline", prompt: "Summarize recent vehicle sales and gross profit margins" },
 ];
 
+// ──────────────────────────────────────────────
+// Custom Markdown Components for Claude Terminal Tables & Code
+// ──────────────────────────────────────────────
+const markdownComponents = {
+  table: ({ node, ...props }: any) => (
+    <div className="overflow-x-auto my-3 rounded-xl border border-[#3d3931] bg-[#171614] shadow-md">
+      <table className="w-full text-left text-xs border-collapse min-w-[560px]" {...props} />
+    </div>
+  ),
+  thead: ({ node, ...props }: any) => (
+    <thead className="bg-[#24221e] text-[#eae7e1] border-b border-[#3d3931] font-mono uppercase tracking-wider text-[10.5px]" {...props} />
+  ),
+  th: ({ node, ...props }: any) => (
+    <th className="px-3.5 py-2.5 font-semibold text-[#d97757] whitespace-nowrap" {...props} />
+  ),
+  td: ({ node, ...props }: any) => (
+    <td className="px-3.5 py-2.5 border-t border-[#2e2b26] text-[#c9c5bd] align-middle" {...props} />
+  ),
+  tr: ({ node, ...props }: any) => (
+    <tr className="hover:bg-[#201e1a] transition-colors" {...props} />
+  ),
+};
+
 export default function AdminClaudeAgentPage() {
   // ── Realtime Convex Queries & Mutations ──
   const sessions = useQuery(api.agent.listSessions, {});
@@ -70,6 +95,8 @@ export default function AdminClaudeAgentPage() {
   const seedInitialData = useMutation(api.seedAgent.seedInitialData);
   const recordCrmEvent = useMutation(api.agent.recordCrmEvent);
   const updateRepairStatus = useMutation(api.agent.updateCarRepairStatus);
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const resolveStorageUrl = useMutation(api.files.resolveStorageUrl);
 
   // Active Session
   const [selectedSessionId, setSelectedSessionId] = useState<any>(null);
@@ -85,6 +112,24 @@ export default function AdminClaudeAgentPage() {
   const [streamingActionPayload, setStreamingActionPayload] = useState<any>(null);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editTitleInput, setEditTitleInput] = useState("");
+
+  // Attachments State
+  const [attachedFiles, setAttachedFiles] = useState<{
+    file: File;
+    previewUrl: string;
+    name: string;
+    type: string;
+    size: number;
+  }[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      attachedFiles.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+    };
+  }, [attachedFiles]);
 
   // Sidebar visibility on mobile
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -170,31 +215,111 @@ export default function AdminClaudeAgentPage() {
     }
   };
 
+  // Handle Attachment File Selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const newItems: any[] = [];
+    Array.from(e.target.files).forEach((file) => {
+      if (file.size > 25 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 25MB)`);
+        return;
+      }
+      newItems.push({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+      });
+    });
+    if (newItems.length > 0) {
+      setAttachedFiles((prev) => [...prev, ...newItems]);
+      toast.success(`Attached ${newItems.length} file${newItems.length > 1 ? "s" : ""}`);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeAttachedFile = (index: number) => {
+    if (attachedFiles[index]?.previewUrl) {
+      URL.revokeObjectURL(attachedFiles[index].previewUrl);
+    }
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // Stream Message from AI Engine (SSE Token-by-Token)
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || inputValue;
-    if (!textToSend.trim() || isStreaming) return;
+    if ((!textToSend.trim() && attachedFiles.length === 0) || isStreaming || isUploadingFiles) return;
 
     let targetSessionId = selectedSessionId;
     if (!targetSessionId) {
       targetSessionId = await createSession({
-        title: textToSend.slice(0, 32),
+        title: textToSend ? textToSend.slice(0, 32) : attachedFiles[0]?.name || "File Analysis",
       });
       setSelectedSessionId(targetSessionId);
     }
 
+    const filesToProcess = [...attachedFiles];
     setInputValue("");
+    setAttachedFiles([]);
     setIsStreaming(true);
     setStreamingText("");
     setStreamingActionPayload(null);
     setActiveWorkspaceView("chat");
 
+    let uploadedAttachments: { name: string; url: string; type: string; size?: number }[] = [];
+
+    // Upload files to Convex Storage
+    if (filesToProcess.length > 0) {
+      setIsUploadingFiles(true);
+      for (const item of filesToProcess) {
+        try {
+          const postUrl = await generateUploadUrl();
+          const uploadRes = await fetch(postUrl, {
+            method: "POST",
+            headers: { "Content-Type": item.type || "application/octet-stream" },
+            body: item.file,
+          });
+
+          if (uploadRes.ok) {
+            const { storageId } = await uploadRes.json();
+            const resolvedUrl = await resolveStorageUrl({ storageId });
+            uploadedAttachments.push({
+              name: item.name,
+              url: resolvedUrl || item.previewUrl,
+              type: item.type,
+              size: item.size,
+            });
+          } else {
+            uploadedAttachments.push({
+              name: item.name,
+              url: item.previewUrl,
+              type: item.type,
+              size: item.size,
+            });
+          }
+        } catch (uploadErr) {
+          console.error("Upload error:", uploadErr);
+          uploadedAttachments.push({
+            name: item.name,
+            url: item.previewUrl,
+            type: item.type,
+            size: item.size,
+          });
+        }
+      }
+      setIsUploadingFiles(false);
+    }
+
+    const finalContent = textToSend.trim() || (uploadedAttachments.length > 0 ? `Uploaded ${uploadedAttachments.length} file(s) for technical review.` : "Hello");
+
     try {
-      // 1. Persist User Message to Convex
+      // 1. Persist User Message to Convex with attachments
       await addMessage({
         sessionId: targetSessionId,
         role: "user",
-        content: textToSend,
+        content: finalContent,
+        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
       // 2. Open Stream to Backend
@@ -207,9 +332,10 @@ export default function AdminClaudeAgentPage() {
               role: m.role,
               content: m.content,
             })),
-            { role: "user", content: textToSend },
+            { role: "user", content: finalContent },
           ],
           context: dealershipContext,
+          attachments: uploadedAttachments,
         }),
       });
 
@@ -581,12 +707,61 @@ export default function AdminClaudeAgentPage() {
                       {/* Markdown Formatted Text (Headings, Bullet points, Code blocks) */}
                       {isAssistant ? (
                         <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                             {msg.content}
                           </ReactMarkdown>
                         </div>
                       ) : (
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                        <div>
+                          <div className="whitespace-pre-wrap">{msg.content}</div>
+                          {/* Attachments rendering */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mt-3 pt-2.5 border-t border-white/20 flex flex-wrap gap-2">
+                              {msg.attachments.map((att: any, idx: number) => {
+                                const isImg =
+                                  att.type?.startsWith("image/") ||
+                                  /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(att.name);
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="group relative rounded-xl overflow-hidden border border-white/25 bg-black/25 backdrop-blur-sm p-1.5 transition hover:border-white/50"
+                                  >
+                                    {isImg ? (
+                                      <a
+                                        href={att.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="block"
+                                        title={`View full image: ${att.name}`}
+                                      >
+                                        <img
+                                          src={att.url}
+                                          alt={att.name}
+                                          className="h-24 w-auto max-w-[220px] object-cover rounded-lg border border-white/10"
+                                        />
+                                        <span className="block text-[10px] truncate max-w-[200px] mt-1 text-white/90 font-mono">
+                                          {att.name}
+                                        </span>
+                                      </a>
+                                    ) : (
+                                      <a
+                                        href={att.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:underline"
+                                        title={`View document: ${att.name}`}
+                                      >
+                                        <FileText className="h-4 w-4 text-white/80 shrink-0" />
+                                        <span className="truncate max-w-[180px] font-mono text-[11px]">{att.name}</span>
+                                        <ExternalLink className="h-3 w-3 opacity-70" />
+                                      </a>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       {/* Interactive Action Cards */}
@@ -669,7 +844,7 @@ export default function AdminClaudeAgentPage() {
 
                   <div className="bg-[#252320] text-[#eae7e1] border border-[#35312b] rounded-2xl p-4 sm:p-5 text-xs sm:text-sm leading-relaxed shadow-sm max-w-2xl w-full">
                     <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                         {streamingText + " ▍"}
                       </ReactMarkdown>
                     </div>
@@ -698,6 +873,33 @@ export default function AdminClaudeAgentPage() {
                   }}
                   className="relative rounded-2xl border border-[#38342d] bg-[#22201c] shadow-lg focus-within:border-[#c96442] focus-within:ring-1 focus-within:ring-[#c96442]/30 transition"
                 >
+                  {/* File Attachment Chip Previews */}
+                  {attachedFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-3 border-b border-[#2e2b26] bg-[#1a1916]/70 rounded-t-2xl">
+                      {attachedFiles.map((f, i) => (
+                        <div
+                          key={i}
+                          className="relative flex items-center gap-2 bg-[#282521] border border-[#3d3931] rounded-lg px-2.5 py-1.5 text-xs text-[#eae7e1] animate-in fade-in"
+                        >
+                          {f.type.startsWith("image/") ? (
+                            <img src={f.previewUrl} alt={f.name} className="h-6 w-6 object-cover rounded" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-[#d97757]" />
+                          )}
+                          <span className="max-w-[140px] truncate text-[11px] font-medium">{f.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachedFile(i)}
+                            className="text-[#8e8a82] hover:text-white p-0.5 rounded-full hover:bg-white/10 transition"
+                            title="Remove attachment"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <textarea
                     ref={textareaRef}
                     value={inputValue}
@@ -709,23 +911,47 @@ export default function AdminClaudeAgentPage() {
                       }
                     }}
                     rows={2}
-                    placeholder="Ask Claude Code about dealership inventory, financing, workshop repairs, or WhatsApp leads..."
+                    placeholder="Ask Claude Code about dealership inventory, financing, workshop repairs, or attach vehicle photos/PDFs..."
                     className="w-full bg-transparent p-4 pb-12 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed"
+                  />
+
+                  {/* Hidden File Input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
+                    onChange={handleFileSelect}
+                    className="hidden"
                   />
 
                   {/* Composer Footer Actions */}
                   <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[11px] text-[#706c64]">
-                      <span className="hidden sm:inline">Press Enter to send • Shift+Enter for new line</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2.5 text-[#a6a197] hover:text-[#f4f2ee] hover:bg-[#2e2b26] flex items-center gap-1.5 rounded-lg text-xs"
+                        title="Attach vehicle photos, FICA documents or PDFs"
+                      >
+                        <Paperclip className="h-3.5 w-3.5 text-[#d97757]" />
+                        <span className="text-[11px] font-medium">Attach</span>
+                      </Button>
+
+                      <span className="hidden md:inline text-[11px] text-[#706c64]">
+                        Press Enter to send • Shift+Enter for new line
+                      </span>
                     </div>
 
                     <Button
                       type="submit"
-                      disabled={!inputValue.trim() || isStreaming}
+                      disabled={(!inputValue.trim() && attachedFiles.length === 0) || isStreaming || isUploadingFiles}
                       size="sm"
                       className="h-8 px-4 rounded-xl bg-[#c96442] hover:bg-[#b85635] text-white font-semibold text-xs flex items-center gap-1.5 shadow transition disabled:opacity-30"
                     >
-                      {isStreaming ? (
+                      {isStreaming || isUploadingFiles ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <Send className="h-3.5 w-3.5" />

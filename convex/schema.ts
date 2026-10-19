@@ -361,6 +361,16 @@ export default defineSchema({
     sessionId: v.id("chatSessions"),
     role: v.string(), // "user" | "assistant" | "system"
     content: v.string(),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          url: v.string(),
+          type: v.string(), // "image/jpeg", "image/png", "application/pdf", etc.
+          size: v.optional(v.number()),
+        })
+      )
+    ),
     actionType: v.optional(v.string()), // "SEND_FINANCE_LINK" | "AUTO_GENERATE_DESCRIPTION" | "CAR_REPAIR_STATUS" | "WHATSAPP_DISPATCH" | "INVENTORY_LOOKUP"
     actionPayload: v.optional(v.any()),
     createdAt: v.string(),

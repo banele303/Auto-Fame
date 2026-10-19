@@ -106,6 +106,16 @@ export const addMessage = mutation({
     sessionId: v.id("chatSessions"),
     role: v.string(),
     content: v.string(),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          url: v.string(),
+          type: v.string(),
+          size: v.optional(v.number()),
+        })
+      )
+    ),
     actionType: v.optional(v.string()),
     actionPayload: v.optional(v.any()),
   },
@@ -116,6 +126,7 @@ export const addMessage = mutation({
       sessionId: args.sessionId,
       role: args.role,
       content: args.content,
+      attachments: args.attachments,
       actionType: args.actionType,
       actionPayload: args.actionPayload,
       createdAt: now,
