@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
 import type * as blogs from "../blogs.js";
 import type * as cars from "../cars.js";
@@ -19,6 +20,7 @@ import type * as http from "../http.js";
 import type * as import_ from "../import.js";
 import type * as omnichannel from "../omnichannel.js";
 import type * as reviews from "../reviews.js";
+import type * as seedAgent from "../seedAgent.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
@@ -29,6 +31,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  agent: typeof agent;
   auth: typeof auth;
   blogs: typeof blogs;
   cars: typeof cars;
@@ -40,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   import: typeof import_;
   omnichannel: typeof omnichannel;
   reviews: typeof reviews;
+  seedAgent: typeof seedAgent;
   transactions: typeof transactions;
   users: typeof users;
 }>;
