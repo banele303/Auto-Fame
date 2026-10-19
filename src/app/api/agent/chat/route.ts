@@ -3,8 +3,222 @@ import { NextRequest } from "next/server";
 export const dynamic = "force-dynamic";
 
 /**
- * Streaming Server-Sent Events (SSE) AI Completion Endpoint for AutoFame Copilot
- * Streams markdown formatted tokens token-by-token with real-time dealership precision.
+ * Build rich South African dealership context for AutoFame Copilot AI System Prompt
+ */
+function buildSystemPrompt(context: any, attachments: any[]) {
+  const cars = context?.cars || [];
+  const repairs = context?.repairs || [];
+  const stats = context?.stats || {};
+
+  const inventorySummary =
+    cars.length > 0
+      ? cars
+          .map(
+            (c: any) =>
+              `- ${c.year || 2022} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, Status: ${c.status || "AVAILABLE"}`
+          )
+          .join("\n")
+      : `- 2018 BMW X2 sDrive20i M Sport: R299,900 ZAR, 106,908 km, Alpine White (AVAILABLE)
+- 2024 Toyota Hilux 2.8 GD-6 Legend 4x4: R649,900 ZAR, 14,200 km, Glacier White (AVAILABLE)
+- 2021 Volkswagen Golf 8 GTI: R489,000 ZAR, 48,000 km, Moonstone Grey (AVAILABLE)
+- 2020 Mercedes-Benz C200 AMG Line: R419,000 ZAR, 62,000 km, Obsidian Black (AVAILABLE)
+- 2019 Ford Everest 3.2 TDCi XLT 4WD: R410,000 ZAR, 89,000 km, Moondust Silver (AVAILABLE)`;
+
+  const repairSummary =
+    repairs.length > 0
+      ? repairs
+          .map(
+            (r: any) =>
+              `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.estimatedCost || 0).toLocaleString()} ZAR)`
+          )
+          .join("\n")
+      : `- Job #WO-2026-001: 2018 BMW X2 M Sport at BMW Panel & Mechanical Sandton (Status: IN PROGRESS, Est: R8,500 ZAR)
+- Job #WO-2026-002: 2024 Toyota Hilux D/Cab at Bosch Car Service (Status: AWAITING PARTS, Est: R4,200 ZAR)`;
+
+  return `You are AutoFame Copilot, the autonomous AI Dealership Copilot for AutoFame, a premier pre-owned vehicle dealership in Baragwanath / Johannesburg South, South Africa.
+
+DEALERSHIP KNOWLEDGE BASE & CONTEXT:
+1. Location: 1 Rifle Range Rd, Baragwanath, Johannesburg South, South Africa.
+2. Official Currency: South African Rand (ZAR, format as e.g. R299,900 ZAR).
+3. Live Inventory Context:
+${inventorySummary}
+
+4. Workshop Repairs Pipeline:
+${repairSummary}
+
+5. Vehicle Finance & South African Banking Integration:
+   - Lending Partners: WesBank Auto, Standard Bank Vehicle Finance, Absa MFC, Nedbank MFC.
+   - Prime Lending Rate: 11.25% (typical vehicle finance rate prime + 1.15% to prime + 2.0%).
+   - Terms: 60 to 72 months, typically 10% deposit or zero-deposit subject to credit rating.
+   - Required FICA/NCA Documentation: Valid South African Green Barcoded ID or Smart Card, valid Code B/EB driver's license, latest 3 months official payslips, latest 3 months stamped bank statements, proof of residential address (utility bill / account not older than 3 months).
+   - Vehicle Finance Application Link: https://www.autofame.co.za/financing
+
+6. CRM & WhatsApp Gateway (Whapi):
+   - Direct customer outreach via WhatsApp.
+   - Fast dispatch of finance pre-approval forms, vehicle brochures, and test-drive appointment confirmations.
+
+FORMATTING & INTERACTION RULES:
+- Format all financial figures in ZAR (e.g. R299,900 ZAR).
+- Use clean Markdown tables with bold column headers when presenting comparisons, finance quotes, or inventory.
+- When generating vehicle sales descriptions, create high-converting copy with highlights, specifications, Dekra assurance, and financing options.
+- If the user asks for a WhatsApp message or finance link, formulate the exact message text ready to dispatch.
+- Keep the tone professional, authoritative, and focused on South African automotive excellence.`;
+}
+
+/**
+ * Stream real tokens from Google Gemini API
+ */
+async function streamGemini(
+  apiKey: string,
+  messages: any[],
+  systemPrompt: string,
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder
+) {
+  const contents = messages.map((m: any) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content || "" }],
+  }));
+
+  // Try gemini-1.5-flash first, fallback to gemini-2.0-flash or gemini-pro
+  const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: systemPrompt }],
+          },
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error?.message || `Gemini HTTP ${res.status}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body from Gemini API");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr) continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const textChunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (textChunk) {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ type: "token", text: textChunk })}\n\n`)
+                );
+              }
+            } catch {
+              // ignore partial line chunks
+            }
+          }
+        }
+      }
+
+      return; // Successfully completed streaming
+    } catch (err: any) {
+      console.warn(`Gemini model ${model} failed, trying fallback:`, err.message);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("Failed to stream from Gemini API");
+}
+
+/**
+ * Stream real tokens from OpenAI API
+ */
+async function streamOpenAI(
+  apiKey: string,
+  messages: any[],
+  systemPrompt: string,
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder
+) {
+  const openAiMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages.map((m: any) => ({ role: m.role, content: m.content || "" })),
+  ];
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: openAiMessages,
+      stream: true,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => null);
+    throw new Error(errJson?.error?.message || `OpenAI HTTP ${res.status}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No response body from OpenAI");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const chunkText = parsed.choices?.[0]?.delta?.content;
+          if (chunkText) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: "token", text: chunkText })}\n\n`)
+            );
+          }
+        } catch {}
+      }
+    }
+  }
+}
+
+/**
+ * Primary AI Chat Completion Handler
  */
 export async function POST(req: NextRequest) {
   try {
@@ -17,76 +231,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const userQuery = messages[messages.length - 1]?.content || "";
-    const lowerQuery = userQuery.toLowerCase();
-    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    // Retrieve API Keys (From request headers, env.local, or process.env)
+    const geminiKey =
+      req.headers.get("x-gemini-api-key") ||
+      process.env.GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      "";
 
-    let responseText = "";
+    const openaiKey =
+      req.headers.get("x-openai-api-key") ||
+      process.env.OPENAI_API_KEY ||
+      "";
+
+    const systemPrompt = buildSystemPrompt(context, attachments || []);
+    const lastUserMessage = messages[messages.length - 1]?.content || "";
+    const lowerQuery = lastUserMessage.toLowerCase();
+
+    // Determine metadata action payload if appropriate
     let actionPayload: any = null;
-
-    if (hasAttachments) {
-      const fileRows = attachments
-        .map(
-          (a: any, i: number) =>
-            `| **#${i + 1}** | \`${a.name}\` | \`${a.type || "file"}\` | ${(a.size ? (a.size / 1024).toFixed(1) + " KB" : "Verified")} | 🟢 Uploaded & Parsed |`
-        )
-        .join("\n");
-
-      const isImage = attachments.some((a: any) => a.type?.startsWith("image/"));
-      const isPdf = attachments.some((a: any) => a.type?.includes("pdf") || a.name?.endsWith(".pdf"));
-
-      responseText = `### 📎 File Intake & Document Inspection
-
-| Item | File Name | Format | File Size | System Status |
-| :---: | :--- | :---: | :---: | :---: |
-${fileRows}
-
----
-
-#### 🔍 Technical Verification Summary:
-${
-  isImage
-    ? `* **Visual Quality Assessment:** High-resolution vehicle photography detected. Panel alignment, showroom lighting, and exterior reflections are verified for our digital showroom catalog, social media ads, and WhatsApp customer brochures.`
-    : isPdf
-    ? `* **Regulatory Document Classification:** Vehicle Documentation / Financial Intake Packet. Verified structure complying with South African National Credit Act (NCA) and FICA standards (Proof of Income, 3-Month Bank Statements, ID Copy).`
-    : `* **Data Packet Verification:** Dealership operational file parsed and indexed into the active workspace.`
-}
-
-#### 💡 Recommended Next Actions:
-| Action | Purpose | Execution |
-| :--- | :--- | :---: |
-| **Link to Showroom Car** | Associate file with active vehicle inventory (e.g. *BMW X2* or *Hilux*) | 🟡 In Review |
-| **Forward via WhatsApp** | Deliver to buyer or finance desk via **WhatsApp** gateway | 🟢 Ready |
-| **Generate Vehicle Listing** | Automatically compile vehicle specs into social media copy | 🟢 Ready |`;
-
-      actionPayload = {
-        actionType: "ANALYZE_ATTACHMENT",
-        fileCount: attachments.length,
-        files: attachments,
-      };
-    } else if (
-      lowerQuery.includes("follow up") ||
-      lowerQuery.includes("lead") ||
-      lowerQuery.includes("crm") ||
-      lowerQuery.includes("inquiry") ||
-      lowerQuery.includes("inquiries")
-    ) {
-      responseText = `### 📞 Dealership CRM Lead & Follow-Up Priority Matrix
-
-Here is the current priority follow-up queue with customer contact info and direct WhatsApp dispatch readiness:
-
-| Priority | Customer / Contact | Vehicle Interest | Current Stage | Recommended Action | WhatsApp Channel |
-| :---: | :--- | :--- | :--- | :--- | :---: |
-| 🔴 **URGENT** | **Thabo Mokoena**<br/>📱 \`+27 83 492 1109\` | **2018 BMW X2 M Sport**<br/>*(R299,900 ZAR)* | Pre-Approval Requested | Dispatch WesBank & MFC Form Link | 🟢 Ready |
-| 🟠 **HIGH** | **Dr. Anelisa Sithole**<br/>📱 \`+27 82 555 8921\` | **2024 Toyota Hilux Legend**<br/>*(R649,900 ZAR)* | Trade-in Valuation Pending | Schedule Physical Appraisal at Sandton | 🟢 Ready |
-| 🟡 **MEDIUM** | **Johan Botha**<br/>📱 \`+27 71 884 9022\` | **Volkswagen Golf 8 GTI**<br/>*(R489,000 ZAR)* | Saturday Test Drive Booked | Confirm Appointment with Sales Rep | 🟢 Ready |
-| 🟢 **NEW** | **Kagiso Ndlovu**<br/>📱 \`+27 79 312 8844\` | **Mercedes-Benz C200 AMG**<br/>*(R419,000 ZAR)* | Online Finance Inquiry | Send FICA Checklist & Monthly Quote | 🟢 Ready |
-
-#### 📋 Follow-Up Task Summary:
-* **Immediate Attention:** 2 clients requested instant WhatsApp vehicle finance applications.
-* **Showroom Visits:** 1 physical appraisal and 1 weekend test drive pending confirmation.
-* **Omnichannel Status:** WhatsApp channel is synced and ready for one-click dispatches.`;
-
+    if (lowerQuery.includes("finance") || lowerQuery.includes("wesbank") || lowerQuery.includes("pre-approval")) {
       actionPayload = {
         actionType: "SEND_FINANCE_LINK",
         customerPhone: "+27834921109",
@@ -95,231 +258,149 @@ Here is the current priority follow-up queue with customer contact info and dire
         carId: 5,
         link: "https://www.autofame.co.za/financing",
       };
-    } else if (
-      lowerQuery.includes("finance") ||
-      lowerQuery.includes("financial application") ||
-      lowerQuery.includes("send finance") ||
-      lowerQuery.includes("application")
-    ) {
-      responseText = `### 📋 South African Vehicle Finance Multi-Lender Matrix
-
-Target Vehicle: **2018 BMW X2 sDrive20i M Sport** (\`R299,900 ZAR\`)
-
-| Lending Institution | Est. Monthly | Interest Rate | Term | Deposit | Pre-Approval Status |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **WesBank Auto** | **~R5,890 / mo** | Prime + 1.25% *(12.50%)* | 72 Mos | 10% (R29,990) | 🟢 Fast-Track Ready |
-| **Standard Bank Auto** | **~R5,940 / mo** | Prime + 1.40% *(12.65%)* | 72 Mos | 10% (R29,990) | 🟢 Fast-Track Ready |
-| **Absa MFC** | **~R5,860 / mo** | Prime + 1.15% *(12.40%)* | 72 Mos | 10% (R29,990) | 🟡 Awaiting 3-Mo Payslip |
-| **Nedbank MFC** | **~R6,020 / mo** | Prime + 1.75% *(13.00%)* | 60 Mos | 10% (R29,990) | 🟢 Fast-Track Ready |
-
-#### 📑 Required FICA / NCA Document Checklist:
-| Document Required | Specification | Verification |
-| :--- | :--- | :---: |
-| **South African ID** | Smart ID Card or Green Barcoded Book (Both sides) | 🟢 Mandatory |
-| **Valid Driver's License** | Valid Code B/EB card without endorsements | 🟢 Mandatory |
-| **Proof of Income** | Latest 3 consecutive months official payslips | 🟢 Mandatory |
-| **Bank Statements** | Latest 3 months official stamped PDF bank statements | 🟢 Mandatory |
-| **Proof of Residence** | Utility bill / telco account (not older than 3 months) | 🟢 Mandatory |
-
-> [!NOTE]
-> Clicking **Dispatch via WhatsApp** below will send this application link directly to **Thabo Mokoena**'s phone with pre-configured WesBank pre-qualification.`;
-
-      actionPayload = {
-        actionType: "SEND_FINANCE_LINK",
-        customerPhone: "+27834921109",
-        customerName: "Thabo Mokoena",
-        carName: "2018 BMW X2 sDrive20i M Sport",
-        carId: 5,
-        link: "https://www.autofame.co.za/financing",
-      };
-    } else if (
-      lowerQuery.includes("repair") ||
-      lowerQuery.includes("fixed") ||
-      lowerQuery.includes("workshop") ||
-      lowerQuery.includes("maintenance") ||
-      lowerQuery.includes("job card")
-    ) {
-      responseText = `### 🔧 Workshop & Vehicle Repair Operational Status
-
-Centralized live tracking of all dealership stock undergoing mechanical, cosmetic, or roadworthy servicing:
-
-| Job Card | Vehicle | Workshop Location | Current Status | Est. Cost (ZAR) | Est. Completion | Primary Technician |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| **WO-2026-001** | **2018 BMW X2 M Sport** | BMW Panel & Mechanical Sandton | 🟡 **IN PROGRESS** | \`R8,500\` | Tomorrow (14:00) | Sipho Dlamini (\`+27 11 883 4900\`) |
-| **WO-2026-002** | **2024 Toyota Hilux D/Cab** | Bosch Car Service JHB Central | 🟠 **AWAITING PARTS** | \`R4,200\` | Thursday | Mark Van Der Merwe (\`+27 11 334 2200\`) |
-
-#### 🛠️ Detailed Mechanical Diagnostics:
-| Vehicle | Primary Mechanical Fault / Service Scope | Parts Procurement |
-| :--- | :--- | :--- |
-| **BMW X2 (Car #5)** | 100,000 km Major Service + Front OEM Brake Pads & Sensors | ✅ Genuine BMW Parts Installed |
-| **Toyota Hilux (Car #4)** | AC Compressor Rebuild & Gas Leak Detection | ⏳ Denso Condenser in transit from Toyota Hub |
-
-> [!TIP]
-> Both vehicles remain automatically set to \`MAINTENANCE\` in the showroom database to prevent premature sales inquiries before physical roadworthy certification.`;
-
-      actionPayload = {
-        actionType: "CAR_REPAIR_STATUS",
-        repairsCount: 2,
-      };
-    } else if (
-      lowerQuery.includes("inventory") ||
-      lowerQuery.includes("stock") ||
-      lowerQuery.includes("showroom") ||
-      lowerQuery.includes("available")
-    ) {
-      responseText = `### 🚗 Live Showroom Inventory & Stock Status
-
-Full overview of vehicles currently in stock, under preparation, or on the main floor:
-
-| Stock # | Vehicle Model | Year | Mileage | Transmission | Price (ZAR) | Availability Status |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **#101** | **BMW X2 sDrive20i M Sport** | 2018 | 106,908 km | Steptronic Auto | \`R299,900\` | 🟡 Workshop Major Service |
-| **#102** | **Toyota Hilux 2.8 GD-6 Legend 4x4** | 2024 | 18,200 km | 6-Speed Auto | \`R649,900\` | 🟠 Workshop Awaiting Parts |
-| **#103** | **Volkswagen Golf 8 GTI DSG** | 2022 | 42,500 km | 7-Speed DSG | \`R489,000\` | 🟢 Showroom Main Floor |
-| **#104** | **Mercedes-Benz C200 AMG Line** | 2021 | 54,000 km | 9G-Tronic Auto | \`R419,000\` | 🟢 Showroom Main Floor |
-| **#105** | **Ford Ranger 2.0 SiT XLT Double Cab** | 2023 | 29,800 km | 10-Speed Auto | \`R459,000\` | 🟢 Showroom Main Floor |
-
-#### 📊 Showroom Inventory Metrics:
-| Metric | Count | Portfolio Value |
-| :--- | :---: | :---: |
-| **Total Inventory on Roster** | 14 Vehicles | \`R5,840,000 ZAR\` |
-| **Frontline Showroom Ready** | 10 Vehicles | \`R4,190,000 ZAR\` |
-| **Workshop / In Prep** | 2 Vehicles | \`R949,800 ZAR\` |
-| **Units Sold (Pending Delivery)** | 2 Vehicles | \`R700,200 ZAR\` |`;
-
-      actionPayload = {
-        actionType: "INVENTORY_OVERVIEW",
-        totalCount: 14,
-      };
-    } else if (
-      lowerQuery.includes("schedule") ||
-      lowerQuery.includes("test drive") ||
-      lowerQuery.includes("appointment")
-    ) {
-      responseText = `### 📅 Customer Test Drive & Appointment Schedule
-
-| Time Slot | Client Name | Vehicle Selected | Assigned Executive | Booking Purpose | Confirmation |
-| :---: | :--- | :--- | :--- | :--- | :---: |
-| **10:00 AM** | **Johan Botha** | VW Golf 8 GTI | David Nkosi | 20-min Highway Test Drive | 🟢 Confirmed |
-| **12:30 PM** | **Dr. Anelisa Sithole** | Toyota Hilux Legend | Sarah Pillay | Vehicle Inspection & Trade-In | 🟡 Awaiting Reply |
-| **03:00 PM** | **Sipho Khumalo** | Mercedes C200 AMG | David Nkosi | Contract Signing & Handover | 🟢 Confirmed |
-
-#### 📍 Operational Checklist for Appointments:
-* All test drive vehicles are pre-washed, fueled, and have trade plates mounted.
-* Customer valid South African driver's license copied prior to departure.`;
-
-      actionPayload = {
-        actionType: "SCHEDULE_OVERVIEW",
-      };
-    } else if (
-      lowerQuery.includes("pipeline") ||
-      lowerQuery.includes("profit") ||
-      lowerQuery.includes("sales")
-    ) {
-      responseText = `### 💰 Sales Pipeline & Gross Profit Margin Report
-
-Recent closed-deal transactions and active gross profit performance:
-
-| Vehicle Sold | Buyer | Contract Price | Trade-in Value | Gross Profit | Margin % | Finance Institution |
-| :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| **2021 VW Polo GTI** | Michael Venter | \`R349,000\` | — | **+R44,000** | 12.6% | Standard Bank Auto |
-| **2020 Audi A4 40 TFSI** | Lerato Molefe | \`R385,000\` | R110,000 | **+R47,000** | 12.2% | WesBank Auto |
-| **2019 Ford Everest 3.2** | Pieter Steyn | \`R410,000\` | — | **+R48,000** | 11.7% | Absa MFC |
-
-#### 📈 Dealership Financial Summary:
-| Metric | Month-to-Date | Quarter-to-Date |
-| :--- | :---: | :---: |
-| **Total Units Delivered** | 8 Vehicles | 26 Vehicles |
-| **Gross Margin Realized** | \`R356,000 ZAR\` | \`R1,142,000 ZAR\` |
-| **Average Margin per Unit** | \`R44,500 ZAR\` (12.1%) | \`R43,920 ZAR\` (11.9%) |`;
-
-      actionPayload = {
-        actionType: "SALES_PIPELINE",
-      };
-    } else if (
-      lowerQuery.includes("description") ||
-      lowerQuery.includes("copy") ||
-      lowerQuery.includes("write") ||
-      lowerQuery.includes("bmw") ||
-      lowerQuery.includes("hilux") ||
-      lowerQuery.includes("social")
-    ) {
-      responseText = `### ✨ Auto-Generated Omnichannel Vehicle Description
-
-Here is the high-converting vehicle copy formulated specifically for South African classifieds and social media:
-
-\`\`\`markdown
-# 2018 BMW X2 sDrive20i M Sport (Sports-Auto) — Alpine White
-R299,900 ZAR | 106,908 km | 2.0L TwinPower Turbo (141 kW / 280 Nm) | 7-Speed Steptronic
-
-Turn heads wherever you go. This immaculate BMW X2 sDrive20i combines coupe athleticism with elevated crossover luxury.
-\`\`\`
-
-#### 🌟 Key Vehicle Specification Matrix:
-| Parameter | Technical Specification |
-| :--- | :--- |
-| **Engine & Power** | 2.0-Litre BMW TwinPower Turbo (141 kW @ 5,000 rpm / 280 Nm @ 1,350 rpm) |
-| **Transmission** | 7-Speed Steptronic Dual-Clutch with Dynamic Driving Modes |
-| **Fuel Economy** | 5.9 L / 100 km (Combined cycle) |
-| **M Sport Styling** | M Aerodynamics package, Shadowline trim, 19" M Light Double-Spoke Alloys |
-| **Interior Equipment** | Panoramic sunroof, Alcantara sport seats, Ambient lighting, Navigation |
-| **Safety Certification** | Dekra 101-point roadworthy certificate, Front & Rear PDC with Reverse Camera |
-
-#### 📍 AutoFame Dealership Guarantee:
-* In-house vehicle finance arranged with all major South African institutions (**WesBank, Standard Bank, Absa, Nedbank**).
-* Trade-ins gladly welcomed with on-the-spot evaluations.
-* Deliveries arranged nationwide across Gauteng, KwaZulu-Natal, Western Cape, and beyond.
-
----
-*Click "Copy Description" to paste directly into AutoTrader, Cars.co.za, or Facebook Marketplace.*`;
-
+    } else if (lowerQuery.includes("description") || lowerQuery.includes("copy") || lowerQuery.includes("write")) {
       actionPayload = {
         actionType: "AUTO_GENERATE_DESCRIPTION",
         carId: 5,
         title: "2018 BMW X2 sDrive20i M Sport",
       };
-    } else {
-      responseText = `### 🏢 AutoFame Executive Dealership Control Center
-
-I am connected to your live South African dealership operational database. Here is your centralized operational snapshot:
-
-| Operational Domain | Current Metrics | Status & Priorities |
-| :--- | :---: | :--- |
-| **Showroom Inventory** | **14 Vehicles** *(10 Active, 2 Sold)* | 2 incoming trade-ins awaiting preparation |
-| **Workshop Repairs** | **2 Job Cards** *(BMW & Toyota)* | BMW X2 Dekra 101-point test scheduled |
-| **Vehicle Financing** | **3 Live NCA Applications** | WesBank & Standard Bank review underway |
-| **WhatsApp Gateway** | **AutoFame WhatsApp Active** | Automated brochures & pre-approval links |
-| **CRM Hot Leads** | **4 Priority Inquiries** | Thabo Mokoena & Johan Botha scheduled |
-
-#### 🚀 Recommended One-Click Actions:
-1. \`Customer Follow-Ups\` — View lead table and dispatch WhatsApp finance links.
-2. \`Send Finance Link\` — Generate multi-bank pre-approval application packet.
-3. \`Cars at Workshop\` — Inspect workshop repair job cards and technician notes.
-4. \`Live Showroom Inventory\` — View full vehicle stock roster with pricing and specs.`;
+    } else if (lowerQuery.includes("repair") || lowerQuery.includes("workshop") || lowerQuery.includes("fixed")) {
+      actionPayload = {
+        actionType: "CAR_REPAIR_STATUS",
+      };
     }
 
-    // Deliver true token-by-token streaming via ReadableStream
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        // Send initial metadata
+        // 1. Emit metadata if applicable
         if (actionPayload) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "meta", actionPayload })}\n\n`)
           );
         }
 
-        // Stream text chunks smoothly (simulating AutoFame Copilot streaming cadence)
-        const words = responseText.split(/(\s+)/);
-        for (let i = 0; i < words.length; i++) {
-          const chunk = words[i];
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "token", text: chunk })}\n\n`)
-          );
-          // 12ms realistic token cadence
-          await new Promise((r) => setTimeout(r, 12));
+        // 2. Execute Real AI Engine if API Key is Present
+        let aiSuccess = false;
+
+        if (geminiKey) {
+          try {
+            await streamGemini(geminiKey, messages, systemPrompt, controller, encoder);
+            aiSuccess = true;
+          } catch (geminiErr: any) {
+            console.error("Gemini stream error:", geminiErr.message);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "token",
+                  text: `\n\n> ⚠️ **Gemini API Error:** ${geminiErr.message}\n\nFalling back to contextual dealership intelligence...\n\n`,
+                })}\n\n`
+              )
+            );
+          }
+        } else if (openaiKey) {
+          try {
+            await streamOpenAI(openaiKey, messages, systemPrompt, controller, encoder);
+            aiSuccess = true;
+          } catch (openAiErr: any) {
+            console.error("OpenAI stream error:", openAiErr.message);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "token",
+                  text: `\n\n> ⚠️ **OpenAI API Error:** ${openAiErr.message}\n\nFalling back to contextual dealership intelligence...\n\n`,
+                })}\n\n`
+              )
+            );
+          }
         }
 
+        // 3. Fallback Contextual Response if no external AI key is yet configured
+        if (!aiSuccess) {
+          let fallbackText = "";
+
+          if (lowerQuery.includes("follow up") || lowerQuery.includes("crm") || lowerQuery.includes("lead")) {
+            fallbackText = `### 📞 Dealership Priority Follow-Up Matrix
+
+| Priority | Customer Name | Phone Number | Vehicle Interest | Current Stage | Recommended Action |
+| :---: | :--- | :--- | :--- | :--- | :---: |
+| 🔴 **URGENT** | **Thabo Mokoena** | \`+27 83 492 1109\` | **2018 BMW X2 M Sport** *(R299,900)* | Pre-Approval Requested | Dispatch WesBank & MFC Form Link |
+| 🟠 **HIGH** | **Dr. Anelisa Sithole** | \`+27 82 555 8921\` | **2024 Toyota Hilux Legend** *(R649,900)* | Trade-in Valuation Pending | Schedule Physical Appraisal |
+| 🟡 **MEDIUM** | **Johan Botha** | \`+27 71 884 9022\` | **Volkswagen Golf 8 GTI** *(R489,000)* | Test Drive Booked | Confirm Appointment |
+| 🟢 **NEW** | **Kagiso Ndlovu** | \`+27 79 312 8844\` | **Mercedes-Benz C200 AMG** *(R419,000)* | Online Inquiry | Send FICA Checklist & Monthly Quote |
+
+> [!TIP]
+> **To enable 100% unrestricted live AI answers**, click the **"Connect Gemini AI"** button in the top bar and paste your free Google Gemini API key!`;
+          } else if (lowerQuery.includes("finance") || lowerQuery.includes("wesbank") || lowerQuery.includes("application")) {
+            fallbackText = `### 📋 Multi-Lender South African Vehicle Finance Structure
+
+Target Vehicle: **2018 BMW X2 sDrive20i M Sport** (\`R299,900 ZAR\`)
+
+| Lending Institution | Est. Monthly | Interest Rate | Term | Deposit | Fast-Track Status |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **WesBank Auto** | **~R5,890 / mo** | Prime + 1.25% *(12.50%)* | 72 Mos | 10% (R29,990) | 🟢 Approved |
+| **Standard Bank Auto** | **~R5,940 / mo** | Prime + 1.40% *(12.65%)* | 72 Mos | 10% (R29,990) | 🟢 Approved |
+| **Absa MFC** | **~R5,860 / mo** | Prime + 1.15% *(12.40%)* | 72 Mos | 10% (R29,990) | 🟡 In Review |
+| **Nedbank MFC** | **~R6,020 / mo** | Prime + 1.75% *(13.00%)* | 60 Mos | 10% (R29,990) | 🟢 Approved |
+
+#### 📑 Mandatory FICA Checklist:
+- SA Smart ID / Green ID Book
+- Valid South African Driver's License
+- Latest 3-Month Payslips
+- Latest 3-Month Stamped Bank Statements
+- Proof of Residential Address (< 3 months old)`;
+          } else if (lowerQuery.includes("repair") || lowerQuery.includes("workshop")) {
+            fallbackText = `### 🔧 Workshop & Vehicle Repair Operational Status
+
+| Job Card | Vehicle | Workshop Location | Current Status | Est. Cost (ZAR) | Est. Completion | Technician |
+| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
+| **WO-2026-001** | **2018 BMW X2 M Sport** | BMW Panel & Mechanical Sandton | 🟡 **IN PROGRESS** | \`R8,500\` | Tomorrow (14:00) | Sipho Dlamini |
+| **WO-2026-002** | **2024 Toyota Hilux D/Cab** | Bosch Car Service JHB Central | 🟠 **AWAITING PARTS** | \`R4,200\` | Thursday | Mark Van Der Merwe |`;
+          } else if (lowerQuery.includes("description") || lowerQuery.includes("copy") || lowerQuery.includes("bmw")) {
+            fallbackText = `### ✨ Auto-Generated Vehicle Description: 2018 BMW X2 M Sport
+
+\`\`\`markdown
+# 2018 BMW X2 sDrive20i M Sport (Sports-Auto) — Alpine White
+R299,900 ZAR | 106,908 km | 2.0L TwinPower Turbo (141 kW / 280 Nm) | 7-Speed Steptronic Dual-Clutch
+
+Turn heads wherever you go. This immaculate BMW X2 sDrive20i combines coupe athleticism with elevated crossover luxury.
+
+HIGHLIGHTS & SPECIFICATIONS:
+• Engine: 2.0-Litre BMW TwinPower Turbo (141 kW / 280 Nm)
+• Transmission: 7-Speed Steptronic Dual-Clutch with Driving Modes
+• Fuel Economy: 5.9 L / 100 km (Combined cycle)
+• Equipment: Panoramic Sunroof, M Aerodynamics Package, 19" M Light Alloys, Alcantara Sport Seats
+• Certification: Dekra 101-Point Roadworthy Certificate, Full Service History
+
+FINANCING & PURCHASE OPTIONS:
+In-house financing arranged with WesBank, Standard Bank, Absa, and Nedbank. Trade-ins welcomed. Nationwide delivery arranged across South Africa.
+\`\`\``;
+          } else {
+            fallbackText = `### ⚡ AutoFame AI Copilot
+
+I received your prompt: **"${lastUserMessage}"**
+
+To enable **Google Gemini live AI** to answer any custom request in real time:
+
+#### 🔑 Connect Google Gemini in 30 Seconds:
+1. Click the **"Connect Gemini AI"** button in the top bar.
+2. Get your free key at **[aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)**.
+3. Paste it in and click **Save**. *(Or set \`GEMINI_API_KEY=...\` in your \`.env.local\` file)*.
+
+Once connected, I will generate unrestricted custom responses, vehicle valuations, financial simulations, and WhatsApp marketing campaigns dynamically!`;
+          }
+
+          // Stream fallback tokens smoothly
+          const words = fallbackText.split(/(\s+)/);
+          for (let i = 0; i < words.length; i++) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: "token", text: words[i] })}\n\n`)
+            );
+            await new Promise((r) => setTimeout(r, 12));
+          }
+        }
+
+        // Finalize stream
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
         controller.close();
       },

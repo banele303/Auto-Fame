@@ -186,6 +186,38 @@ export default function AdminAutoFameAgentPage() {
   });
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
+  // Live AI Engine Settings (Google Gemini / OpenAI)
+  const [apiKey, setApiKey] = useState("");
+  const [apiProvider, setApiProvider] = useState<"gemini" | "openai">("gemini");
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [hasCustomKey, setHasCustomKey] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedKey = localStorage.getItem("autofame_ai_key") || "";
+      const storedProvider = (localStorage.getItem("autofame_ai_provider") as any) || "gemini";
+      setApiKey(storedKey);
+      setApiProvider(storedProvider);
+      setHasCustomKey(!!storedKey);
+    }
+  }, []);
+
+  const handleSaveApiKey = () => {
+    if (typeof window !== "undefined") {
+      if (apiKey.trim()) {
+        localStorage.setItem("autofame_ai_key", apiKey.trim());
+        localStorage.setItem("autofame_ai_provider", apiProvider);
+        setHasCustomKey(true);
+        toast.success(`${apiProvider === "gemini" ? "Google Gemini" : "OpenAI"} API Key connected!`);
+      } else {
+        localStorage.removeItem("autofame_ai_key");
+        setHasCustomKey(false);
+        toast.info("AI Key cleared");
+      }
+      setAiSettingsOpen(false);
+    }
+  };
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -361,10 +393,21 @@ export default function AdminAutoFameAgentPage() {
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
-      // 2. Open Stream to Backend
+      // 2. Open Stream to Backend with AI credentials
+      const reqHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (apiKey.trim()) {
+        if (apiProvider === "gemini") {
+          reqHeaders["x-gemini-api-key"] = apiKey.trim();
+        } else {
+          reqHeaders["x-openai-api-key"] = apiKey.trim();
+        }
+      }
+
       const response = await fetch("/api/agent/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: reqHeaders,
         body: JSON.stringify({
           messages: [
             ...(activeSessionData?.messages || []).map((m: any) => ({
@@ -710,6 +753,23 @@ export default function AdminAutoFameAgentPage() {
                 WhatsApp CRM
               </button>
             </div>
+
+            {/* AI Engine Status & Configuration Pill */}
+            <button
+              onClick={() => setAiSettingsOpen(true)}
+              className={cn(
+                "px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border shadow-sm",
+                hasCustomKey
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                  : "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25"
+              )}
+              title="Configure Google Gemini or OpenAI Live API Key"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                {hasCustomKey ? `${apiProvider === "gemini" ? "Gemini AI" : "OpenAI"} Active` : "Connect Gemini AI"}
+              </span>
+            </button>
           </div>
         </header>
 
@@ -1356,6 +1416,130 @@ export default function AdminAutoFameAgentPage() {
                   </>
                 )}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* AI ENGINE CONFIGURATION MODAL (Google Gemini / OpenAI)     */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {aiSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl bg-[#1e1d1a] border border-[#38342d] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#2e2b26] pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#f5f2eb]">Connect Real AI Engine</h3>
+                  <p className="text-[11px] text-[#8e8a82]">Google Gemini 1.5 Flash / OpenAI</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAiSettingsOpen(false)}
+                className="text-[#8e8a82] hover:text-white p-1 rounded-lg hover:bg-white/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] font-semibold text-[#a6a197] mb-1.5 uppercase font-mono">
+                  Select AI Provider
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setApiProvider("gemini")}
+                    className={cn(
+                      "p-3 rounded-2xl border font-semibold flex items-center justify-center gap-2 transition",
+                      apiProvider === "gemini"
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow-md"
+                        : "bg-[#252320] text-[#a6a197] border-[#38342d] hover:text-white"
+                    )}
+                  >
+                    <span>Google Gemini</span>
+                    <span className="text-[10px] bg-black/30 px-1.5 py-0.5 rounded font-mono">Free</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setApiProvider("openai")}
+                    className={cn(
+                      "p-3 rounded-2xl border font-semibold flex items-center justify-center gap-2 transition",
+                      apiProvider === "openai"
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow-md"
+                        : "bg-[#252320] text-[#a6a197] border-[#38342d] hover:text-white"
+                    )}
+                  >
+                    <span>OpenAI</span>
+                    <span className="text-[10px] bg-black/30 px-1.5 py-0.5 rounded font-mono">GPT-4o</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[#a6a197] mb-1.5 uppercase font-mono">
+                  {apiProvider === "gemini" ? "Google Gemini API Key" : "OpenAI API Key"}
+                </label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={apiProvider === "gemini" ? "Paste AIzaSy... key" : "Paste sk-... key"}
+                  className="w-full rounded-2xl bg-[#141311] border border-[#38342d] p-3 text-xs text-white placeholder:text-[#666] focus:border-emerald-500 focus:outline-none font-mono"
+                />
+                {apiProvider === "gemini" ? (
+                  <p className="text-[11px] text-[#8e8a82] mt-2 leading-relaxed">
+                    👉 Get your free Google Gemini API key in 30 seconds:{" "}
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-400 hover:underline font-semibold"
+                    >
+                      aistudio.google.com/app/apikey
+                    </a>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-[#8e8a82] mt-2 leading-relaxed">
+                    Get an OpenAI API key from{" "}
+                    <a
+                      href="https://platform.openai.com/api-keys"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-400 hover:underline font-semibold"
+                    >
+                      platform.openai.com/api-keys
+                    </a>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-2 border-t border-[#2e2b26]">
+              <Button
+                onClick={handleSaveApiKey}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 rounded-2xl shadow-md"
+              >
+                Save &amp; Activate Live AI
+              </Button>
+              {apiKey && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setApiKey("");
+                    localStorage.removeItem("autofame_ai_key");
+                    setHasCustomKey(false);
+                    toast.info("AI Key cleared");
+                  }}
+                  className="text-neutral-400 hover:text-rose-400 text-xs h-9 rounded-2xl"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </div>
