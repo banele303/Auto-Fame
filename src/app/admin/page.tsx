@@ -642,6 +642,27 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 gap-4">
                 <Button 
                   variant="outline" 
+                  className="justify-start h-auto py-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/20 text-amber-300 transition-all shadow-sm"
+                  onClick={() => router.push('/admin/agent')}
+                >
+                  <div className="flex items-center">
+                    <div className="bg-amber-500/20 border border-amber-500/40 p-2 rounded-full mr-3 text-amber-400">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-white flex items-center gap-2">
+                        AutoFame AI Copilot Agent
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          Claude Powered
+                        </span>
+                      </p>
+                      <p className="text-xs text-zinc-400">Manage chat history, send WhatsApp finance links, track workshop repairs & AI copy</p>
+                    </div>
+                  </div>
+                </Button>
+
+                <Button 
+                  variant="outline" 
                   className="justify-start h-auto py-4 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 transition-colors"
                   onClick={() => router.push('/admin/cars/add')}
                 >

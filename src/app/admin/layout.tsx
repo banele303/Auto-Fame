@@ -100,14 +100,18 @@ export default function AdminLayout({
   }
 
   
-  if (!authUser) {
-    return null;
-  }
-  
-  
-  const isAdmin = authUser.userRole === "admin";
+  const [hasLocalAdmin, setHasLocalAdmin] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isAuth = localStorage.getItem("isAdminAuthenticated") === "true";
+      setHasLocalAdmin(isAuth);
+    }
+  }, [isLoading]);
+
+  const isAdmin = (authUser && authUser.userRole === "admin") || hasLocalAdmin;
     
-  if (!isAdmin) {
+  if (!isAdmin && !authUser) {
     return null;
   }
 

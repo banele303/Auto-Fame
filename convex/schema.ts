@@ -344,4 +344,60 @@ export default defineSchema({
     receivedAt: v.string(),
   })
   .index("by_sender", ["sender"]),
+
+  // ── AI Dealership Agent Tables (Claude-style Copilot) ──
+  chatSessions: defineTable({
+    title: v.string(),
+    model: v.string(), // e.g. "puter:claude-3-5-sonnet" | "puter:gpt-4o"
+    category: v.optional(v.string()), // "inventory", "sales", "finance", "repairs", "general"
+    systemPrompt: v.optional(v.string()),
+    lastMessageAt: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+  .index("by_lastMessageAt", ["lastMessageAt"]),
+
+  chatMessages: defineTable({
+    sessionId: v.id("chatSessions"),
+    role: v.string(), // "user" | "assistant" | "system"
+    content: v.string(),
+    actionType: v.optional(v.string()), // "SEND_FINANCE_LINK" | "AUTO_GENERATE_DESCRIPTION" | "CAR_REPAIR_STATUS" | "WHATSAPP_DISPATCH" | "INVENTORY_LOOKUP"
+    actionPayload: v.optional(v.any()),
+    createdAt: v.string(),
+  })
+  .index("by_sessionId", ["sessionId"])
+  .index("by_sessionId_createdAt", ["sessionId", "createdAt"]),
+
+  // ── Car Repairs & Workshop Management ──
+  carRepairs: defineTable({
+    carId: v.number(),
+    repairNumber: v.string(), // e.g. "WO-2026-001"
+    workshopName: v.string(), // e.g. "Bosch Car Service Sandton"
+    status: v.string(), // "SENT_FOR_REPAIR" | "IN_PROGRESS" | "AWAITING_PARTS" | "COMPLETED" | "COLLECTED"
+    issueDescription: v.string(),
+    costEstimated: v.number(),
+    costActual: v.optional(v.number()),
+    dateSent: v.string(),
+    estimatedCompletionDate: v.optional(v.string()),
+    dateCompleted: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    technicianContact: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+  .index("by_carId", ["carId"])
+  .index("by_status", ["status"]),
+
+  // ── Centralized CRM Activity Stream & WhatsApp Logs ──
+  crmEvents: defineTable({
+    eventType: v.string(), // "WHATSAPP_SENT" | "FINANCE_SUBMITTED" | "LEAD_INQUIRY" | "TEST_DRIVE" | "REPAIR_UPDATE"
+    recipient: v.string(),
+    customerName: v.optional(v.string()),
+    summary: v.string(),
+    payload: v.optional(v.any()),
+    status: v.string(), // "SUCCESS" | "PENDING" | "FAILED"
+    createdAt: v.string(),
+  })
+  .index("by_eventType", ["eventType"])
+  .index("by_createdAt", ["createdAt"]),
 });
