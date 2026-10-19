@@ -639,7 +639,7 @@ export default function AdminAutoFameAgentPage() {
                     <>
                       <div className="min-w-0 flex-1 pr-2">
                         <p className="font-medium truncate">{s.title}</p>
-                        <span className="text-[10px] text-[#706c64]">
+                        <span className="text-[10px] text-[#706c64]" suppressHydrationWarning>
                           {new Date(s.lastMessageAt).toLocaleDateString([], {
                             month: "short",
                             day: "numeric",
@@ -756,6 +756,7 @@ export default function AdminAutoFameAgentPage() {
 
             {/* AI Engine Status & Configuration Pill */}
             <button
+              suppressHydrationWarning
               onClick={() => setAiSettingsOpen(true)}
               className={cn(
                 "px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border shadow-sm",

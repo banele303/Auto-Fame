@@ -28,28 +28,14 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   
-  // Initialize synchronously from client storage to prevent initial null render / white screen
-  const [hasLocalAdmin, setHasLocalAdmin] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const isAuth = localStorage.getItem("isAdminAuthenticated") === "true";
-      const hasState = !!localStorage.getItem("admin_auth_state");
-      return isAuth || hasState;
-    }
-    return false;
-  });
-
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const isAuth = localStorage.getItem("isAdminAuthenticated") === "true";
-      const hasState = !!localStorage.getItem("admin_auth_state");
-      if (isAuth || hasState) return false;
-    }
-    return true;
-  });
-
+  // Use mounted state to ensure server and client initial render match 100% (eliminates hydration error)
+  const [mounted, setMounted] = useState(false);
+  const [hasLocalAdmin, setHasLocalAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     let isSubscribed = true;
 
     async function evaluateAuth() {
@@ -62,9 +48,10 @@ export default function AdminLayout({
       // Check local storage & convex admin auth state
       const { isAuthenticated, adminData } = await checkAdminAuth();
       const localFlag = localStorage.getItem("isAdminAuthenticated") === "true";
+      const hasState = !!localStorage.getItem("admin_auth_state");
       const cognitoAdmin = authUser && authUser.userRole === "admin";
       
-      const isAuthorized = isAuthenticated || localFlag || !!cognitoAdmin;
+      const isAuthorized = isAuthenticated || localFlag || hasState || !!cognitoAdmin;
 
       if (!isSubscribed) return;
 
@@ -111,10 +98,13 @@ export default function AdminLayout({
     window.location.reload();
   };
 
-  // 1. Loading State (Never an unstyled white flash; elegant dark mode copilot theme)
-  if (isLoading || (authLoading && !hasLocalAdmin)) {
+  // 1. Loading State (Identical on server & client initial render - zero hydration mismatch)
+  if (!mounted || isLoading || (authLoading && !hasLocalAdmin)) {
     return (
-      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-[#0f0e0d] text-[#eae7e1]">
+      <div 
+        suppressHydrationWarning
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-[#0f0e0d] text-[#eae7e1]"
+      >
         <div className="w-10 h-10 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin"></div>
         <p className="text-xs font-mono text-neutral-400 tracking-wide uppercase">
           Initializing AutoFame Control Center...
