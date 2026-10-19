@@ -26,16 +26,21 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLocalAdmin, setHasLocalAdmin] = useState(false);
 
   useEffect(() => {
-    
+    if (typeof window !== "undefined") {
+      const isAuth = localStorage.getItem("isAdminAuthenticated") === "true";
+      setHasLocalAdmin(isAuth);
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
     if (pathname !== '/admin-login' && pathname !== '/admin-signup') {
       localStorage.setItem('adminIntendedPath', pathname);
     }
     
-    
     const isAdminAuthenticated = localStorage.getItem('isAdminAuthenticated') === 'true';
-    
     
     if (!authLoading && authUser) {
       console.log('Admin layout - User info:', { 
@@ -45,16 +50,13 @@ export default function AdminLayout({
         isAdminAuthenticated
       });
       
-      
       const isAdmin = authUser.userRole === "admin";
       
       if (!isAdmin) {
         console.log('Not an admin user, redirecting to home');
-        
         localStorage.removeItem('isAdminAuthenticated');
         router.replace("/");
       } else {
-        
         localStorage.setItem('isAdminAuthenticated', 'true');
         console.log('Admin user confirmed, continuing to admin dashboard');
         setIsLoading(false);
@@ -62,17 +64,12 @@ export default function AdminLayout({
     } else if (!authLoading && !authUser) {
       console.log('No authenticated user, checking localStorage flag:', isAdminAuthenticated);
       
-      
-      
       if (!isAdminAuthenticated) {
         console.log('No admin authentication in localStorage, redirecting to login');
-        
         if (pathname !== '/admin-login' && pathname !== '/admin-signup') {
           router.replace("/admin-login");
         }
       } else {
-        
-        
         console.log('Potential timing issue - localStorage says admin is authenticated but authUser is null');
         setIsLoading(false);
       }
@@ -98,16 +95,6 @@ export default function AdminLayout({
       </div>
     );
   }
-
-  
-  const [hasLocalAdmin, setHasLocalAdmin] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isAuth = localStorage.getItem("isAdminAuthenticated") === "true";
-      setHasLocalAdmin(isAuth);
-    }
-  }, [isLoading]);
 
   const isAdmin = (authUser && authUser.userRole === "admin") || hasLocalAdmin;
     
