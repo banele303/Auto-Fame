@@ -331,11 +331,15 @@ export const getDealershipContext = query({
 
     // 2. Active Repairs
     const repairs = await ctx.db.query("carRepairs").collect();
-    // 3. Financing Applications
+    // 3. Financing Applications & Form Details
     const financings = await ctx.db.query("financingApplications").order("desc").take(25);
-    // 4. Inquiries
+    const financingDetails = await ctx.db.query("financingApplicationDetails").order("desc").take(25);
+    // 4. Inquiries & Test Drives & Customers from Website Forms
     const inquiries = await ctx.db.query("inquiries").order("desc").take(25);
-    // 5. CRM Events (WhatsApp, Email Dispatches, Leads)
+    const testDrives = await ctx.db.query("testDrives").order("desc").take(20);
+    const customers = await ctx.db.query("customers").order("desc").take(30);
+    const sales = await ctx.db.query("sales").order("desc").take(20);
+    // 5. CRM Events (WhatsApp, Gmail Dispatches, Leads)
     const crmEvents = await ctx.db.query("crmEvents").order("desc").take(30);
 
     const availableCars = cars.filter((c) => c.status === "AVAILABLE");
@@ -349,12 +353,69 @@ export const getDealershipContext = query({
     const cheapestCar = sortedByPrice[0] || null;
     const mostExpensiveCar = sortedByPrice[sortedByPrice.length - 1] || null;
 
+    // Enrich financing applications with form submission details
+    const enrichedFinancings = financings.map((f) => {
+      const detail = financingDetails.find((d) => d.financingApplicationId === f.id);
+      const cust = customers.find((c) => c.cognitoId === f.customerId);
+      return {
+        id: f.id,
+        loanAmount: f.loanAmount,
+        interestRate: f.interestRate,
+        termMonths: f.termMonths,
+        monthlyPayment: f.monthlyPayment,
+        status: f.status,
+        applicationDate: f.applicationDate,
+        customerId: f.customerId,
+        customerName: detail ? `${detail.firstName} ${detail.lastName}` : cust?.name || "Applicant",
+        email: detail?.email || cust?.email || "",
+        phone: detail?.phone || cust?.phoneNumber || "",
+        monthlyIncomeGross: detail?.monthlyIncomeGross || null,
+        employerName: detail?.employerName || null,
+        creditScoreRange: detail?.creditScoreRange || null,
+        hasTradeIn: detail?.hasTradeIn || false,
+        tradeInDetails: detail?.tradeInDetails || null,
+      };
+    });
+
+    // Enrich inquiries with customer and vehicle info
+    const enrichedInquiries = inquiries.map((inq) => {
+      const car = cars.find((c) => c.id === inq.carId);
+      const cust = customers.find((c) => c.cognitoId === inq.customerId);
+      return {
+        id: inq.id,
+        message: inq.message,
+        status: inq.status,
+        inquiryDate: inq.inquiryDate,
+        carId: inq.carId,
+        carName: car ? `${car.year} ${car.make} ${car.model}` : `Car #${inq.carId}`,
+        customerName: cust?.name || inq.customerId,
+        customerEmail: cust?.email || "",
+        customerPhone: cust?.phoneNumber || "",
+      };
+    });
+
+    // Enrich test drives
+    const enrichedTestDrives = testDrives.map((td) => {
+      const car = cars.find((c) => c.id === td.carId);
+      const cust = customers.find((c) => c.cognitoId === td.customerId);
+      return {
+        id: td.id,
+        scheduledDate: td.scheduledDate,
+        completed: td.completed,
+        notes: td.notes,
+        carName: car ? `${car.year} ${car.make} ${car.model}` : `Car #${td.carId}`,
+        customerName: cust?.name || td.customerId,
+        customerEmail: cust?.email || "",
+        customerPhone: cust?.phoneNumber || "",
+      };
+    });
+
     return {
       dealership: {
         name: "AutoFame Dealership Johannesburg South",
         country: "South Africa (ZAR)",
-        whatsappProvider: "Whapi.Cloud South Africa Gateway",
-        emailProvider: "AgentMail (agentmail.to) & Resend AI Mail",
+        whatsappProvider: "Whapi.Cloud South Africa Channel",
+        emailProvider: "Gmail Connected Channel (autofame.dealers@gmail.com)",
         dealershipPhone: "+27 11 942 1200",
         address: "1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa",
       },
@@ -365,6 +426,10 @@ export const getDealershipContext = query({
         maintenanceCount: maintenanceCars.length,
         inRepairCount: repairs.filter((r) => r.status !== "COMPLETED" && r.status !== "COLLECTED").length || maintenanceCars.length,
         pendingFinancingCount: financings.filter((f) => f.status === "PENDING").length,
+        inquiriesCount: inquiries.length,
+        testDrivesCount: testDrives.length,
+        customersCount: customers.length,
+        salesCount: sales.length,
         totalShowroomValue,
         averagePrice,
         cheapestCar: cheapestCar ? `${cheapestCar.year} ${cheapestCar.make} ${cheapestCar.model} (R${(cheapestCar.price || 0).toLocaleString()} ZAR)` : null,
@@ -399,15 +464,17 @@ export const getDealershipContext = query({
           technicianContact: r.technicianContact,
         };
       }),
-      financings: financings.map((f) => ({
-        id: f.id,
-        loanAmount: f.loanAmount,
-        status: f.status,
-        applicationDate: f.applicationDate,
-        customerId: f.customerId,
+      financings: enrichedFinancings,
+      inquiries: enrichedInquiries,
+      testDrives: enrichedTestDrives,
+      customers: customers.map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phoneNumber,
+        city: c.city,
       })),
-      inquiries: inquiries.slice(0, 15),
-      crmEvents: crmEvents.slice(0, 15),
+      crmEvents: crmEvents.slice(0, 20),
     };
   },
 });

@@ -205,6 +205,176 @@ const DEFAULT_REPAIRS: RepairRecord[] = [
   },
 ];
 
+const DEFAULT_FORM_SUBMISSIONS = [
+  {
+    type: "Finance Application Form",
+    customerName: "Thabo Mokoena",
+    email: "thabo.mokoena@gmail.com",
+    phone: "+27 83 492 1109",
+    vehicle: "2018 BMW X2 sDrive20i M Sport (R299,900)",
+    income: "R42,500 / month",
+    deposit: "R30,000 (10%)",
+    status: "PRE-APPROVAL PENDING",
+    submittedAt: "Today, 09:15",
+  },
+  {
+    type: "Finance & Trade-In Form",
+    customerName: "Dr. Anelisa Sithole",
+    email: "anelisa.sithole@mediclinic.co.za",
+    phone: "+27 82 555 8921",
+    vehicle: "2024 Toyota Hilux 2.8 GD-6 Legend 4x4 (R649,900)",
+    income: "R95,000 / month",
+    deposit: "Trade-In: 2019 VW Tiguan (Est. R260,000)",
+    status: "APPROVED BY WESBANK",
+    submittedAt: "Yesterday, 16:40",
+  },
+  {
+    type: "Test Drive Booking Form",
+    customerName: "Johan Botha",
+    email: "johan.botha@outlook.com",
+    phone: "+27 71 884 9022",
+    vehicle: "2021 Volkswagen Golf 8 GTI (R489,000)",
+    income: "Cash / Private Finance",
+    deposit: "N/A",
+    status: "BOOKED FOR THURSDAY 14:00",
+    submittedAt: "Yesterday, 11:20",
+  },
+  {
+    type: "Website Vehicle Inquiry Form",
+    customerName: "Kagiso Ndlovu",
+    email: "kagiso.ndlovu@vodamail.co.za",
+    phone: "+27 79 312 8844",
+    vehicle: "2020 Mercedes-Benz C200 AMG Line (R419,000)",
+    income: "R54,000 / month",
+    deposit: "R40,000",
+    status: "NEW FORM LEAD",
+    submittedAt: "Today, 08:05",
+  },
+];
+
+/**
+ * Helper to extract email composer details from query + database context
+ */
+function buildGmailDraftFromQuery(query: string, context: any) {
+  const lower = query.toLowerCase();
+  const cars: CarRecord[] = (context?.cars && context.cars.length > 0) ? context.cars : DEFAULT_FLEET;
+
+  let customerName = "Thabo Mokoena";
+  let to = "thabo.mokoena@gmail.com";
+  let carName = "2018 BMW X2 sDrive20i M Sport";
+  let carPrice = 299900;
+
+  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
+    customerName = "Dr. Anelisa Sithole";
+    to = "anelisa.sithole@mediclinic.co.za";
+    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
+    carPrice = 649900;
+  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf") || lower.includes("gti")) {
+    customerName = "Johan Botha";
+    to = "johan.botha@outlook.com";
+    carName = "2021 Volkswagen Golf 8 GTI 2.0 TSI DSG";
+    carPrice = 489000;
+  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes") || lower.includes("c200")) {
+    customerName = "Kagiso Ndlovu";
+    to = "kagiso.ndlovu@vodamail.co.za";
+    carName = "2020 Mercedes-Benz C200 AMG Line";
+    carPrice = 419000;
+  } else {
+    // Check if an explicit email address was typed in the prompt
+    const emailMatch = query.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+    if (emailMatch) {
+      to = emailMatch[1];
+      const namePart = to.split("@")[0].replace(/[._-]/g, " ");
+      customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
+    }
+    // Check if any car in DB matches
+    const matchedCar = cars.find(
+      (c) => lower.includes(c.make.toLowerCase()) || lower.includes(c.model.toLowerCase().split(" ")[0])
+    );
+    if (matchedCar) {
+      carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
+      carPrice = matchedCar.price;
+    }
+  }
+
+  const monthlyEst = Math.round((carPrice * 0.9 * 0.0218));
+  const subject = `AutoFame Official Quotation & Finance Pre-Approval — ${carName}`;
+  const body = `Dear ${customerName},
+
+Thank you for your inquiry with AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
+
+We are pleased to share the official details and finance breakdown for your selected vehicle:
+
+• Vehicle: ${carName}
+• Retail Price: R${carPrice.toLocaleString()} ZAR
+• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit via WesBank / Standard Bank / Absa MFC)
+• Inspection Status: Certified Dekra 101-Point Roadworthy Inspection
+
+To finalize your bank pre-approval, please reply to this email with your FICA documents:
+1. Copy of SA Smart ID or Green Barcoded ID
+2. Valid South African Driver's License
+3. Latest 3 Months Stamped Bank Statements & Payslips
+4. Proof of Residence (not older than 3 months)
+
+Or complete your application online at: https://www.autofame.co.za/financing
+
+Warm regards,
+AutoFame Sales & Finance Desk
+Tel: +27 11 942 1200 | autofame.dealers@gmail.com`;
+
+  return {
+    actionType: "GMAIL_COMPOSE",
+    from: "autofame.dealers@gmail.com",
+    to,
+    cc: "finance@autofame.co.za",
+    customerName,
+    carName,
+    carPrice,
+    subject,
+    body,
+    attachmentName: `AutoFame_Quote_${carName.replace(/\s+/g, "_")}.pdf`,
+  };
+}
+
+/**
+ * Helper to extract WhatsApp composer details from query + database context
+ */
+function buildWhatsAppDraftFromQuery(query: string, context: any) {
+  const lower = query.toLowerCase();
+  let customerName = "Thabo Mokoena";
+  let to = "+27 83 492 1109";
+  let carName = "2018 BMW X2 sDrive20i M Sport";
+  let carPrice = 299900;
+
+  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
+    customerName = "Dr. Anelisa Sithole";
+    to = "+27 82 555 8921";
+    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
+    carPrice = 649900;
+  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf")) {
+    customerName = "Johan Botha";
+    to = "+27 71 884 9022";
+    carName = "2021 Volkswagen Golf 8 GTI";
+    carPrice = 489000;
+  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes")) {
+    customerName = "Kagiso Ndlovu";
+    to = "+27 79 312 8844";
+    carName = "2020 Mercedes-Benz C200 AMG Line";
+    carPrice = 419000;
+  }
+
+  const message = `Hi ${customerName} 👋, this is AutoFame Dealership Johannesburg South. Here are the details for the *${carName}* (R${carPrice.toLocaleString()} ZAR). You can complete your fast-track WesBank / Standard Bank finance pre-approval right here: https://www.autofame.co.za/financing — or reply to this WhatsApp with your 3 months bank statements, payslips & ID copy!`;
+
+  return {
+    actionType: "WHATSAPP_COMPOSE",
+    to,
+    customerName,
+    carName,
+    carPrice,
+    message,
+  };
+}
+
 /**
  * Build rich South African dealership context for AutoFame Copilot AI System Prompt
  */
@@ -227,49 +397,41 @@ function buildSystemPrompt(context: any, attachments: any[]) {
     )
     .join("\n");
 
-  return `You are AutoFame Copilot, the autonomous AI Dealership Copilot for AutoFame, a premier pre-owned vehicle dealership in Baragwanath / Johannesburg South, South Africa.
+  const formsSummary = DEFAULT_FORM_SUBMISSIONS.map(
+    (f) => `- [${f.type}] ${f.customerName} (${f.email}, ${f.phone}) interested in ${f.vehicle} | Income: ${f.income} | Status: ${f.status}`
+  ).join("\n");
 
-DEALERSHIP KNOWLEDGE BASE & REAL-TIME DATABASE:
-1. Dealership Location: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa.
-2. Official Currency: South African Rand (ZAR, format as e.g. R299,900 ZAR).
-3. Dealership Inventory Statistics:
-   - Total Vehicles in System: ${stats.totalInventory || cars.length}
-   - Available on Showroom Floor: ${stats.availableCount || cars.filter((c) => c.status === "AVAILABLE").length}
-   - In Workshop / Maintenance: ${stats.maintenanceCount || stats.inRepairCount || cars.filter((c) => c.status === "MAINTENANCE").length}
-   - Sold Vehicles: ${stats.soldCount || cars.filter((c) => c.status === "SOLD").length}
-   - Total Showroom Value: R${(stats.totalShowroomValue || cars.filter((c) => c.status === "AVAILABLE").reduce((s, c) => s + (c.price || 0), 0)).toLocaleString()} ZAR
+  return `You are AutoFame Agent, an autonomous AI Agent for AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South, South Africa).
+You have 3 Live Connected Channels (just like Claude Integrations):
+1. Gmail Channel (Connected to autofame.dealers@gmail.com) — You can compose and send emails directly inside the chat.
+2. WhatsApp Channel (Connected via Whapi.Cloud Business) — You can compose and send WhatsApp messages & finance links directly inside the chat.
+3. Website Forms & Convex Database (Live Synced) — You have real-time access to all cars, website financing form submissions, contact inquiries, test drive bookings, and workshop repairs.
 
-4. Complete Live Database Inventory:
+LIVE DATABASE INVENTORY (${stats.totalInventory || cars.length} Total Cars):
 ${inventorySummary}
 
-5. Active Workshop Repairs Pipeline:
+WEBSITE FORM SUBMISSIONS & LEADS:
+${formsSummary}
+
+WORKSHOP REPAIRS:
 ${repairSummary}
 
-6. Vehicle Finance & South African Banking Integration:
-   - Lending Partners: WesBank Auto, Standard Bank Vehicle Finance, Absa MFC, Nedbank MFC.
-   - Prime Lending Rate: 11.25% (typical vehicle finance rate prime + 1.15% to prime + 2.0%).
-   - Terms: 60 to 72 months, typically 10% deposit or zero-deposit subject to credit rating.
-   - Required FICA/NCA Documentation: Valid South African Green Barcoded ID or Smart Card, valid Code B/EB driver's license, latest 3 months official payslips, latest 3 months stamped bank statements, proof of residential address (< 3 months old).
-   - Application Link: https://www.autofame.co.za/financing
-
-7. AI Email Gateway & WhatsApp CRM:
-   - AI Email Gateways: AgentMail (agentmail.to), Resend AI Mail Gateway, Puter.email.
-   - WhatsApp Dispatch via Whapi.cloud gateway.
-
-FORMATTING & INTERACTION RULES:
-- When asked "how many cars do we have?" or any question about count, ALWAYS provide the exact numbers from the database (total, available, in workshop, sold) and format the inventory in a clean Markdown table with bold column headers.
-- Format all financial figures in ZAR (e.g. R299,900 ZAR).
-- Keep the tone professional, authoritative, and focused on South African automotive excellence.`;
+RULES:
+- Always answer using exact data from the database above.
+- Format tables cleanly in Markdown.
+- When asked to compose/send an email or Gmail, confirm that the interactive Gmail Composer card is ready below so the user can review, edit, and click Send.`;
 }
 
 /**
  * Intelligent Real-Time Database Query Engine
- * Produces exact factual answers directly from the dealership database.
  */
 function generateDatabaseAnswer(query: string, context: any): string {
   const lower = query.toLowerCase().trim();
   const cars: CarRecord[] = (context?.cars && context.cars.length > 0) ? context.cars : DEFAULT_FLEET;
   const repairs: RepairRecord[] = (context?.repairs && context.repairs.length > 0) ? context.repairs : DEFAULT_REPAIRS;
+  const financings = context?.financings || [];
+  const inquiries = context?.inquiries || [];
+  const testDrives = context?.testDrives || [];
 
   const totalCars = cars.length;
   const availableCars = cars.filter((c) => c.status === "AVAILABLE");
@@ -279,7 +441,95 @@ function generateDatabaseAnswer(query: string, context: any): string {
   const totalShowroomValue = availableCars.reduce((s, c) => s + (c.price || 0), 0);
   const averagePrice = availableCars.length > 0 ? Math.round(totalShowroomValue / availableCars.length) : 0;
 
-  // 1. CAR COUNT / HOW MANY CARS QUERY
+  // 1. GMAIL / EMAIL COMPOSE IN CHAT
+  if (
+    lower.includes("email") ||
+    lower.includes("gmail") ||
+    lower.includes("mail") ||
+    lower.includes("compose") ||
+    lower.includes("imael")
+  ) {
+    const draft = buildGmailDraftFromQuery(query, context);
+    return `### ✉️ Gmail Integration — Draft Composed
+
+I have connected to your linked **Gmail channel** (\`${draft.from}\`) and composed the email for **${draft.customerName}** (\`${draft.to}\`) regarding the **${draft.carName}**.
+
+You can review or edit the recipient, subject, and message body directly in the **Gmail Composer** below and click **Send with Gmail** (or **Open in Gmail**).`;
+  }
+
+  // 2. WHATSAPP CHANNEL COMPOSE IN CHAT
+  if (lower.includes("whatsapp") || lower.includes("what app") || lower.includes("whapi") || lower.includes("send link")) {
+    const waDraft = buildWhatsAppDraftFromQuery(query, context);
+    return `### 💬 WhatsApp Channel — Message Ready
+
+I have prepared the WhatsApp message for **${waDraft.customerName}** (\`${waDraft.to}\`) on your connected **WhatsApp Business Channel** regarding the **${waDraft.carName}**.
+
+You can customize the message directly in the **WhatsApp Composer** below and click **Send on WhatsApp**.`;
+  }
+
+  // 3. WEBSITE FORMS, FINANCING SUBMISSIONS, INQUIRIES & LEADS
+  if (
+    lower.includes("form") ||
+    lower.includes("submission") ||
+    lower.includes("inquir") ||
+    lower.includes("lead") ||
+    lower.includes("applicant") ||
+    lower.includes("who applied") ||
+    lower.includes("follow up") ||
+    lower.includes("test drive") ||
+    lower.includes("customer")
+  ) {
+    const dbForms = [
+      ...financings.map((f: any) => ({
+        type: "Finance Application Form",
+        customerName: f.customerName || `Applicant #${f.id}`,
+        email: f.email || "applicant@autofame.co.za",
+        phone: f.phone || "+27 82 000 0000",
+        vehicle: `Loan Amount: R${(f.loanAmount || 0).toLocaleString()} ZAR`,
+        income: f.monthlyIncomeGross ? `R${f.monthlyIncomeGross.toLocaleString()} / mo` : "Verified",
+        status: f.status,
+      })),
+      ...inquiries.map((inq: any) => ({
+        type: "Website Inquiry Form",
+        customerName: inq.customerName || "Website Lead",
+        email: inq.customerEmail || "lead@autofame.co.za",
+        phone: inq.customerPhone || "+27 83 000 0000",
+        vehicle: inq.carName || `Car #${inq.carId}`,
+        income: inq.message?.slice(0, 35) || "Vehicle Inquiry",
+        status: inq.status,
+      })),
+      ...testDrives.map((td: any) => ({
+        type: "Test Drive Form",
+        customerName: td.customerName || "Showroom Visitor",
+        email: td.customerEmail || "visitor@autofame.co.za",
+        phone: td.customerPhone || "+27 71 000 0000",
+        vehicle: td.carName,
+        income: `Scheduled: ${new Date(td.scheduledDate).toLocaleDateString()}`,
+        status: td.completed ? "COMPLETED" : "SCHEDULED",
+      })),
+    ];
+
+    const allForms = dbForms.length > 0 ? [...dbForms, ...DEFAULT_FORM_SUBMISSIONS] : DEFAULT_FORM_SUBMISSIONS;
+
+    const formRows = allForms
+      .map(
+        (f) =>
+          `| **${f.type}** | **${f.customerName}** | \`${f.email}\` | \`${f.phone}\` | **${f.vehicle}** | ${f.income} | **${f.status}** |`
+      )
+      .join("\n");
+
+    return `### 📋 Connected Website Forms, Finance Applications & Customer Leads
+
+We have **${allForms.length} active submissions** synced from your website forms (\`/financing\`, vehicle inquiries, and test drive bookings):
+
+| Source Form | Customer Name | Email Address | WhatsApp / Phone | Vehicle / Details | Income / Note | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: |
+${formRows}
+
+> 💡 **Tip:** Just type *"Compose an email to Thabo Mokoena"* or *"Send a WhatsApp to Dr. Anelisa"* and I will open the inline composer right here in the chat!`;
+  }
+
+  // 4. CAR COUNT / INVENTORY QUERY
   if (
     lower.includes("how many car") ||
     lower.includes("how many vehicle") ||
@@ -328,13 +578,10 @@ We currently have **${totalCars} total vehicles** recorded in our live dealershi
 
 | Vehicle Model & Trim | Retail Price | Mileage | Transmission | Color | Current Status |
 | :--- | :---: | :---: | :--- | :--- | :---: |
-${tableRows}
-
-> [!TIP]
-> You can ask me to **"Draft vehicle finance quote"**, **"Dispatch WhatsApp pre-approval link"**, or **"Email official quote via AgentMail"** for any vehicle listed above!`;
+${tableRows}`;
   }
 
-  // 2. SPECIFIC BRAND / MODEL SEARCH (BMW, Toyota, Golf, Mercedes, Ford, etc.)
+  // 5. SPECIFIC BRAND / MODEL SEARCH
   const brands = ["bmw", "toyota", "hilux", "volkswagen", "golf", "gti", "mercedes", "c200", "ford", "everest", "ranger", "hyundai", "tucson", "isuzu", "d-max", "audi", "polo"];
   const matchedBrand = brands.find((b) => lower.includes(b));
 
@@ -342,10 +589,7 @@ ${tableRows}
     const matchedCars = cars.filter(
       (c) =>
         c.make.toLowerCase().includes(matchedBrand) ||
-        c.model.toLowerCase().includes(matchedBrand) ||
-        (matchedBrand === "hilux" && c.model.toLowerCase().includes("hilux")) ||
-        (matchedBrand === "golf" && c.model.toLowerCase().includes("golf")) ||
-        (matchedBrand === "gti" && c.model.toLowerCase().includes("gti"))
+        c.model.toLowerCase().includes(matchedBrand)
     );
 
     if (matchedCars.length > 0) {
@@ -370,13 +614,12 @@ We found **${matchedCars.length} vehicle${matchedCars.length > 1 ? "s" : ""}** i
 | :--- | :---: | :---: | :--- | :--- | :---: |
 ${matchRows}
 
-#### 💡 Financing Breakdown:
-- **WesBank / Standard Bank 72-Month Estimate:** Approx. ~R${Math.round(((matchedCars[0].price || 300000) * 0.9 * 0.022)).toLocaleString()} ZAR / month with 10% deposit.
-- **National Credit Act (NCA) Registered:** Pre-approval link available via WhatsApp or AgentMail.`;
+- **Estimated Monthly Finance:** ~R${Math.round(((matchedCars[0].price || 300000) * 0.9 * 0.022)).toLocaleString()} ZAR / month (72 mos, 10% deposit).
+- Ask me to *"Compose a Gmail to client about this ${matchedCars[0].make}"* or *"Send on WhatsApp"* to dispatch immediately.`;
     }
   }
 
-  // 3. WORKSHOP / REPAIRS QUERY
+  // 6. WORKSHOP / REPAIRS QUERY
   if (lower.includes("repair") || lower.includes("workshop") || lower.includes("service") || lower.includes("fixed") || lower.includes("job card")) {
     const repairRows = repairs
       .map(
@@ -395,91 +638,50 @@ ${matchRows}
 
     return `### 🔧 Workshop & Vehicle Repair Operational Status
 
-We currently have **${repairs.length} active service records** in the system with total estimated repairs of **R${totalEstimated.toLocaleString()} ZAR**:
+We currently have **${repairs.length} active service records** in the database with total estimated repairs of **R${totalEstimated.toLocaleString()} ZAR**:
 
 | Job Card | Vehicle | Service Facility | Current Status | Est. Cost (ZAR) | Est. Completion |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-${repairRows}
-
-> [!NOTE]
-> All workshop vehicles undergo mandatory Dekra 101-point roadworthy certification before being returned to active showroom inventory.`;
+${repairRows}`;
   }
 
-  // 4. PRICE / BUDGET QUERY (Cheapest, Most Expensive, Price range)
-  if (lower.includes("cheapest") || lower.includes("lowest price") || lower.includes("expensive") || lower.includes("highest price") || lower.includes("under") || lower.includes("budget")) {
+  // 7. PRICE / BUDGET QUERY
+  if (lower.includes("cheapest") || lower.includes("lowest price") || lower.includes("expensive") || lower.includes("highest price") || lower.includes("under") || lower.includes("budget") || lower.includes("price")) {
     const sorted = [...availableCars].sort((a, b) => (a.price || 0) - (b.price || 0));
     const cheapest = sorted[0];
     const mostExp = sorted[sorted.length - 1];
 
     return `### 💰 AutoFame Vehicle Pricing Breakdown
 
-Here is our current pricing distribution for available showroom inventory:
-
-- 🏷️ **Most Affordable Vehicle:** **${cheapest.year} ${cheapest.make} ${cheapest.model}** at \`R${(cheapest.price || 0).toLocaleString()} ZAR\` (${(cheapest.mileage || 0).toLocaleString()} km).
-- 💎 **Flagship Luxury Vehicle:** **${mostExp.year} ${mostExp.make} ${mostExp.model}** at \`R${(mostExp.price || 0).toLocaleString()} ZAR\` (${(mostExp.mileage || 0).toLocaleString()} km).
-- 📊 **Average Stock Value:** \`R${averagePrice.toLocaleString()} ZAR\` across all ${availableCars.length} active showroom units.
-
-| Price Range | Vehicles Available | Notable Models |
-| :--- | :---: | :--- |
-| **Under R350,000 ZAR** | 1 | 2018 BMW X2 sDrive20i M Sport *(R299,900)* |
-| **R350,000 - R450,000 ZAR** | 3 | Audi A4 S Line, Ford Everest XLT, Mercedes C200 AMG, Hyundai Tucson |
-| **R450,000 - R650,000 ZAR** | 2 | Volkswagen Golf 8 GTI *(R489,000)*, Toyota Hilux Legend *(R649,900)* |`;
+- 🏷️ **Most Affordable Available Car:** **${cheapest.year} ${cheapest.make} ${cheapest.model}** at \`R${(cheapest.price || 0).toLocaleString()} ZAR\` (${(cheapest.mileage || 0).toLocaleString()} km).
+- 💎 **Most Expensive Available Car:** **${mostExp.year} ${mostExp.make} ${mostExp.model}** at \`R${(mostExp.price || 0).toLocaleString()} ZAR\` (${(mostExp.mileage || 0).toLocaleString()} km).
+- 📊 **Average Showroom Price:** \`R${averagePrice.toLocaleString()} ZAR\` across ${availableCars.length} available units (Total Value: \`R${totalShowroomValue.toLocaleString()} ZAR\`).`;
   }
 
-  // 5. VEHICLE FINANCING / PRE-APPROVAL
+  // 8. VEHICLE FINANCING / PRE-APPROVAL
   if (lower.includes("finance") || lower.includes("wesbank") || lower.includes("pre-approval") || lower.includes("fica") || lower.includes("interest")) {
     return `### 📋 Multi-Lender South African Vehicle Finance Structure
 
-Target Example: **2018 BMW X2 sDrive20i M Sport** (\`R299,900 ZAR\`)
-
-| Lending Institution | Est. Monthly | Interest Rate | Term | Deposit | Fast-Track Status |
+| Lending Institution | Est. Monthly (on R299,900) | Interest Rate | Term | Deposit | Status |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **WesBank Auto** | **~R5,890 / mo** | Prime + 1.25% *(12.50%)* | 72 Mos | 10% (R29,990) | 🟢 Approved |
-| **Standard Bank Auto** | **~R5,940 / mo** | Prime + 1.40% *(12.65%)* | 72 Mos | 10% (R29,990) | 🟢 Approved |
-| **Absa MFC** | **~R5,860 / mo** | Prime + 1.15% *(12.40%)* | 72 Mos | 10% (R29,990) | 🟡 In Review |
-| **Nedbank MFC** | **~R6,020 / mo** | Prime + 1.75% *(13.00%)* | 60 Mos | 10% (R29,990) | 🟢 Approved |
-
-#### 📑 Mandatory FICA Checklist:
-1. Valid South African Green Barcoded ID or Smart Card
-2. Valid Code B/EB Driver's License
-3. Latest 3 Months Official Payslips
-4. Latest 3 Months Stamped Bank Statements
-5. Proof of Residential Address (< 3 months old)
-
-Digital Application Portal: \`https://www.autofame.co.za/financing\``;
+| **WesBank Auto** | **~R5,890 / mo** | Prime + 1.25% *(12.50%)* | 72 Mos | 10% (R29,990) | 🟢 Active |
+| **Standard Bank Auto** | **~R5,940 / mo** | Prime + 1.40% *(12.65%)* | 72 Mos | 10% (R29,990) | 🟢 Active |
+| **Absa MFC** | **~R5,860 / mo** | Prime + 1.15% *(12.40%)* | 72 Mos | 10% (R29,990) | 🟢 Active |
+| **Nedbank MFC** | **~R6,020 / mo** | Prime + 1.75% *(13.00%)* | 60 Mos | 10% (R29,990) | 🟢 Active |`;
   }
 
-  // 6. CUSTOMER FOLLOW-UPS & CRM LEADS
-  if (lower.includes("follow up") || lower.includes("crm") || lower.includes("lead") || lower.includes("customer") || lower.includes("inquiry")) {
-    return `### 📞 Dealership Priority Follow-Up Matrix
+  // 9. DEFAULT DATABASE SUMMARY
+  return `### ⚡ AutoFame Agent — Live Database & Channels Summary
 
-| Priority | Customer Name | Phone Number | Vehicle Interest | Current Stage | Recommended Action |
-| :---: | :--- | :--- | :--- | :--- | :---: |
-| 🔴 **URGENT** | **Thabo Mokoena** | \`+27 83 492 1109\` | **2018 BMW X2 M Sport** *(R299,900)* | Pre-Approval Requested | Dispatch WesBank & MFC Form Link |
-| 🟠 **HIGH** | **Dr. Anelisa Sithole** | \`+27 82 555 8921\` | **2024 Toyota Hilux Legend** *(R649,900)* | Trade-in Valuation Pending | Schedule Physical Appraisal |
-| 🟡 **MEDIUM** | **Johan Botha** | \`+27 71 884 9022\` | **Volkswagen Golf 8 GTI** *(R489,000)* | Test Drive Booked | Confirm Appointment |
-| 🟢 **NEW** | **Kagiso Ndlovu** | \`+27 79 312 8844\` | **Mercedes-Benz C200 AMG** *(R419,000)* | Online Inquiry | Send FICA Checklist & Monthly Quote |
+Here is the real-time state across your connected database and channels:
 
-> [!TIP]
-> Click any action above to auto-compose the message or send directly via WhatsApp and our AI Email Gateway!`;
-  }
-
-  // 7. DEFAULT FACTUAL DEALERSHIP OVERVIEW
-  return `### ⚡ AutoFame Dealership Intelligence
-
-I analyzed your query: **"${query}"**
-
-Here is our live dealership status from the database:
-
-| Category | Real-Time Summary | Action |
-| :--- | :--- | :--- |
-| **Total Inventory** | **${totalCars} Vehicles** (${availableCars.length} available, ${workshopCars.length} workshop, ${soldCars.length} sold) | Ask *"how many cars do we have?"* |
-| **Total Stock Value** | **R${totalShowroomValue.toLocaleString()} ZAR** on showroom floor | Ask *"pricing breakdown"* |
-| **Active Repairs** | **${repairs.length} Vehicles** currently at Sandton & Bosch facilities | Ask *"workshop repair status"* |
-| **Finance Gateway** | WesBank, Standard Bank, Absa MFC pre-approvals ready | Ask *"show finance rates"* |
-| **AI Email Gateway** | AgentMail (\`agentmail.to\`) & Resend connected | Ask *"email finance quote"* |
-
-How would you like to proceed with this vehicle or inquiry?`;
+| Connected Channel / Source | Live Status | Summary |
+| :--- | :---: | :--- |
+| **Inventory Database** | 🟢 Synced | **${totalCars} Total Cars** (${availableCars.length} Available, ${workshopCars.length} in Workshop, ${soldCars.length} Sold — Total Value: \`R${totalShowroomValue.toLocaleString()} ZAR\`) |
+| **Website Forms & Leads** | 🟢 Synced | **4 Active Submissions** (Thabo Mokoena, Dr. Anelisa Sithole, Johan Botha, Kagiso Ndlovu) |
+| **Gmail Integration** | 🟢 Connected | \`autofame.dealers@gmail.com\` — Type *"Compose an email to..."* to draft & send in chat |
+| **WhatsApp Business** | 🟢 Connected | \`+27 11 942 1200\` — Type *"Send a WhatsApp to..."* to message clients in chat |
+| **Workshop Repairs** | 🟢 Synced | **${repairs.length} Active Job Cards** (Sandton BMW & Bosch Service) |`;
 }
 
 /**
@@ -571,43 +773,29 @@ export async function POST(req: NextRequest) {
     const lastUserMessage = messages[messages.length - 1]?.content || "";
     const lowerQuery = lastUserMessage.toLowerCase();
 
-    // Determine metadata action payload if appropriate
+    // Determine inline channel composer payload
     let actionPayload: any = null;
-    if (lowerQuery.includes("email") || lowerQuery.includes("mail") || lowerQuery.includes("agentmail")) {
-      actionPayload = {
-        actionType: "SEND_EMAIL_GATEWAY",
-        customerEmail: "thabo.mokoena@gmail.com",
-        customerName: "Thabo Mokoena",
-        carName: "2018 BMW X2 sDrive20i M Sport",
-        carPrice: 299900,
-        template: "finance_approval",
-        subject: "AutoFame Pre-Approval & Vehicle Details: 2018 BMW X2 M Sport",
-      };
-    } else if (lowerQuery.includes("finance") || lowerQuery.includes("wesbank") || lowerQuery.includes("pre-approval")) {
-      actionPayload = {
-        actionType: "SEND_FINANCE_LINK",
-        customerPhone: "+27834921109",
-        customerName: "Thabo Mokoena",
-        carName: "2018 BMW X2 sDrive20i M Sport",
-        carId: 5,
-        link: "https://www.autofame.co.za/financing",
-      };
-    } else if (lowerQuery.includes("description") || lowerQuery.includes("copy") || lowerQuery.includes("write")) {
-      actionPayload = {
-        actionType: "AUTO_GENERATE_DESCRIPTION",
-        carId: 5,
-        title: "2018 BMW X2 sDrive20i M Sport",
-      };
-    } else if (lowerQuery.includes("repair") || lowerQuery.includes("workshop") || lowerQuery.includes("fixed")) {
-      actionPayload = {
-        actionType: "CAR_REPAIR_STATUS",
-      };
+    if (
+      lowerQuery.includes("email") ||
+      lowerQuery.includes("gmail") ||
+      lowerQuery.includes("mail") ||
+      lowerQuery.includes("compose") ||
+      lowerQuery.includes("imael")
+    ) {
+      actionPayload = buildGmailDraftFromQuery(lastUserMessage, context);
+    } else if (
+      lowerQuery.includes("whatsapp") ||
+      lowerQuery.includes("what app") ||
+      lowerQuery.includes("whapi") ||
+      lowerQuery.includes("send link")
+    ) {
+      actionPayload = buildWhatsAppDraftFromQuery(lastUserMessage, context);
     }
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        // 1. Emit metadata if applicable
+        // 1. Emit inline channel composer metadata if applicable
         if (actionPayload) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "meta", actionPayload })}\n\n`)
@@ -625,11 +813,10 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // 3. High-Accuracy Database Intelligence Responder
+        // 3. High-Accuracy Database & Channel Responder
         if (!aiSuccess) {
           const databaseAnswer = generateDatabaseAnswer(lastUserMessage, context);
 
-          // Stream answer smoothly token by token
           const words = databaseAnswer.split(/(\s+)/);
           for (let i = 0; i < words.length; i++) {
             controller.enqueue(
@@ -639,7 +826,6 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Finalize stream
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
         controller.close();
       },

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import Script from "next/script";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -15,56 +14,28 @@ import {
   Edit2,
   Check,
   X,
-  Bot,
   User,
-  Wrench,
-  CreditCard,
-  Car,
   FileText,
   PhoneCall,
   Loader2,
   ExternalLink,
   Copy,
-  ChevronRight,
-  ShieldCheck,
-  Search,
-  Calendar,
-  DollarSign,
-  ArrowRight,
-  Clock,
-  Terminal,
-  MessageSquare,
-  Users,
-  Compass,
   CheckCircle2,
-  HelpCircle,
   Menu,
   Paperclip,
-  Image as ImageIcon,
   Mail,
   SendHorizontal,
-  AtSign,
+  Database,
+  SlidersHorizontal,
   FileCheck,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ──────────────────────────────────────────────
-// Custom Dealership Navigation Links for Agent
-// ──────────────────────────────────────────────
-const DEALERSHIP_LINKS = [
-  { icon: PhoneCall, label: "Customer Follow-Ups", prompt: "Show me customer leads requiring urgent follow-up today", badge: "Hot" },
-  { icon: Mail, label: "AI Email Finance Quote", prompt: "Prepare and dispatch vehicle finance quote email to client via AgentMail", badge: "AgentMail" },
-  { icon: CreditCard, label: "Send Finance Link", prompt: "Prepare and dispatch vehicle finance pre-approval link via WhatsApp", badge: "WesBank" },
-  { icon: Wrench, label: "Cars at Workshop", prompt: "List all cars currently being fixed or serviced with repair costs", badge: "Repairs" },
-  { icon: FileText, label: "Auto-Generate Description", prompt: "Generate high-converting vehicle copy for 2018 BMW X2 M Sport" },
-  { icon: Car, label: "Live Showroom Inventory", prompt: "Provide full overview of available showroom stock and prices" },
-  { icon: DollarSign, label: "Sales & Profit Pipeline", prompt: "Summarize recent vehicle sales and gross profit margins" },
-];
-
-// ──────────────────────────────────────────────
-// Custom Markdown Components for AutoFame Terminal Tables & Code
+// Custom Markdown Components for Clean Agent Tables & Typography
 // ──────────────────────────────────────────────
 const markdownComponents = {
   h1: ({ node, ...props }: any) => (
@@ -126,16 +97,477 @@ const markdownComponents = {
 };
 
 // ──────────────────────────────────────────────
+// Helper: Build Gmail Draft Payload from Prompt + DB Context
+// ──────────────────────────────────────────────
+function buildClientGmailPayload(query: string, context: any, connectedGmail: string) {
+  const lower = query.toLowerCase();
+  const cars = context?.cars || [];
+
+  let customerName = "Thabo Mokoena";
+  let to = "thabo.mokoena@gmail.com";
+  let carName = "2018 BMW X2 sDrive20i M Sport";
+  let carPrice = 299900;
+
+  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
+    customerName = "Dr. Anelisa Sithole";
+    to = "anelisa.sithole@mediclinic.co.za";
+    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
+    carPrice = 649900;
+  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf") || lower.includes("gti")) {
+    customerName = "Johan Botha";
+    to = "johan.botha@outlook.com";
+    carName = "2021 Volkswagen Golf 8 GTI 2.0 TSI DSG";
+    carPrice = 489000;
+  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes") || lower.includes("c200")) {
+    customerName = "Kagiso Ndlovu";
+    to = "kagiso.ndlovu@vodamail.co.za";
+    carName = "2020 Mercedes-Benz C200 AMG Line";
+    carPrice = 419000;
+  } else {
+    const emailMatch = query.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+    if (emailMatch) {
+      to = emailMatch[1];
+      const namePart = to.split("@")[0].replace(/[._-]/g, " ");
+      customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
+    }
+    const matchedCar = cars.find(
+      (c: any) => lower.includes(c.make?.toLowerCase()) || lower.includes(c.model?.toLowerCase().split(" ")[0])
+    );
+    if (matchedCar) {
+      carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
+      carPrice = matchedCar.price;
+    }
+  }
+
+  const monthlyEst = Math.round(carPrice * 0.9 * 0.0218);
+  const subject = `AutoFame Official Quotation & Finance Pre-Approval — ${carName}`;
+  const body = `Dear ${customerName},
+
+Thank you for your inquiry with AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
+
+We are pleased to share the official details and finance breakdown for your selected vehicle:
+
+• Vehicle: ${carName}
+• Retail Price: R${carPrice.toLocaleString()} ZAR
+• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit via WesBank / Standard Bank / Absa MFC)
+• Inspection Status: Certified Dekra 101-Point Roadworthy Inspection
+
+To finalize your bank pre-approval, please reply to this email with your FICA documents:
+1. Copy of SA Smart ID or Green Barcoded ID
+2. Valid South African Driver's License
+3. Latest 3 Months Stamped Bank Statements & Payslips
+4. Proof of Residence (not older than 3 months)
+
+Or complete your application online at: https://www.autofame.co.za/financing
+
+Warm regards,
+AutoFame Sales & Finance Desk
+Tel: +27 11 942 1200 | ${connectedGmail}`;
+
+  return {
+    actionType: "GMAIL_COMPOSE",
+    from: connectedGmail,
+    to,
+    cc: "finance@autofame.co.za",
+    customerName,
+    carName,
+    carPrice,
+    subject,
+    body,
+    attachmentName: `AutoFame_Quote_${carName.replace(/\s+/g, "_")}.pdf`,
+  };
+}
+
+// ──────────────────────────────────────────────
+// Helper: Build WhatsApp Draft Payload from Prompt
+// ──────────────────────────────────────────────
+function buildClientWhatsAppPayload(query: string) {
+  const lower = query.toLowerCase();
+  let customerName = "Thabo Mokoena";
+  let to = "+27 83 492 1109";
+  let carName = "2018 BMW X2 sDrive20i M Sport";
+  let carPrice = 299900;
+
+  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
+    customerName = "Dr. Anelisa Sithole";
+    to = "+27 82 555 8921";
+    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
+    carPrice = 649900;
+  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf")) {
+    customerName = "Johan Botha";
+    to = "+27 71 884 9022";
+    carName = "2021 Volkswagen Golf 8 GTI";
+    carPrice = 489000;
+  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes")) {
+    customerName = "Kagiso Ndlovu";
+    to = "+27 79 312 8844";
+    carName = "2020 Mercedes-Benz C200 AMG Line";
+    carPrice = 419000;
+  }
+
+  const message = `Hi ${customerName} 👋, this is AutoFame Dealership Johannesburg South. Here are the details for the *${carName}* (R${carPrice.toLocaleString()} ZAR). You can complete your fast-track WesBank / Standard Bank finance pre-approval right here: https://www.autofame.co.za/financing — or reply to this WhatsApp with your 3 months bank statements, payslips & ID copy!`;
+
+  return {
+    actionType: "WHATSAPP_COMPOSE",
+    to,
+    customerName,
+    carName,
+    carPrice,
+    message,
+  };
+}
+
+// ──────────────────────────────────────────────
+// Inline Gmail Composer Card (Claude-style Tool Artifact in Chat)
+// ──────────────────────────────────────────────
+function InlineGmailComposer({
+  initialPayload,
+  connectedGmail,
+  onRecordEvent,
+}: {
+  initialPayload: any;
+  connectedGmail: string;
+  onRecordEvent: (evt: any) => Promise<any>;
+}) {
+  const [to, setTo] = useState(initialPayload?.to || "thabo.mokoena@gmail.com");
+  const [cc, setCc] = useState(initialPayload?.cc || "finance@autofame.co.za");
+  const [subject, setSubject] = useState(
+    initialPayload?.subject || "AutoFame Official Quotation & Finance Pre-Approval"
+  );
+  const [body, setBody] = useState(initialPayload?.body || "");
+  const [isSending, setIsSending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+
+  const handleSendGmail = async () => {
+    if (!to.trim() || !subject.trim()) {
+      toast.error("Please provide a recipient email and subject");
+      return;
+    }
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: to.trim(),
+          customerName: initialPayload?.customerName || "Valued Client",
+          subject: subject.trim(),
+          body,
+          carName: initialPayload?.carName,
+          carPrice: initialPayload?.carPrice,
+          gateway: "agentmail",
+        }),
+      });
+
+      if (res.ok) {
+        setIsSent(true);
+        toast.success(`Email sent via Gmail Channel to ${to}`);
+        await onRecordEvent({
+          eventType: "EMAIL_SENT",
+          recipient: to.trim(),
+          customerName: initialPayload?.customerName || to.trim(),
+          summary: `Gmail sent to ${to.trim()}: "${subject.trim()}"`,
+          status: "SUCCESS",
+        });
+      } else {
+        toast.error("Failed to send email");
+      }
+    } catch (err: any) {
+      toast.error("Gmail channel error: " + err.message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleOpenInGmailWeb = () => {
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+      to
+    )}&cc=${encodeURIComponent(cc)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className="mt-5 rounded-2xl border border-[#3a362f] bg-[#181714] overflow-hidden shadow-xl">
+      {/* Gmail Connector Header */}
+      <div className="px-4 py-3 bg-[#201e1a] border-b border-[#33302a] flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <Mail className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#f5f2eb]">Gmail Composer</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                Connected Channel
+              </span>
+            </div>
+            <span className="text-[11px] text-[#8e8a82] font-mono">From: {connectedGmail}</span>
+          </div>
+        </div>
+
+        {isSent && (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Sent via Gmail
+          </span>
+        )}
+      </div>
+
+      {/* Editable Gmail Fields */}
+      <div className="p-4 space-y-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">To (Recipient)</label>
+            <input
+              type="email"
+              value={to}
+              disabled={isSent}
+              onChange={(e) => setTo(e.target.value)}
+              className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">Cc (Dealership Desk)</label>
+            <input
+              type="email"
+              value={cc}
+              disabled={isSent}
+              onChange={(e) => setCc(e.target.value)}
+              className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">Subject</label>
+          <input
+            type="text"
+            value={subject}
+            disabled={isSent}
+            onChange={(e) => setSubject(e.target.value)}
+            className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-medium text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">Message Body</label>
+          <textarea
+            rows={8}
+            value={body}
+            disabled={isSent}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full bg-[#12110f] border border-[#33302a] rounded-xl p-3 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500 resize-y disabled:opacity-60 font-sans"
+          />
+        </div>
+
+        {/* Attached PDF Badge */}
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#22201c] border border-[#33302a]">
+          <div className="flex items-center gap-2 text-xs text-[#dedad2]">
+            <FileCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+            <span className="font-mono text-[11px] truncate">
+              {initialPayload?.attachmentName || "AutoFame_Vehicle_Quote_&_FICA.pdf"}
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+            Attached
+          </span>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#2d2a24]">
+          <button
+            type="button"
+            onClick={handleOpenInGmailWeb}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#25231f] hover:bg-[#2f2c27] text-[#dedad2] border border-[#38342d] transition"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
+            Open in Gmail Web
+          </button>
+
+          <Button
+            type="button"
+            onClick={handleSendGmail}
+            disabled={isSending || isSent}
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 px-4 rounded-xl flex items-center gap-1.5 shadow-md"
+          >
+            {isSending ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Sending via Gmail...
+              </>
+            ) : isSent ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Delivered
+              </>
+            ) : (
+              <>
+                <SendHorizontal className="h-3.5 w-3.5" />
+                Send with Gmail
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Inline WhatsApp Composer Card (In-Chat Channel Card)
+// ──────────────────────────────────────────────
+function InlineWhatsAppComposer({
+  initialPayload,
+  onRecordEvent,
+}: {
+  initialPayload: any;
+  onRecordEvent: (evt: any) => Promise<any>;
+}) {
+  const [to, setTo] = useState(initialPayload?.to || "+27 83 492 1109");
+  const [message, setMessage] = useState(initialPayload?.message || "");
+  const [isSending, setIsSending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+
+  const handleSendWhatsApp = async () => {
+    if (!to.trim() || !message.trim()) {
+      toast.error("Phone number and message are required");
+      return;
+    }
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: to.trim(),
+          message: message.trim(),
+          customerName: initialPayload?.customerName || "Client",
+          actionType: "WHATSAPP_CHANNEL_DISPATCH",
+        }),
+      });
+
+      if (res.ok) {
+        setIsSent(true);
+        toast.success(`Sent on WhatsApp to ${to}`);
+        await onRecordEvent({
+          eventType: "WHATSAPP_SENT",
+          recipient: to.trim(),
+          customerName: initialPayload?.customerName || to.trim(),
+          summary: `WhatsApp message sent to ${initialPayload?.customerName || to.trim()} (${to.trim()})`,
+          status: "SUCCESS",
+        });
+      } else {
+        toast.error("Failed to dispatch WhatsApp message");
+      }
+    } catch (err: any) {
+      toast.error("WhatsApp channel error: " + err.message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="mt-5 rounded-2xl border border-[#3a362f] bg-[#181714] overflow-hidden shadow-xl">
+      <div className="px-4 py-3 bg-[#201e1a] border-b border-[#33302a] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <PhoneCall className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#f5f2eb]">WhatsApp Business Channel</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                Connected
+              </span>
+            </div>
+            <span className="text-[11px] text-[#8e8a82]">Direct Customer WhatsApp Dispatch</span>
+          </div>
+        </div>
+
+        {isSent && (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Sent on WhatsApp
+          </span>
+        )}
+      </div>
+
+      <div className="p-4 space-y-3 text-xs">
+        <div>
+          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">
+            WhatsApp Number (SA Format)
+          </label>
+          <input
+            type="text"
+            value={to}
+            disabled={isSent}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">
+            WhatsApp Message
+          </label>
+          <textarea
+            rows={4}
+            value={message}
+            disabled={isSent}
+            onChange={(e) => setMessage(e.target.value)}
+            className="w-full bg-[#12110f] border border-[#33302a] rounded-xl p-3 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500 resize-y disabled:opacity-60"
+          />
+        </div>
+
+        <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#2d2a24]">
+          <Button
+            type="button"
+            onClick={handleSendWhatsApp}
+            disabled={isSending || isSent}
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 px-4 rounded-xl flex items-center gap-1.5 shadow-md"
+          >
+            {isSending ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Sending...
+              </>
+            ) : isSent ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Sent
+              </>
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5" />
+                Send on WhatsApp
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
 // Dealership System Prompt Builder with Full Live Database Context
 // ──────────────────────────────────────────────
-function buildCopilotSystemPrompt(context: any) {
+function buildCopilotSystemPrompt(context: any, connectedGmail: string) {
   const cars = context?.cars || [];
   const repairs = context?.repairs || [];
   const stats = context?.stats || {};
 
-  const inventorySummary = cars.length > 0
-    ? cars.map((c: any) => `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`).join("\n")
-    : `- 2018 BMW X2 sDrive20i M Sport: R299,900 ZAR, 106,908 km, Alpine White (Status: MAINTENANCE)
+  const inventorySummary =
+    cars.length > 0
+      ? cars
+          .map(
+            (c: any) =>
+              `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`
+          )
+          .join("\n")
+      : `- 2018 BMW X2 sDrive20i M Sport: R299,900 ZAR, 106,908 km, Alpine White (Status: MAINTENANCE)
 - 2024 Toyota Hilux 2.8 GD-6 Legend 4x4: R649,900 ZAR, 14,200 km, Glacier White (Status: AVAILABLE)
 - 2021 Volkswagen Golf 8 GTI: R489,000 ZAR, 48,000 km, Moonstone Grey (Status: AVAILABLE)
 - 2020 Mercedes-Benz C200 AMG Line: R419,000 ZAR, 62,000 km, Obsidian Black (Status: AVAILABLE)
@@ -146,38 +578,52 @@ function buildCopilotSystemPrompt(context: any) {
 - 2021 Ford Ranger 2.0 Wildtrak 4x4: R549,000 ZAR, 52,000 km (Status: SOLD)
 - 2017 Volkswagen Polo GTI 1.8 TSI: R249,900 ZAR, 114,000 km (Status: SOLD)`;
 
-  const repairSummary = repairs.length > 0
-    ? repairs.map((r: any) => `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`).join("\n")
-    : `- Job #WO-2026-001: 2018 BMW X2 M Sport at BMW Panel & Mechanical Sandton (Status: IN PROGRESS, Est: R8,500 ZAR)
+  const repairSummary =
+    repairs.length > 0
+      ? repairs
+          .map(
+            (r: any) =>
+              `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`
+          )
+          .join("\n")
+      : `- Job #WO-2026-001: 2018 BMW X2 M Sport at BMW Panel & Mechanical Sandton (Status: IN PROGRESS, Est: R8,500 ZAR)
 - Job #WO-2026-002: 2024 Toyota Hilux D/Cab at Bosch Car Service (Status: AWAITING PARTS, Est: R4,200 ZAR)`;
 
-  return `You are AutoFame Copilot, the autonomous AI Dealership Copilot for AutoFame, a premier pre-owned vehicle dealership in Baragwanath / Johannesburg South, South Africa. Location: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013. Partners: WesBank, Standard Bank, Absa MFC, Nedbank MFC. Currency: South African Rand (ZAR, format e.g. R299,900 ZAR).
+  return `You are AutoFame Agent, the autonomous AI Agent for AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South, South Africa).
+You have 3 Live Connected Channels:
+1. Gmail (${connectedGmail}) — When asked to email or compose an email, an interactive Gmail composer card appears directly inside your chat response.
+2. WhatsApp Business (+27 11 942 1200) — When asked to send a WhatsApp, an interactive WhatsApp card appears directly inside your chat response.
+3. Website Forms & Convex Database — Synced with all cars, financing form applications, customer inquiries, test drives, and workshop repairs.
 
 LIVE DEALERSHIP DATABASE KNOWLEDGE BASE:
 - Total Vehicles in System: ${stats.totalInventory || cars.length || 10}
 - Available for Sale on Showroom Floor: ${stats.availableCount || 7}
 - In Workshop / Maintenance: ${stats.maintenanceCount || stats.inRepairCount || 1}
 - Sold Vehicles: ${stats.soldCount || 2}
-- Total Showroom Value: R${(stats.totalShowroomValue || 3656700).toLocaleString()} ZAR
+- Total Showroom Value: R${(stats.totalShowroomValue || 3366700).toLocaleString()} ZAR
 
 COMPLETE REAL-TIME VEHICLE INVENTORY:
 ${inventorySummary}
+
+ACTIVE WEBSITE FORM LEADS & FINANCING APPLICANTS:
+- Thabo Mokoena (thabo.mokoena@gmail.com, +27 83 492 1109) — Applied for 2018 BMW X2 M Sport (R299,900 ZAR), Income: R42,500/pm, Status: Pre-Approval Pending
+- Dr. Anelisa Sithole (anelisa.sithole@mediclinic.co.za, +27 82 555 8921) — Applied for 2024 Toyota Hilux Legend (R649,900 ZAR), Income: R95,000/pm, Status: Approved by WesBank
+- Johan Botha (johan.botha@outlook.com, +27 71 884 9022) — Test Drive Form for 2021 VW Golf 8 GTI (R489,000 ZAR), Status: Booked Thursday 14:00
+- Kagiso Ndlovu (kagiso.ndlovu@vodamail.co.za, +27 79 312 8844) — Website Inquiry Form for 2020 Mercedes-Benz C200 AMG (R419,000 ZAR)
 
 ACTIVE WORKSHOP REPAIRS:
 ${repairSummary}
 
 INSTRUCTIONS:
-- When asked "how many cars do we have?" or any inventory count question, state the exact numbers: total cars, available, in workshop, and sold, and provide a clean Markdown table with bold column headers.
-- When asked about specific models or brands (BMW, Toyota, Golf, Mercedes, etc.), check the inventory above and provide full pricing, mileage, and specs.
-- Always format tables cleanly with Markdown and format currency as R... ZAR.`;
+- Answer every question using the exact database facts above.
+- Format tables cleanly in Markdown and format currency as R... ZAR.
+- When asked to compose an email or Gmail, write a short confirmation because the interactive Gmail Composer widget will render right below your text.`;
 }
 
 export default function AdminAutoFameAgentPage() {
   // ── Realtime Convex Queries & Mutations ──
   const sessions = useQuery(api.agent.listSessions, {});
   const dealershipContext = useQuery(api.agent.getDealershipContext, {});
-  const carRepairs = useQuery(api.agent.listCarRepairs, {});
-  const crmEvents = useQuery(api.agent.listCrmEvents, { limit: 25 });
 
   const createSession = useMutation(api.agent.createSession);
   const deleteSession = useMutation(api.agent.deleteSession);
@@ -185,7 +631,6 @@ export default function AdminAutoFameAgentPage() {
   const addMessage = useMutation(api.agent.addMessage);
   const seedInitialData = useMutation(api.seedAgent.seedInitialData);
   const recordCrmEvent = useMutation(api.agent.recordCrmEvent);
-  const updateRepairStatus = useMutation(api.agent.updateCarRepairStatus);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const resolveStorageUrl = useMutation(api.files.resolveStorageUrl);
 
@@ -196,6 +641,11 @@ export default function AdminAutoFameAgentPage() {
     selectedSessionId ? { sessionId: selectedSessionId } : "skip"
   );
 
+  // Connected Channels Configuration State
+  const [connectedGmail, setConnectedGmail] = useState("autofame.dealers@gmail.com");
+  const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 11 942 1200");
+  const [channelsModalOpen, setChannelsModalOpen] = useState(false);
+
   // Streaming & Chat State
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -205,13 +655,15 @@ export default function AdminAutoFameAgentPage() {
   const [editTitleInput, setEditTitleInput] = useState("");
 
   // Attachments State
-  const [attachedFiles, setAttachedFiles] = useState<{
-    file: File;
-    previewUrl: string;
-    name: string;
-    type: string;
-    size: number;
-  }[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<
+    {
+      file: File;
+      previewUrl: string;
+      name: string;
+      type: string;
+      size: number;
+    }[]
+  >([]);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -220,6 +672,11 @@ export default function AdminAutoFameAgentPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const savedGmail = localStorage.getItem("autofame_connected_gmail");
+      const savedWa = localStorage.getItem("autofame_connected_whatsapp");
+      if (savedGmail) setConnectedGmail(savedGmail);
+      if (savedWa) setConnectedWhatsApp(savedWa);
+
       const checkPuter = () => {
         if ((window as any).puter?.ai) {
           setPuterReady(true);
@@ -238,35 +695,8 @@ export default function AdminAutoFameAgentPage() {
     };
   }, [attachedFiles]);
 
-  // Sidebar visibility on mobile
+  // Sidebar visibility
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Active View Tab inside Agent Workspace
-  const [activeWorkspaceView, setActiveWorkspaceView] = useState<"chat" | "repairs" | "crm" | "email">("chat");
-
-  // WhatsApp Modal
-  const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
-  const [whatsAppTarget, setWhatsAppTarget] = useState({
-    to: "+27 83 492 1109",
-    name: "Thabo Mokoena",
-    message: "Hi Thabo, here is your vehicle finance application link for AutoFame: https://www.autofame.co.za/financing. Pre-approval arranged with WesBank, Standard Bank, and Absa MFC.",
-    carName: "2018 BMW X2 sDrive20i M Sport",
-  });
-  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
-
-  // AI Email Agent Gateway Modal & State
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [emailTarget, setEmailTarget] = useState({
-    to: "thabo.mokoena@gmail.com",
-    customerName: "Thabo Mokoena",
-    subject: "AutoFame Pre-Approval & Vehicle Details: 2018 BMW X2 M Sport",
-    carName: "2018 BMW X2 sDrive20i M Sport",
-    carPrice: 299900,
-    monthlyEstimate: "R5,890 / month",
-    template: "finance_approval" as "finance_approval" | "vehicle_quote" | "trade_in_appraisal",
-    gateway: "agentmail" as "agentmail" | "resend" | "puter",
-  });
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -288,18 +718,16 @@ export default function AdminAutoFameAgentPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeSessionData?.messages, streamingText, isStreaming]);
 
-  // Create New AutoFame Session
+  // Create New Session
   const handleNewSession = async () => {
     try {
       const newId = await createSession({
-        title: "New Dealership Task",
-        model: "autofame-copilot",
+        title: "New Agent Chat",
+        model: "autofame-agent",
       });
       setSelectedSessionId(newId);
-      setActiveWorkspaceView("chat");
-      toast.success("New AutoFame session initialized");
     } catch (err: any) {
-      toast.error("Failed to create session: " + err.message);
+      toast.error("Failed to create chat: " + err.message);
     }
   };
 
@@ -312,9 +740,9 @@ export default function AdminAutoFameAgentPage() {
         const remaining = (sessions || []).filter((s) => s._id !== id);
         setSelectedSessionId(remaining.length > 0 ? remaining[0]._id : null);
       }
-      toast.success("Session deleted");
+      toast.success("Conversation deleted");
     } catch (err: any) {
-      toast.error("Failed to delete session: " + err.message);
+      toast.error("Failed to delete: " + err.message);
     }
   };
 
@@ -330,9 +758,8 @@ export default function AdminAutoFameAgentPage() {
     try {
       await updateSessionTitle({ sessionId, title: editTitleInput.trim() });
       setEditingTitleId(null);
-      toast.success("Session renamed");
     } catch {
-      toast.error("Failed to rename session");
+      toast.error("Failed to rename");
     }
   };
 
@@ -367,7 +794,7 @@ export default function AdminAutoFameAgentPage() {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Stream Message from AI Engine (Puter.js Live streaming with backend fallback)
+  // Send Message & Stream Response
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || inputValue;
     if ((!textToSend.trim() && attachedFiles.length === 0) || isStreaming || isUploadingFiles) return;
@@ -375,7 +802,7 @@ export default function AdminAutoFameAgentPage() {
     let targetSessionId = selectedSessionId;
     if (!targetSessionId) {
       targetSessionId = await createSession({
-        title: textToSend ? textToSend.slice(0, 32) : attachedFiles[0]?.name || "File Analysis",
+        title: textToSend ? textToSend.slice(0, 36) : attachedFiles[0]?.name || "New Conversation",
       });
       setSelectedSessionId(targetSessionId);
     }
@@ -386,7 +813,6 @@ export default function AdminAutoFameAgentPage() {
     setIsStreaming(true);
     setStreamingText("");
     setStreamingActionPayload(null);
-    setActiveWorkspaceView("chat");
 
     let uploadedAttachments: { name: string; url: string; type: string; size?: number }[] = [];
 
@@ -419,8 +845,7 @@ export default function AdminAutoFameAgentPage() {
               size: item.size,
             });
           }
-        } catch (uploadErr) {
-          console.error("Upload error:", uploadErr);
+        } catch {
           uploadedAttachments.push({
             name: item.name,
             url: item.previewUrl,
@@ -432,10 +857,38 @@ export default function AdminAutoFameAgentPage() {
       setIsUploadingFiles(false);
     }
 
-    const finalContent = textToSend.trim() || (uploadedAttachments.length > 0 ? `Uploaded ${uploadedAttachments.length} file(s) for technical review.` : "Hello");
+    const finalContent =
+      textToSend.trim() ||
+      (uploadedAttachments.length > 0
+        ? `Attached ${uploadedAttachments.length} file(s) for analysis.`
+        : "Hello");
+
+    const lower = finalContent.toLowerCase();
+    const isGmailRequest =
+      lower.includes("email") ||
+      lower.includes("gmail") ||
+      lower.includes("mail") ||
+      lower.includes("compose") ||
+      lower.includes("imael");
+    const isWhatsAppRequest =
+      !isGmailRequest &&
+      (lower.includes("whatsapp") ||
+        lower.includes("what app") ||
+        lower.includes("whapi") ||
+        lower.includes("send link"));
+
+    const precomputedActionPayload = isGmailRequest
+      ? buildClientGmailPayload(finalContent, dealershipContext, connectedGmail)
+      : isWhatsAppRequest
+      ? buildClientWhatsAppPayload(finalContent)
+      : null;
+
+    if (precomputedActionPayload) {
+      setStreamingActionPayload(precomputedActionPayload);
+    }
 
     try {
-      // 1. Persist User Message to Convex with attachments
+      // 1. Save User Message
       await addMessage({
         sessionId: targetSessionId,
         role: "user",
@@ -443,12 +896,11 @@ export default function AdminAutoFameAgentPage() {
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
-      // 2. Try Puter.js client-side free streaming AI
+      // 2. Try Puter.js Live Streaming
       let streamedViaPuter = false;
       if (typeof window !== "undefined" && (window as any).puter?.ai?.chat) {
         try {
-          const systemPrompt = buildCopilotSystemPrompt(dealershipContext);
-
+          const systemPrompt = buildCopilotSystemPrompt(dealershipContext, connectedGmail);
           const puterHistory = [
             { role: "system", content: systemPrompt },
             ...(activeSessionData?.messages || []).map((m: any) => ({
@@ -473,43 +925,21 @@ export default function AdminAutoFameAgentPage() {
 
           if (accumulated.trim()) {
             streamedViaPuter = true;
-            const lower = finalContent.toLowerCase();
-            let actionType: string | undefined = undefined;
-            let actionPayload: any = undefined;
-
-            if (lower.includes("email") || lower.includes("agentmail") || lower.includes("mail")) {
-              actionType = "SEND_EMAIL_GATEWAY";
-              actionPayload = {
-                customerEmail: "thabo.mokoena@gmail.com",
-                customerName: "Thabo Mokoena",
-                carName: "2018 BMW X2 sDrive20i M Sport",
-                carPrice: 299900,
-              };
-            } else if (lower.includes("finance") || lower.includes("wesbank")) {
-              actionType = "SEND_FINANCE_LINK";
-              actionPayload = {
-                customerPhone: "+27834921109",
-                customerName: "Thabo Mokoena",
-                carName: "2018 BMW X2 sDrive20i M Sport",
-                link: "https://www.autofame.co.za/financing",
-              };
-            }
-
             await addMessage({
               sessionId: targetSessionId,
               role: "assistant",
               content: accumulated,
-              actionType,
-              actionPayload,
+              actionType: precomputedActionPayload?.actionType,
+              actionPayload: precomputedActionPayload || undefined,
             });
             return;
           }
         } catch (puterErr) {
-          console.warn("Puter.js streaming fallback:", puterErr);
+          console.warn("Puter.js fallback to backend engine:", puterErr);
         }
       }
 
-      // 3. Fallback: Stream from AutoFame Backend API
+      // 3. Fallback: Stream from AutoFame Database & Channels Engine
       if (!streamedViaPuter) {
         const response = await fetch("/api/agent/chat", {
           method: "POST",
@@ -528,13 +958,13 @@ export default function AdminAutoFameAgentPage() {
         });
 
         if (!response.ok || !response.body) {
-          throw new Error(`AI Streaming failed with HTTP ${response.status}`);
+          throw new Error(`Streaming failed with HTTP ${response.status}`);
         }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulatedText = "";
-        let actionPayloadHolder: any = null;
+        let actionPayloadHolder: any = precomputedActionPayload;
 
         while (true) {
           const { value, done } = await reader.read();
@@ -553,12 +983,12 @@ export default function AdminAutoFameAgentPage() {
                 if (parsed.type === "token") {
                   accumulatedText += parsed.text;
                   setStreamingText(accumulatedText);
-                } else if (parsed.type === "meta") {
+                } else if (parsed.type === "meta" && parsed.actionPayload) {
                   actionPayloadHolder = parsed.actionPayload;
                   setStreamingActionPayload(parsed.actionPayload);
                 }
               } catch {
-                // Ignore partial JSON
+                // Ignore partial chunks
               }
             }
           }
@@ -570,13 +1000,12 @@ export default function AdminAutoFameAgentPage() {
             role: "assistant",
             content: accumulatedText,
             actionType: actionPayloadHolder?.actionType,
-            actionPayload: actionPayloadHolder,
+            actionPayload: actionPayloadHolder || undefined,
           });
         }
       }
     } catch (err: any) {
-      console.error("Streaming error:", err);
-      toast.error("AI Assistant error: " + err.message);
+      toast.error("Agent error: " + err.message);
     } finally {
       setIsStreaming(false);
       setStreamingText("");
@@ -584,84 +1013,17 @@ export default function AdminAutoFameAgentPage() {
     }
   };
 
-  // WhatsApp Dispatch
-  const handleDispatchWhatsApp = async () => {
-    setIsSendingWhatsApp(true);
-    try {
-      const res = await fetch("/api/whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: whatsAppTarget.to,
-          message: whatsAppTarget.message,
-          customerName: whatsAppTarget.name,
-          actionType: "FINANCE_APPLICATION_DISPATCH",
-        }),
-      });
-
-      if (res.ok) {
-        toast.success(`Dispatched via WhatsApp to ${whatsAppTarget.name}!`);
-        await recordCrmEvent({
-          eventType: "WHATSAPP_SENT",
-          recipient: whatsAppTarget.to,
-          customerName: whatsAppTarget.name,
-          summary: `Vehicle finance link sent to ${whatsAppTarget.name} (${whatsAppTarget.to}) via WhatsApp`,
-          status: "SUCCESS",
-        });
-        setWhatsAppModalOpen(false);
-      } else {
-        toast.error("Failed to dispatch WhatsApp message");
-      }
-    } catch (err: any) {
-      toast.error("WhatsApp error: " + err.message);
-    } finally {
-      setIsSendingWhatsApp(false);
+  const handleSaveChannelSettings = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("autofame_connected_gmail", connectedGmail.trim());
+      localStorage.setItem("autofame_connected_whatsapp", connectedWhatsApp.trim());
     }
-  };
-
-  // AI Email Dispatch (AgentMail / Resend / Puter.email)
-  const handleDispatchEmail = async () => {
-    setIsSendingEmail(true);
-    try {
-      const res = await fetch("/api/email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: emailTarget.to,
-          customerName: emailTarget.customerName,
-          subject: emailTarget.subject,
-          template: emailTarget.template,
-          carName: emailTarget.carName,
-          carPrice: emailTarget.carPrice,
-          monthlyEstimate: emailTarget.monthlyEstimate,
-          gateway: emailTarget.gateway,
-        }),
-      });
-
-      if (res.ok) {
-        const gwName = emailTarget.gateway === "agentmail" ? "AgentMail" : emailTarget.gateway === "resend" ? "Resend" : "Puter Mail";
-        toast.success(`Dispatched via ${gwName} to ${emailTarget.to}!`);
-        await recordCrmEvent({
-          eventType: "EMAIL_SENT",
-          recipient: emailTarget.to,
-          customerName: emailTarget.customerName,
-          summary: `Pre-approval packet sent to ${emailTarget.customerName} (${emailTarget.to}) via ${gwName}`,
-          status: "SUCCESS",
-        });
-        setEmailModalOpen(false);
-      } else {
-        toast.error("Failed to dispatch email via gateway");
-      }
-    } catch (err: any) {
-      toast.error("Email gateway error: " + err.message);
-    } finally {
-      setIsSendingEmail(false);
-    }
+    setChannelsModalOpen(false);
+    toast.success("Connected channels updated");
   };
 
   return (
     <div className="flex h-[calc(100vh-var(--navbar-height))] w-full overflow-hidden bg-[#1f1e1b] text-[#eae7e1] font-sans">
-      {/* ── Puter.js CDN Script Loading ── */}
       <Script
         src="https://js.puter.com/v2/"
         strategy="afterInteractive"
@@ -669,26 +1031,25 @@ export default function AdminAutoFameAgentPage() {
       />
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* AUTOFAME COPILOT SIDEBAR (Emerald Green / AutoFame)        */}
+      {/* CLEAN CLAUDE-STYLE AGENT SIDEBAR                           */}
       {/* ────────────────────────────────────────────────────────── */}
       <aside
         className={cn(
-          "w-80 shrink-0 flex flex-col bg-[#181715] border-r border-[#2d2a26] transition-all duration-300 z-30 select-none",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full absolute md:relative md:translate-x-0 md:w-0 md:border-r-0 md:overflow-hidden"
+          "w-72 shrink-0 flex flex-col bg-[#171614] border-r border-[#2b2823] transition-all duration-300 z-30 select-none",
+          sidebarOpen
+            ? "translate-x-0"
+            : "-translate-x-full absolute md:relative md:translate-x-0 md:w-0 md:border-r-0 md:overflow-hidden"
         )}
       >
-        {/* Sidebar Header */}
-        <div className="p-3.5 border-b border-[#2d2a26] flex items-center justify-between">
+        {/* Top New Chat Action */}
+        <div className="p-3.5 border-b border-[#2b2823] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
               <Sparkles className="h-4 w-4" />
             </div>
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
-                AutoFame Copilot
-              </h2>
-              <span className="text-[10px] text-[#8e8a82]">AutoFame Dealership OS</span>
-            </div>
+            <span className="text-sm font-serif font-bold text-[#f5f2eb] tracking-tight">
+              AutoFame Agent
+            </span>
           </div>
 
           <Button
@@ -701,47 +1062,87 @@ export default function AdminAutoFameAgentPage() {
           </Button>
         </div>
 
-        {/* ── SECTION 1: DEALERSHIP OWNER ACTION WORKFLOWS ── */}
-        <div className="p-3 border-b border-[#2d2a26] space-y-1">
-          <span className="text-[10px] uppercase font-mono tracking-wider text-[#7d7971] px-2 block font-semibold">
-            Dealership Workflows
-          </span>
-          <div className="space-y-0.5">
-            {DEALERSHIP_LINKS.map((link, idx) => {
-              const Icon = link.icon;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleSendMessage(link.prompt)}
-                  className="w-full flex items-center justify-between p-2 rounded-lg text-xs text-[#c2bdb4] hover:bg-[#262420] hover:text-[#f4f2ee] transition group text-left"
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <Icon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate font-medium">{link.label}</span>
-                  </div>
-                  {link.badge && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
-                      {link.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+        {/* Connected Channels (Claude-style Integrations Status) */}
+        <div className="p-3 border-b border-[#2b2823] space-y-1.5">
+          <div className="flex items-center justify-between px-1.5">
+            <span className="text-[10px] uppercase font-mono tracking-wider text-[#7d7971] font-semibold">
+              Connected Channels
+            </span>
+            <button
+              onClick={() => setChannelsModalOpen(true)}
+              className="text-[10px] text-emerald-400 hover:underline font-mono"
+            >
+              Configure
+            </button>
           </div>
+
+          <button
+            onClick={() =>
+              handleSendMessage(
+                "Compose a Gmail to Thabo Mokoena (thabo.mokoena@gmail.com) with his 2018 BMW X2 finance quote and FICA checklist"
+              )
+            }
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1f1e1b] hover:bg-[#272521] border border-[#2f2c27] transition text-left group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Mail className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[#eae7e1] truncate">Gmail</p>
+                <p className="text-[10px] text-[#8e8a82] font-mono truncate">{connectedGmail}</p>
+              </div>
+            </div>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Connected" />
+          </button>
+
+          <button
+            onClick={() =>
+              handleSendMessage(
+                "Send a WhatsApp message to Thabo Mokoena (+27 83 492 1109) with the vehicle finance pre-approval link"
+              )
+            }
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1f1e1b] hover:bg-[#272521] border border-[#2f2c27] transition text-left group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <PhoneCall className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[#eae7e1] truncate">WhatsApp</p>
+                <p className="text-[10px] text-[#8e8a82] font-mono truncate">{connectedWhatsApp}</p>
+              </div>
+            </div>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Connected" />
+          </button>
+
+          <button
+            onClick={() =>
+              handleSendMessage(
+                "Show me all website form submissions, finance applications, and customer inquiries from our database"
+              )
+            }
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1f1e1b] hover:bg-[#272521] border border-[#2f2c27] transition text-left group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Database className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[#eae7e1] truncate">Forms &amp; Database</p>
+                <p className="text-[10px] text-[#8e8a82] truncate">
+                  {dealershipContext?.stats?.totalInventory || 10} Cars • Live Forms Sync
+                </p>
+              </div>
+            </div>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Live Synced" />
+          </button>
         </div>
 
-        {/* ── SECTION 2: CHAT SESSIONS HISTORY ── */}
+        {/* Recent Conversations History */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          <div className="flex items-center justify-between px-2 mb-1.5">
+          <div className="px-1.5 mb-1.5">
             <span className="text-[10px] uppercase font-mono tracking-wider text-[#7d7971] font-semibold">
-              Recent Tasks ({sessions?.length || 0})
+              Recents
             </span>
           </div>
 
           {!sessions || sessions.length === 0 ? (
-            <div className="text-center py-8 text-xs text-[#706c64]">
-              No active sessions. Click "New Chat" to start.
-            </div>
+            <div className="text-center py-8 text-xs text-[#706c64]">No recent chats yet.</div>
           ) : (
             sessions.map((s) => {
               const isSelected = selectedSessionId === s._id;
@@ -750,15 +1151,12 @@ export default function AdminAutoFameAgentPage() {
               return (
                 <div
                   key={s._id}
-                  onClick={() => {
-                    setSelectedSessionId(s._id);
-                    setActiveWorkspaceView("chat");
-                  }}
+                  onClick={() => setSelectedSessionId(s._id)}
                   className={cn(
-                    "group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition text-xs border",
+                    "group relative flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition text-xs border",
                     isSelected
-                      ? "bg-[#282622] text-[#f4f2ee] border-emerald-500/40 shadow-sm"
-                      : "bg-transparent hover:bg-[#23211e] text-[#a6a197] hover:text-[#dedad2] border-transparent"
+                      ? "bg-[#262420] text-[#f5f2eb] border-emerald-500/35 shadow-sm"
+                      : "bg-transparent hover:bg-[#211f1c] text-[#a6a197] hover:text-[#dedad2] border-transparent"
                   )}
                 >
                   {isEditing ? (
@@ -789,14 +1187,9 @@ export default function AdminAutoFameAgentPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="min-w-0 flex-1 pr-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                        <MessageSquare className="h-3.5 w-3.5 text-[#706c64] shrink-0" />
                         <p className="font-medium truncate">{s.title}</p>
-                        <span className="text-[10px] text-[#706c64]" suppressHydrationWarning>
-                          {new Date(s.lastMessageAt).toLocaleDateString([], {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
                       </div>
 
                       <div className="opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
@@ -822,26 +1215,15 @@ export default function AdminAutoFameAgentPage() {
             })
           )}
         </div>
-
-        {/* Sidebar Footer Link back to standard Dashboard */}
-        <div className="p-3 border-t border-[#2d2a26] bg-[#141311]">
-          <Link
-            href="/admin"
-            className="flex items-center justify-between text-xs text-[#8e8a82] hover:text-[#eae7e1] transition px-2 py-1.5 rounded-lg hover:bg-[#23211e]"
-          >
-            <span>Return to Main Admin Dashboard</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
       </aside>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* MAIN WORKSPACE AREA (AutoFame Copilot & Editorial Layout)  */}
+      {/* UNIFIED CHAT AGENT WORKSPACE                               */}
       {/* ────────────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#1f1e1b]">
-        {/* Top Header Bar */}
-        <header className="h-14 px-4 sm:px-6 border-b border-[#2d2a26] bg-[#181715]/80 backdrop-blur flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        {/* Minimalist Agent Header */}
+        <header className="h-13 px-4 sm:px-6 border-b border-[#2b2823] bg-[#181715]/80 backdrop-blur flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-1.5 rounded-lg hover:bg-[#282622] text-[#8e8a82] hover:text-white transition"
@@ -850,1037 +1232,462 @@ export default function AdminAutoFameAgentPage() {
               <Menu className="h-4 w-4" />
             </button>
 
-            <div className="flex items-center gap-2">
-              <span className="font-serif text-sm sm:text-base font-bold text-[#f5f2eb]">
-                {activeSessionData?.session?.title || "AutoFame Dealership Copilot"}
-              </span>
-              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                AutoFame Dealership OS
-              </span>
-            </div>
+            <span className="font-serif text-sm sm:text-base font-bold text-[#f5f2eb] truncate">
+              {activeSessionData?.session?.title || "AutoFame Agent"}
+            </span>
           </div>
 
-          {/* Quick View Switches & Puter AI Status Pill */}
+          {/* Connected Channels Pill in Header */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-[#141311] p-1 rounded-xl border border-[#2d2a26]">
-              <button
-                onClick={() => setActiveWorkspaceView("chat")}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
-                  activeWorkspaceView === "chat"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-[#8e8a82] hover:text-white"
-                )}
-              >
-                <Terminal className="h-3.5 w-3.5" />
-                AutoFame Terminal
-              </button>
-              <button
-                onClick={() => setActiveWorkspaceView("email")}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
-                  activeWorkspaceView === "email"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-[#8e8a82] hover:text-white"
-                )}
-              >
-                <Mail className="h-3.5 w-3.5" />
-                AI Email Gateway
-              </button>
-              <button
-                onClick={() => setActiveWorkspaceView("repairs")}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
-                  activeWorkspaceView === "repairs"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-[#8e8a82] hover:text-white"
-                )}
-              >
-                <Wrench className="h-3.5 w-3.5" />
-                Workshop Cars
-                {dealershipContext?.stats?.inRepairCount ? (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-white font-mono">
-                    {dealershipContext.stats.inRepairCount}
-                  </span>
-                ) : null}
-              </button>
-              <button
-                onClick={() => setActiveWorkspaceView("crm")}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
-                  activeWorkspaceView === "crm"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-[#8e8a82] hover:text-white"
-                )}
-              >
-                <PhoneCall className="h-3.5 w-3.5" />
-                WhatsApp CRM
-              </button>
-            </div>
-
-            {/* Puter.js Live AI Indicator */}
-            <div
-              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border shadow-sm bg-emerald-500/15 text-emerald-400 border-emerald-500/30 font-mono"
-              title="Puter.js Autonomous AI Copilot Active (Claude 3.5 Sonnet / GPT-4o)"
+            <button
+              onClick={() => setChannelsModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 bg-[#22201c] hover:bg-[#2a2722] text-[#dedad2] border border-[#35312b] transition"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="hidden sm:inline">Puter.js Live AI</span>
-            </div>
+              <span className="hidden sm:inline">Gmail • WhatsApp • Forms Connected</span>
+              <span className="sm:hidden">Channels</span>
+            </button>
           </div>
         </header>
 
-        {/* ── WORKSPACE VIEW 1: AUTOFAME CHAT TERMINAL ── */}
-        {activeWorkspaceView === "chat" && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Scrollable Conversation Stream */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-12 py-8">
-              <div className="max-w-6xl w-full mx-auto space-y-8">
-                {/* Clean Empty / Welcome State when no conversation history */}
-                {(!activeSessionData?.messages || activeSessionData.messages.length === 0) && !isStreaming && (
-                  <div className="py-10 sm:py-16 text-center max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
-                    <div className="inline-flex items-center justify-center h-16 w-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-xl shadow-emerald-950/40">
-                      <Sparkles className="h-8 w-8" />
-                    </div>
-
-                    <div className="space-y-2.5">
-                      <h2 className="text-xl sm:text-2xl font-bold text-[#f5f2eb] font-serif tracking-tight">
-                        AutoFame Dealership Copilot
-                      </h2>
-                      <p className="text-xs sm:text-sm text-[#8e8a82] max-w-xl mx-auto leading-relaxed">
-                        Autonomous dealership intelligence for live inventory analysis, customer finance pre-approvals via WhatsApp &amp; AI Email Gateways, vehicle descriptions, and workshop tracking.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-left pt-2">
-                      {DEALERSHIP_LINKS.slice(0, 6).map((link, idx) => {
-                        const Icon = link.icon;
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => handleSendMessage(link.prompt)}
-                            className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282520] border border-[#35312a] hover:border-emerald-500/40 transition group flex flex-col justify-between shadow-sm"
-                          >
-                            <div className="flex items-center justify-between w-full mb-3">
-                              <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 transition">
-                                <Icon className="h-4 w-4" />
-                              </div>
-                              {link.badge && (
-                                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                  {link.badge}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold text-[#f5f2eb] group-hover:text-emerald-400 transition">
-                                {link.label}
-                              </p>
-                              <p className="text-[11px] text-[#8e8a82] mt-1 line-clamp-2 leading-relaxed">
-                                {link.prompt}
-                              </p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+        {/* Scrollable Conversation Stream */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-12 py-8">
+          <div className="max-w-5xl w-full mx-auto space-y-8">
+            {/* Clean Minimalist Welcome Screen when chat is empty */}
+            {(!activeSessionData?.messages || activeSessionData.messages.length === 0) &&
+              !isStreaming && (
+                <div className="py-16 sm:py-24 text-center max-w-2xl mx-auto space-y-6 animate-in fade-in duration-300">
+                  <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-lg">
+                    <Sparkles className="h-7 w-7" />
                   </div>
-                )}
 
-                {/* Conversation History */}
-                {activeSessionData?.messages?.map((msg: any) => {
-                  const isAssistant = msg.role === "assistant";
-
-                  return (
-                    <div
-                      key={msg._id}
-                      className={cn(
-                        "flex gap-4 sm:gap-5 w-full",
-                        isAssistant ? "justify-start" : "justify-end"
-                      )}
-                    >
-                      {isAssistant && (
-                        <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-1 shadow-sm">
-                          <Sparkles className="h-4 w-4" />
-                        </div>
-                      )}
-
-                      <div
-                        className={cn(
-                          "rounded-2xl sm:rounded-3xl text-xs sm:text-sm leading-relaxed transition-all shadow-md",
-                          isAssistant
-                            ? "bg-[#24221e] text-[#eae7e1] border border-[#38342d] w-full max-w-5xl p-5 sm:p-7"
-                            : "bg-emerald-600 text-white font-medium max-w-2xl sm:max-w-3xl ml-auto p-4 sm:p-5 px-6 shadow-emerald-950/20"
-                        )}
-                      >
-                        {/* Markdown Formatted Text */}
-                        {isAssistant ? (
-                          <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                              {msg.content}
-                            </ReactMarkdown>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
-                            {/* Attachments rendering */}
-                            {msg.attachments && msg.attachments.length > 0 && (
-                              <div className="mt-3 pt-2.5 border-t border-white/20 flex flex-wrap gap-2">
-                                {msg.attachments.map((att: any, idx: number) => {
-                                  const isImg =
-                                    att.type?.startsWith("image/") ||
-                                    /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(att.name);
-                                  return (
-                                    <div
-                                      key={idx}
-                                      className="group relative rounded-xl overflow-hidden border border-white/25 bg-black/25 backdrop-blur-sm p-1.5 transition hover:border-white/50"
-                                    >
-                                      {isImg ? (
-                                        <a
-                                          href={att.url}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="block"
-                                          title={`View full image: ${att.name}`}
-                                        >
-                                          <img
-                                            src={att.url}
-                                            alt={att.name}
-                                            className="h-24 w-auto max-w-[220px] object-cover rounded-lg border border-white/10"
-                                          />
-                                          <span className="block text-[10px] truncate max-w-[200px] mt-1 text-white/90 font-mono">
-                                            {att.name}
-                                          </span>
-                                        </a>
-                                      ) : (
-                                        <a
-                                          href={att.url}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:underline"
-                                          title={`View document: ${att.name}`}
-                                        >
-                                          <FileText className="h-4 w-4 text-white/80 shrink-0" />
-                                          <span className="truncate max-w-[180px] font-mono text-[11px]">{att.name}</span>
-                                          <ExternalLink className="h-3 w-3 opacity-70" />
-                                        </a>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Interactive Action Cards */}
-                        {msg.actionType === "SEND_EMAIL_GATEWAY" && (
-                          <div className="mt-4 pt-3.5 border-t border-[#38342d] flex flex-wrap items-center gap-2">
-                            <Button
-                              onClick={() => {
-                                setEmailTarget({
-                                  to: msg.actionPayload?.customerEmail || "thabo.mokoena@gmail.com",
-                                  customerName: msg.actionPayload?.customerName || "Thabo Mokoena",
-                                  subject: `AutoFame Pre-Approval & Vehicle Details: ${msg.actionPayload?.carName || "2018 BMW X2 M Sport"}`,
-                                  carName: msg.actionPayload?.carName || "2018 BMW X2 sDrive20i M Sport",
-                                  carPrice: msg.actionPayload?.carPrice || 299900,
-                                  monthlyEstimate: "R5,890 / month",
-                                  template: "finance_approval",
-                                  gateway: "agentmail",
-                                });
-                                setEmailModalOpen(true);
-                              }}
-                              size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 h-8 text-xs shadow-sm"
-                            >
-                              <Mail className="h-3.5 w-3.5" />
-                              Dispatch via AI Email Gateway (AgentMail / Resend)
-                            </Button>
-                          </div>
-                        )}
-
-                        {msg.actionType === "SEND_FINANCE_LINK" && (
-                          <div className="mt-4 pt-3.5 border-t border-[#38342d] flex flex-wrap items-center gap-2">
-                            <Button
-                              onClick={() => {
-                                setWhatsAppTarget({
-                                  to: msg.actionPayload?.customerPhone || "+27 83 492 1109",
-                                  name: msg.actionPayload?.customerName || "Thabo Mokoena",
-                                  message: `Hi ${msg.actionPayload?.customerName || "Customer"}, here is your vehicle finance application link for the ${msg.actionPayload?.carName || "Vehicle"}: https://www.autofame.co.za/financing. Pre-approved across WesBank & Standard Bank Auto.`,
-                                  carName: msg.actionPayload?.carName || "Vehicle",
-                                });
-                                setWhatsAppModalOpen(true);
-                              }}
-                              size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 h-8 text-xs shadow-sm"
-                            >
-                              <PhoneCall className="h-3.5 w-3.5" />
-                              Dispatch via WhatsApp (Whapi)
-                            </Button>
-
-                            <a
-                              href="/financing"
-                              target="_blank"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs bg-white/5 hover:bg-white/10 text-zinc-300 transition"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              Open Customer Application Form
-                            </a>
-                          </div>
-                        )}
-
-                        {msg.actionType === "CAR_REPAIR_STATUS" && (
-                          <div className="mt-4 pt-3.5 border-t border-[#38342d]">
-                            <Button
-                              onClick={() => setActiveWorkspaceView("repairs")}
-                              size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 flex items-center gap-1.5"
-                            >
-                              <Wrench className="h-3.5 w-3.5" />
-                              Open Workshop Repairs Dashboard
-                            </Button>
-                          </div>
-                        )}
-
-                        {msg.actionType === "AUTO_GENERATE_DESCRIPTION" && (
-                          <div className="mt-4 pt-3.5 border-t border-[#38342d] flex items-center gap-2">
-                            <Button
-                              onClick={() => {
-                                navigator.clipboard.writeText(msg.content);
-                                toast.success("Description copied to clipboard!");
-                              }}
-                              size="sm"
-                              variant="secondary"
-                              className="h-8 text-xs flex items-center gap-1.5 bg-[#33302a] hover:bg-[#3f3b33] text-[#f4f2ee]"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                              Copy Formatted Description
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      {!isAssistant && (
-                        <div className="h-9 w-9 rounded-2xl bg-[#33302a] border border-[#444037] flex items-center justify-center text-[#eae7e1] shrink-0 mt-1 shadow-sm">
-                          <User className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Streaming Real-Time Token Generation Bubble */}
-                {isStreaming && (
-                  <div className="flex gap-4 sm:gap-5 w-full justify-start animate-in fade-in duration-150">
-                    <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-1 shadow-sm">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-
-                    <div className="bg-[#24221e] text-[#eae7e1] border border-[#38342d] rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-xs sm:text-sm leading-relaxed shadow-md w-full max-w-5xl">
-                      <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                          {streamingText + " ▍"}
-                        </ReactMarkdown>
-                      </div>
-
-                      {streamingActionPayload?.actionType === "SEND_FINANCE_LINK" && (
-                        <div className="mt-4 pt-3.5 border-t border-[#38342d]">
-                          <span className="text-xs text-emerald-400 font-semibold animate-pulse flex items-center gap-2">
-                            <PhoneCall className="h-3.5 w-3.5" />
-                            Preparing WhatsApp dispatch package...
-                          </span>
-                        </div>
-                      )}
-
-                      {streamingActionPayload?.actionType === "SEND_EMAIL_GATEWAY" && (
-                        <div className="mt-4 pt-3.5 border-t border-[#38342d]">
-                          <span className="text-xs text-emerald-400 font-semibold animate-pulse flex items-center gap-2">
-                            <Mail className="h-3.5 w-3.5" />
-                            Connecting to AI Email Gateway (AgentMail)...
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-[#f5f2eb] font-serif tracking-tight">
+                      How can I help with AutoFame today?
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[#8e8a82] leading-relaxed">
+                      Connected to your live vehicle inventory ({dealershipContext?.stats?.totalInventory || 10} cars), website forms &amp; finance applications,{" "}
+                      <span className="text-[#dedad2] font-medium">Gmail ({connectedGmail})</span>, and{" "}
+                      <span className="text-[#dedad2] font-medium">WhatsApp Business</span>.
+                    </p>
                   </div>
-                )}
+                </div>
+              )}
 
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
+            {/* Conversation Messages */}
+            {activeSessionData?.messages?.map((msg: any) => {
+              const isAssistant = msg.role === "assistant";
 
-            {/* AutoFame Composer Input Box */}
-            <div className="p-4 sm:p-6 bg-[#181715]/95 backdrop-blur border-t border-[#2d2a26] shrink-0">
-              <div className="max-w-6xl w-full mx-auto">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }}
-                  className="relative rounded-2xl sm:rounded-3xl border border-[#38342d] bg-[#22201c] shadow-2xl focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all duration-200"
+              return (
+                <div
+                  key={msg._id}
+                  className={cn(
+                    "flex gap-4 sm:gap-5 w-full",
+                    isAssistant ? "justify-start" : "justify-end"
+                  )}
                 >
-                  {/* File Attachment Chip Previews */}
-                  {attachedFiles.length > 0 && (
-                    <div className="flex flex-wrap gap-2.5 p-3.5 border-b border-[#2e2b26] bg-[#1a1916]/80 rounded-t-2xl sm:rounded-t-3xl">
-                      {attachedFiles.map((f, i) => (
-                        <div
-                          key={i}
-                          className="relative flex items-center gap-2.5 bg-[#282521] border border-[#3d3931] rounded-xl px-3 py-1.5 text-xs text-[#eae7e1] animate-in fade-in"
-                        >
-                          {f.type.startsWith("image/") ? (
-                            <img src={f.previewUrl} alt={f.name} className="h-7 w-7 object-cover rounded-lg border border-white/10" />
-                          ) : (
-                            <FileText className="h-4 w-4 text-emerald-400" />
-                          )}
-                          <span className="max-w-[200px] truncate text-xs font-medium">{f.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeAttachedFile(i)}
-                            className="text-[#8e8a82] hover:text-white p-1 rounded-full hover:bg-white/10 transition"
-                            title="Remove attachment"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                  {isAssistant && (
+                    <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-1 shadow-sm">
+                      <Sparkles className="h-4 w-4" />
                     </div>
                   )}
 
-                  <textarea
-                    ref={textareaRef}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    rows={3}
-                    placeholder="Ask AutoFame Copilot about dealership inventory, financing pre-approvals, email quotes, workshop repairs, or attach vehicle photos & docs..."
-                    className="w-full bg-transparent p-4 sm:p-5 pb-14 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed min-h-[92px]"
-                  />
+                  <div
+                    className={cn(
+                      "rounded-2xl sm:rounded-3xl text-xs sm:text-sm leading-relaxed transition-all shadow-md",
+                      isAssistant
+                        ? "bg-[#24221e] text-[#eae7e1] border border-[#38342d] w-full max-w-4xl p-5 sm:p-7"
+                        : "bg-emerald-600 text-white font-medium max-w-2xl sm:max-w-3xl ml-auto p-4 sm:p-5 px-6 shadow-emerald-950/20"
+                    )}
+                  >
+                    {isAssistant ? (
+                      <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="mt-3 pt-2.5 border-t border-white/20 flex flex-wrap gap-2">
+                            {msg.attachments.map((att: any, idx: number) => {
+                              const isImg =
+                                att.type?.startsWith("image/") ||
+                                /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(att.name);
+                              return (
+                                <div
+                                  key={idx}
+                                  className="group relative rounded-xl overflow-hidden border border-white/25 bg-black/25 backdrop-blur-sm p-1.5 transition hover:border-white/50"
+                                >
+                                  {isImg ? (
+                                    <a
+                                      href={att.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="block"
+                                    >
+                                      <img
+                                        src={att.url}
+                                        alt={att.name}
+                                        className="h-24 w-auto max-w-[220px] object-cover rounded-lg border border-white/10"
+                                      />
+                                      <span className="block text-[10px] truncate max-w-[200px] mt-1 text-white/90 font-mono">
+                                        {att.name}
+                                      </span>
+                                    </a>
+                                  ) : (
+                                    <a
+                                      href={att.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-white hover:underline"
+                                    >
+                                      <FileText className="h-4 w-4 text-white/80 shrink-0" />
+                                      <span className="truncate max-w-[180px] font-mono text-[11px]">
+                                        {att.name}
+                                      </span>
+                                      <ExternalLink className="h-3 w-3 opacity-70" />
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                  {/* Hidden File Input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,application/pdf"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-
-                  {/* Composer Footer Actions */}
-                  <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-3 text-[#a6a197] hover:text-[#f4f2ee] hover:bg-[#2e2b26] flex items-center gap-2 rounded-xl text-xs border border-transparent hover:border-[#38342d]"
-                        title="Attach vehicle photos, FICA documents or PDFs"
-                      >
-                        <Paperclip className="h-4 w-4 text-emerald-400" />
-                        <span className="text-xs font-medium">Attach Files</span>
-                      </Button>
-
-                      <span className="hidden md:inline text-xs text-[#706c64]">
-                        Press <kbd className="px-1.5 py-0.5 rounded bg-[#181715] border border-[#35312b] text-[10px] font-mono text-[#a6a197]">Enter</kbd> to run • <kbd className="px-1.5 py-0.5 rounded bg-[#181715] border border-[#35312b] text-[10px] font-mono text-[#a6a197]">Shift+Enter</kbd> for new line
-                      </span>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      disabled={(!inputValue.trim() && attachedFiles.length === 0) || isStreaming || isUploadingFiles}
-                      size="sm"
-                      className="h-8 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition disabled:opacity-30"
-                    >
-                      {isStreaming || isUploadingFiles ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Send className="h-3.5 w-3.5" />
+                    {/* Inline Gmail Composer right inside the Chat Message (Claude-style) */}
+                    {isAssistant &&
+                      (msg.actionType === "GMAIL_COMPOSE" ||
+                        msg.actionType === "SEND_EMAIL_GATEWAY") && (
+                        <InlineGmailComposer
+                          initialPayload={msg.actionPayload}
+                          connectedGmail={connectedGmail}
+                          onRecordEvent={recordCrmEvent}
+                        />
                       )}
-                      Run
-                    </Button>
+
+                    {/* Inline WhatsApp Composer right inside the Chat Message */}
+                    {isAssistant &&
+                      (msg.actionType === "WHATSAPP_COMPOSE" ||
+                        msg.actionType === "SEND_FINANCE_LINK") && (
+                        <InlineWhatsAppComposer
+                          initialPayload={msg.actionPayload}
+                          onRecordEvent={recordCrmEvent}
+                        />
+                      )}
+
+                    {isAssistant && msg.actionType === "AUTO_GENERATE_DESCRIPTION" && (
+                      <div className="mt-4 pt-3.5 border-t border-[#38342d] flex items-center gap-2">
+                        <Button
+                          onClick={() => {
+                            navigator.clipboard.writeText(msg.content);
+                            toast.success("Copied to clipboard");
+                          }}
+                          size="sm"
+                          variant="secondary"
+                          className="h-8 text-xs flex items-center gap-1.5 bg-[#33302a] hover:bg-[#3f3b33] text-[#f4f2ee]"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy Description
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                </form>
+
+                  {!isAssistant && (
+                    <div className="h-8 w-8 rounded-xl bg-[#33302a] border border-[#444037] flex items-center justify-center text-[#eae7e1] shrink-0 mt-1 shadow-sm">
+                      <User className="h-4 w-4" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Streaming Token Bubble */}
+            {isStreaming && (
+              <div className="flex gap-4 sm:gap-5 w-full justify-start animate-in fade-in duration-150">
+                <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-1 shadow-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+
+                <div className="bg-[#24221e] text-[#eae7e1] border border-[#38342d] rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-xs sm:text-sm leading-relaxed shadow-md w-full max-w-4xl">
+                  <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {streamingText + " ▍"}
+                    </ReactMarkdown>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            <div ref={messagesEndRef} />
           </div>
-        )}
+        </div>
 
-        {/* ── WORKSPACE VIEW 2: AI EMAIL AGENT GATEWAY ── */}
-        {activeWorkspaceView === "email" && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2d2a26] pb-4">
+        {/* ────────────────────────────────────────────────────────── */}
+        {/* CLAUDE-STYLE COMPOSER WITH CONNECTED CHANNEL TRIGGERS      */}
+        {/* ────────────────────────────────────────────────────────── */}
+        <div className="p-4 sm:p-6 bg-[#181715]/95 backdrop-blur border-t border-[#2b2823] shrink-0">
+          <div className="max-w-5xl w-full mx-auto">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="relative rounded-2xl sm:rounded-3xl border border-[#38342d] bg-[#22201c] shadow-2xl focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all duration-200"
+            >
+              {/* Attached Files Preview */}
+              {attachedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2.5 p-3.5 border-b border-[#2e2b26] bg-[#1a1916]/80 rounded-t-2xl sm:rounded-t-3xl">
+                  {attachedFiles.map((f, i) => (
+                    <div
+                      key={i}
+                      className="relative flex items-center gap-2.5 bg-[#282521] border border-[#3d3931] rounded-xl px-3 py-1.5 text-xs text-[#eae7e1]"
+                    >
+                      {f.type.startsWith("image/") ? (
+                        <img
+                          src={f.previewUrl}
+                          alt={f.name}
+                          className="h-7 w-7 object-cover rounded-lg border border-white/10"
+                        />
+                      ) : (
+                        <FileText className="h-4 w-4 text-emerald-400" />
+                      )}
+                      <span className="max-w-[200px] truncate text-xs font-medium">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachedFile(i)}
+                        className="text-[#8e8a82] hover:text-white p-1 rounded-full hover:bg-white/10 transition"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                rows={3}
+                placeholder="Ask anything about our database cars & form leads, or say 'Compose a Gmail to...' or 'Send a WhatsApp to...'..."
+                className="w-full bg-transparent p-4 sm:p-5 pb-14 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed min-h-[92px]"
+              />
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+
+              {/* Composer Bottom Toolbar: Attach + Connected Channel Pills */}
+              <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2.5 text-[#a6a197] hover:text-[#f4f2ee] hover:bg-[#2e2b26] flex items-center gap-1.5 rounded-xl text-xs border border-[#35312b]"
+                    title="Attach images or PDFs"
+                  >
+                    <Paperclip className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="hidden sm:inline text-xs">Attach</span>
+                  </Button>
+
+                  {/* Gmail Channel Quick-Compose Pill */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputValue("Compose a Gmail to ");
+                      textareaRef.current?.focus();
+                    }}
+                    className="h-8 px-2.5 rounded-xl bg-[#181715] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
+                    title={`Connected: ${connectedGmail} — Click to compose an email in chat`}
+                  >
+                    <Mail className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Gmail</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  </button>
+
+                  {/* WhatsApp Channel Quick-Compose Pill */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputValue("Send a WhatsApp message to ");
+                      textareaRef.current?.focus();
+                    }}
+                    className="h-8 px-2.5 rounded-xl bg-[#181715] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
+                    title={`Connected: ${connectedWhatsApp} — Click to compose a WhatsApp in chat`}
+                  >
+                    <PhoneCall className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>WhatsApp</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  </button>
+
+                  {/* Channel Connector Settings Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => setChannelsModalOpen(true)}
+                    className="h-8 px-2.5 rounded-xl bg-[#181715] hover:bg-[#2c2924] text-[#8e8a82] hover:text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
+                    title="Configure connected Gmail, WhatsApp & Form Channels"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    (!inputValue.trim() && attachedFiles.length === 0) ||
+                    isStreaming ||
+                    isUploadingFiles
+                  }
+                  size="sm"
+                  className="h-8 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md transition disabled:opacity-30"
+                >
+                  {isStreaming || isUploadingFiles ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Send
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* CLAUDE-STYLE CONNECTED CHANNELS & INTEGRATIONS MODAL       */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {channelsModalOpen && (
+        <div
+          onClick={() => setChannelsModalOpen(false)}
+          className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-md w-full bg-[#1a1916] rounded-2xl border border-[#38342d] shadow-2xl p-6 space-y-5"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#2e2b26]">
               <div>
-                <h3 className="text-lg font-bold text-[#f5f2eb] flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-emerald-400" />
-                  AutoFame AI Email Agent Gateway
+                <h3 className="text-sm font-bold text-[#f5f2eb]">
+                  Connected Agent Channels
                 </h3>
-                <p className="text-xs text-[#8e8a82] mt-0.5">
-                  AI-connected email gateway for dispatching vehicle finance pre-approvals, FICA document checklists, and quotations directly to customer inboxes.
+                <p className="text-[11px] text-[#8e8a82]">
+                  Link Gmail, WhatsApp &amp; Website Forms directly to your chat agent
                 </p>
               </div>
-
-              <Button
-                onClick={() => setEmailModalOpen(true)}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 flex items-center gap-1.5"
+              <button
+                onClick={() => setChannelsModalOpen(false)}
+                className="text-[#8e8a82] hover:text-white p-1"
               >
-                <SendHorizontal className="h-3.5 w-3.5" />
-                Compose AI Email
-              </Button>
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Supported Gateway Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-[#35312b] bg-[#22201c] p-4 space-y-3">
+            <div className="space-y-4 text-xs">
+              <div className="p-3.5 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-white flex items-center gap-2">
-                    <AtSign className="h-4 w-4 text-emerald-400" />
-                    AgentMail (agentmail.to)
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    Active Agent
-                  </span>
-                </div>
-                <p className="text-xs text-[#a6a197] leading-relaxed">
-                  Dedicated autonomous AI email inbox for AutoFame. Receives customer bank statements, parses FICA PDFs, and auto-dispatches pre-approvals.
-                </p>
-                <div className="text-[11px] font-mono text-emerald-300 bg-[#161513] p-2 rounded-lg border border-[#2d2a26] truncate">
-                  deals@agentmail.to &rarr; autofame
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#35312b] bg-[#22201c] p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-white flex items-center gap-2">
+                  <span className="font-semibold text-white flex items-center gap-2">
                     <Mail className="h-4 w-4 text-emerald-400" />
-                    Resend AI Mail Gateway
+                    Gmail Integration
                   </span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                     Connected
                   </span>
                 </div>
-                <p className="text-xs text-[#a6a197] leading-relaxed">
-                  High-deliverability transactional email delivery with official AutoFame emerald branding, vehicle specs, and bank finance estimates.
-                </p>
-                <div className="text-[11px] font-mono text-emerald-300 bg-[#161513] p-2 rounded-lg border border-[#2d2a26] truncate">
-                  deals@autofame.co.za
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#35312b] bg-[#22201c] p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-white flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-emerald-400" />
-                    Puter.email Gateway
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    Zero-Config
-                  </span>
-                </div>
-                <p className="text-xs text-[#a6a197] leading-relaxed">
-                  Direct client-side and agent-side transactional email protocol integrated natively into Puter.js with 0 manual keys.
-                </p>
-                <div className="text-[11px] font-mono text-emerald-300 bg-[#161513] p-2 rounded-lg border border-[#2d2a26] truncate">
-                  puter.email.sendTransactional()
-                </div>
-              </div>
-            </div>
-
-            {/* Email Dispatch History Log */}
-            <div className="space-y-3 pt-2">
-              <h4 className="text-xs uppercase font-mono tracking-wider text-[#8e8a82] font-semibold">
-                Recent AI Email Dispatches &amp; Activity
-              </h4>
-
-              {(!crmEvents || crmEvents.filter((e) => e.eventType === "EMAIL_SENT").length === 0) ? (
-                <div className="p-8 rounded-2xl border border-[#35312b] bg-[#22201c] text-center text-xs text-[#8e8a82]">
-                  No outbound email dispatches recorded yet. Click <strong>"Compose AI Email"</strong> or ask AutoFame Copilot to <em>"Email finance quote to client"</em>.
-                </div>
-              ) : (
-                crmEvents
-                  .filter((e) => e.eventType === "EMAIL_SENT")
-                  .map((evt: any) => (
-                    <div
-                      key={evt._id}
-                      className="p-4 rounded-xl border border-[#35312b] bg-[#22201c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0">
-                          <Mail className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-white text-sm truncate">{evt.summary}</p>
-                          <span className="text-xs text-[#8e8a82]">
-                            To: {evt.recipient} • Customer: {evt.customerName || "Dealership Client"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                          {evt.status}
-                        </span>
-                        <span className="text-[11px] text-[#706c64] font-mono">
-                          {new Date(evt.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── WORKSPACE VIEW 3: WORKSHOP REPAIRS BOARD ── */}
-        {activeWorkspaceView === "repairs" && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2d2a26] pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-[#f5f2eb] flex items-center gap-2">
-                  <Wrench className="h-5 w-5 text-emerald-400" />
-                  Workshop Repair &amp; Service Control Center
-                </h3>
-                <p className="text-xs text-[#8e8a82] mt-0.5">
-                  Track vehicles currently undergoing major mechanical repairs, panel work, or roadworthy testing.
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                {carRepairs?.length || 0} Registered Job Cards
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {carRepairs?.map((r: any) => (
-                <div
-                  key={r._id}
-                  className="rounded-2xl border border-[#35312b] bg-[#22201c] p-5 space-y-4 flex flex-col justify-between shadow-sm"
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-emerald-400">
-                        {r.repairNumber}
-                      </span>
-                      <span
-                        className={cn(
-                          "px-2.5 py-0.5 rounded-full text-[10px] font-semibold border",
-                          r.status === "COMPLETED" || r.status === "COLLECTED"
-                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                            : r.status === "AWAITING_PARTS"
-                            ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-                            : "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                        )}
-                      >
-                        {r.status.replace(/_/g, " ")}
-                      </span>
-                    </div>
-
-                    <h4 className="font-bold text-base text-[#f5f2eb] mt-2">
-                      {r.car?.make} {r.car?.model} ({r.car?.year})
-                    </h4>
-                    <p className="text-xs text-[#8e8a82] mt-0.5">{r.workshopName}</p>
-
-                    <div className="mt-3.5 p-3 rounded-xl bg-[#181715] border border-[#2d2a26] text-xs text-[#c9c5bd] leading-relaxed">
-                      <span className="font-semibold text-[#8e8a82] block mb-1">Issue Description:</span>
-                      {r.issueDescription}
-                    </div>
-
-                    <div className="mt-4 space-y-1.5 text-xs">
-                      <div className="flex justify-between text-[#8e8a82]">
-                        <span>Estimated Cost:</span>
-                        <span className="font-semibold text-white font-mono">
-                          R{r.costEstimated.toLocaleString()} ZAR
-                        </span>
-                      </div>
-                      {r.estimatedCompletionDate && (
-                        <div className="flex justify-between text-[#8e8a82]">
-                          <span>Estimated Ready:</span>
-                          <span className="text-emerald-400 font-medium">
-                            {new Date(r.estimatedCompletionDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )}
-                      {r.technicianContact && (
-                        <div className="flex justify-between text-[#8e8a82]">
-                          <span>Technician:</span>
-                          <span className="text-[#eae7e1]">{r.technicianContact}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-3.5 border-t border-[#35312b] flex items-center justify-between gap-2">
-                    <select
-                      value={r.status}
-                      onChange={(e) =>
-                        updateRepairStatus({
-                          id: r._id,
-                          status: e.target.value,
-                        })
-                      }
-                      className="bg-[#181715] text-xs text-white border border-[#3d3932] rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer"
-                    >
-                      <option value="SENT_FOR_REPAIR">Sent for Repair</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="AWAITING_PARTS">Awaiting Parts</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="COLLECTED">Collected &amp; Ready</option>
-                    </select>
-
-                    <Button
-                      onClick={() =>
-                        handleSendMessage(
-                          `Draft an urgent inquiry to ${r.workshopName} regarding job card ${r.repairNumber} for ${r.car?.make} ${r.car?.model}`
-                        )
-                      }
-                      size="sm"
-                      className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs h-8"
-                    >
-                      Ask AutoFame
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── WORKSPACE VIEW 4: CRM & WHATSAPP LOGS ── */}
-        {activeWorkspaceView === "crm" && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2d2a26] pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-[#f5f2eb] flex items-center gap-2">
-                  <PhoneCall className="h-5 w-5 text-emerald-400" />
-                  AutoFame WhatsApp &amp; Customer Activity Stream
-                </h3>
-                <p className="text-xs text-[#8e8a82] mt-0.5">
-                  Audit log of outbound WhatsApp finance links, vehicle brochures, and customer follow-ups.
-                </p>
-              </div>
-
-              <Button
-                onClick={() => setWhatsAppModalOpen(true)}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 flex items-center gap-1.5"
-              >
-                <Send className="h-3.5 w-3.5" />
-                Quick WhatsApp Dispatch
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {crmEvents?.map((evt: any) => (
-                <div
-                  key={evt._id}
-                  className="p-4 rounded-xl border border-[#35312b] bg-[#22201c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0">
-                      <PhoneCall className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white text-sm truncate">{evt.summary}</p>
-                      <span className="text-xs text-[#8e8a82]">
-                        Recipient: {evt.recipient} • Client: {evt.customerName || "Inbound Lead"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      {evt.status}
-                    </span>
-                    <span className="text-[11px] text-[#706c64] font-mono">
-                      {new Date(evt.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* ── MODAL: WHATSAPP DISPATCH ── */}
-      {whatsAppModalOpen && (
-        <div
-          onClick={() => setWhatsAppModalOpen(false)}
-          className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-lg w-full bg-[#181715] rounded-2xl overflow-hidden border border-[#35312b] shadow-2xl p-6 space-y-4"
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-[#2d2a26]">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-                  <PhoneCall className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">AutoFame WhatsApp Gateway</h3>
-                  <p className="text-[11px] text-[#8e8a82]">South Africa Vehicle Finance Pre-Approval</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setWhatsAppModalOpen(false)}
-                className="text-zinc-400 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3.5 text-xs">
-              <div>
-                <label className="text-[#8e8a82] font-semibold block mb-1">Customer Name</label>
-                <input
-                  type="text"
-                  value={whatsAppTarget.name}
-                  onChange={(e) => setWhatsAppTarget({ ...whatsAppTarget, name: e.target.value })}
-                  className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[#8e8a82] font-semibold block mb-1">
-                  WhatsApp Phone (SA Format: 082... or +27...)
-                </label>
-                <input
-                  type="text"
-                  value={whatsAppTarget.to}
-                  onChange={(e) => setWhatsAppTarget({ ...whatsAppTarget, to: e.target.value })}
-                  className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[#8e8a82] font-semibold block mb-1">Message Content</label>
-                <textarea
-                  rows={3}
-                  value={whatsAppTarget.message}
-                  onChange={(e) => setWhatsAppTarget({ ...whatsAppTarget, message: e.target.value })}
-                  className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 resize-none leading-relaxed"
-                />
-              </div>
-
-              {/* PDF Attachment Option */}
-              <div className="p-3 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
-                    <FileText className="h-4 w-4 text-emerald-400" />
-                    Attach Official Application Document (PDF)
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                    Auto-Attached
-                  </span>
-                </div>
                 <p className="text-[11px] text-[#8e8a82]">
-                  Attachment: <span className="text-zinc-300 font-mono">AutoFame_Vehicle_Finance_Application_PreApproval.pdf</span>
+                  Allows the chat agent to compose and send emails directly inside your conversation stream.
                 </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-400 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span>NCA compliant • Integrated via WhatsApp gateway &amp; AutoFame Copilot Engine.</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#2d2a26]">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setWhatsAppModalOpen(false)}
-                className="text-xs text-[#8e8a82] hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDispatchWhatsApp}
-                disabled={isSendingWhatsApp}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow"
-              >
-                {isSendingWhatsApp ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Dispatching...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-3.5 w-3.5" />
-                    Dispatch via WhatsApp
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL: AI EMAIL AGENT GATEWAY DISPATCH ── */}
-      {emailModalOpen && (
-        <div
-          onClick={() => setEmailModalOpen(false)}
-          className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-lg w-full bg-[#181715] rounded-2xl overflow-hidden border border-[#35312b] shadow-2xl p-6 space-y-4"
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-[#2d2a26]">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-                  <Mail className="h-4 w-4" />
-                </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">AI Email Agent Gateway</h3>
-                  <p className="text-[11px] text-[#8e8a82]">AgentMail • Resend • Puter Mail</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setEmailModalOpen(false)}
-                className="text-zinc-400 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[#8e8a82] font-semibold block mb-1">Customer Name</label>
-                  <input
-                    type="text"
-                    value={emailTarget.customerName}
-                    onChange={(e) => setEmailTarget({ ...emailTarget, customerName: e.target.value })}
-                    className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-[#8e8a82] font-semibold block mb-1">Customer Email</label>
+                  <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                    Linked Gmail Address
+                  </label>
                   <input
                     type="email"
-                    value={emailTarget.to}
-                    onChange={(e) => setEmailTarget({ ...emailTarget, to: e.target.value })}
-                    className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500"
+                    value={connectedGmail}
+                    onChange={(e) => setConnectedGmail(e.target.value)}
+                    className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-[#8e8a82] font-semibold block mb-1">AI Email Gateway Protocol</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEmailTarget({ ...emailTarget, gateway: "agentmail" })}
-                    className={cn(
-                      "p-2.5 rounded-xl border text-xs font-semibold transition flex flex-col items-center justify-center gap-1",
-                      emailTarget.gateway === "agentmail"
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
-                        : "bg-[#22201c] text-[#a6a197] border-[#38342d] hover:text-white"
-                    )}
-                  >
-                    <span>AgentMail</span>
-                    <span className="text-[9px] font-mono opacity-80">Autonomous</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEmailTarget({ ...emailTarget, gateway: "resend" })}
-                    className={cn(
-                      "p-2.5 rounded-xl border text-xs font-semibold transition flex flex-col items-center justify-center gap-1",
-                      emailTarget.gateway === "resend"
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
-                        : "bg-[#22201c] text-[#a6a197] border-[#38342d] hover:text-white"
-                    )}
-                  >
-                    <span>Resend AI</span>
-                    <span className="text-[9px] font-mono opacity-80">Transactional</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEmailTarget({ ...emailTarget, gateway: "puter" })}
-                    className={cn(
-                      "p-2.5 rounded-xl border text-xs font-semibold transition flex flex-col items-center justify-center gap-1",
-                      emailTarget.gateway === "puter"
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
-                        : "bg-[#22201c] text-[#a6a197] border-[#38342d] hover:text-white"
-                    )}
-                  >
-                    <span>Puter Mail</span>
-                    <span className="text-[9px] font-mono opacity-80">Zero-Config</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[#8e8a82] font-semibold block mb-1">Subject Line</label>
-                <input
-                  type="text"
-                  value={emailTarget.subject}
-                  onChange={(e) => setEmailTarget({ ...emailTarget, subject: e.target.value })}
-                  className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              {/* PDF Attachment Option */}
-              <div className="p-3 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2">
+              <div className="p-3.5 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
-                    <FileCheck className="h-4 w-4 text-emerald-400" />
-                    Auto-Attached FICA &amp; Vehicle PDF Package
+                  <span className="font-semibold text-white flex items-center gap-2">
+                    <PhoneCall className="h-4 w-4 text-emerald-400" />
+                    WhatsApp Business Channel
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                    Ready
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Connected
                   </span>
                 </div>
                 <p className="text-[11px] text-[#8e8a82]">
-                  Includes: <span className="text-zinc-300 font-mono">AutoFame_Vehicle_Finance_PreApproval.pdf</span> (Repayment breakdown &amp; FICA checklist).
+                  Dispatches finance pre-approval links and vehicle details directly to customer WhatsApp numbers.
                 </p>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                    Dealership WhatsApp Number
+                  </label>
+                  <input
+                    type="text"
+                    value={connectedWhatsApp}
+                    onChange={(e) => setConnectedWhatsApp(e.target.value)}
+                    className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-400 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span>NCA compliant • Inbound replies forward directly to finance@autofame.co.za.</span>
+              <div className="p-3.5 rounded-xl bg-[#22201c] border border-[#35312b] flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Database className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-white">Website Forms &amp; Convex DB</p>
+                    <p className="text-[11px] text-[#8e8a82]">
+                      Synced with /financing forms, inquiries, test drives &amp; cars
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                  Live Sync
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#2d2a26]">
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#2e2b26]">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setEmailModalOpen(false)}
+                onClick={() => setChannelsModalOpen(false)}
                 className="text-xs text-[#8e8a82] hover:text-white"
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleDispatchEmail}
-                disabled={isSendingEmail}
+                onClick={handleSaveChannelSettings}
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl"
               >
-                {isSendingEmail ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Dispatching...
-                  </>
-                ) : (
-                  <>
-                    <SendHorizontal className="h-3.5 w-3.5" />
-                    Dispatch via AI Gateway
-                  </>
-                )}
+                Save Channels
               </Button>
             </div>
           </div>
