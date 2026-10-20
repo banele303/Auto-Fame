@@ -21,7 +21,57 @@ function normalizeToChatId(rawPhone: string): string {
 }
 
 /**
- * Fetches messages for a specific WhatsApp contact (by phone number or name) from Whapi.Cloud
+ * Clean, modern WhatsApp formatter for a list of vehicles
+ */
+function formatCarsForWhatsApp(cars: any[], title = "AUTOFAME SHOWROOM INVENTORY", maxShow = 12): string {
+  if (!cars || cars.length === 0) {
+    return "No matching vehicles found in showroom inventory.";
+  }
+
+  const availableCount = cars.filter((c: any) => c.status === "AVAILABLE").length;
+  const header = `🚘 *${title}*\n📊 *Showing ${Math.min(cars.length, maxShow)} of ${cars.length} Vehicles* (${availableCount} Available)\n━━━━━━━━━━━━━━━━━━━━`;
+
+  const items = cars.slice(0, maxShow).map((c: any, idx: number) => {
+    const price = Number(c.price || 0);
+    const estMonthly = Math.round(price * 0.9 * 0.0218);
+    const mileage = Number(c.mileage || 0).toLocaleString();
+    const trans = c.transmission || "Auto";
+    const fuel = c.fuelType || "Petrol";
+    const statusBadge =
+      c.status === "AVAILABLE"
+        ? "🟢 *AVAILABLE*"
+        : c.status === "SOLD"
+        ? "🔴 *SOLD*"
+        : "🟡 *" + (c.status || "IN STOCK") + "*";
+
+    return `*${idx + 1}. ${c.year} ${c.make} ${c.model}*\n💰 *R${price.toLocaleString()} ZAR* (~R${estMonthly.toLocaleString()}/mo)\n⚙️ ${mileage} km • ${trans} • ${fuel}\n${statusBadge}`;
+  });
+
+  return `${header}\n\n${items.join("\n\n")}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _Reply with any car name to generate an official quote or type *FINANCE* to open an application._`;
+}
+
+/**
+ * Clean, modern WhatsApp formatter for an Official Vehicle Quote
+ */
+function formatVehicleQuoteForWhatsApp(car: any): string {
+  if (!car) {
+    return "No vehicle available to quote.";
+  }
+  const price = Number(car.price || 0);
+  const deposit = Math.round(price * 0.1);
+  const loanAmount = price - deposit;
+  const monthlyRate = 0.1175 / 12;
+  const term = 72;
+  const monthlyPayment = Math.round(
+    (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, term)) /
+      (Math.pow(1 + monthlyRate, term) - 1)
+  );
+
+  return `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n\n🚘 *Vehicle:* ${car.year} ${car.make} ${car.model}\n🔢 *Stock ID:* #AF-${car.id}\n⚙️ *Specs:* ${Number(car.mileage || 0).toLocaleString()} km • ${car.transmission || "Automatic"} • ${car.fuelType || "Petrol"}\n\n💳 *FINANCE BREAKDOWN (ESTIMATE)*\n• *Retail Price:* R${price.toLocaleString()} ZAR\n• *10% Deposit:* R${deposit.toLocaleString()} ZAR\n• *Principal Loan:* R${loanAmount.toLocaleString()} ZAR\n• *Term & Rate:* 72 Months @ 11.75% Linked\n• *Monthly Instalment:* *~R${monthlyPayment.toLocaleString()} ZAR / month*\n\n📋 *REQUIRED FICA DOCUMENTS*\n1. Copy of SA ID (Smart Card / Book)\n2. Valid SA Driver's License\n3. 3 Months Stamped Bank Statements\n4. Latest 3 Months Payslips\n5. Proof of Residence (< 3 Months)\n\n📍 *AutoFame Dealership Johannesburg South*\n📞 +27 63 199 5124 | ✉️ alexsouthflow3@gmail.com`;
+}
+
+/**
+ * Finds a contact in Whapi /contacts and /chats by phone number or fuzzy name match
  */
 async function fetchContactMessagesFromWhapi(
   queryText: string,
@@ -33,7 +83,7 @@ async function fetchContactMessagesFromWhapi(
   contactPhone: string;
   messages: any[];
 }> {
-  // 1. Check if a phone number is mentioned in the query (e.g. 0747404229, +27 83 732 4229, 27602471161)
+  // 1. Check if a phone number is mentioned in the query
   const phoneMatch = queryText.match(/(?:\+?27|0)\s*\d{2}\s*\d{3}\s*\d{4}|\b27\d{9}\b/);
   if (phoneMatch) {
     const chatId = normalizeToChatId(phoneMatch[0]);
@@ -57,13 +107,59 @@ async function fetchContactMessagesFromWhapi(
     };
   }
 
-  // 2. Otherwise search recent chats from Whapi /chats
-  const chatsRes = await fetch("https://gate.whapi.cloud/chats?count=30", {
-    method: "GET",
-    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
+  // 2. Search saved contacts in /contacts?count=500 for name or fuzzy match
+  const stopWords = new Set([
+    "what",
+    "was",
+    "my",
+    "last",
+    "message",
+    "messages",
+    "with",
+    "from",
+    "take",
+    "all",
+    "the",
+    "information",
+    "info",
+    "this",
+    "user",
+    "contact",
+    "and",
+    "create",
+    "fill",
+    "application",
+    "form",
+    "send",
+    "via",
+    "email",
+    "attachments",
+    "chat",
+    "show",
+  ]);
+
+  const candidateWords = queryText
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !stopWords.has(w));
+
+  const [contactsRes, chatsRes] = await Promise.all([
+    fetch("https://gate.whapi.cloud/contacts?count=500", {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }),
+    fetch("https://gate.whapi.cloud/chats?count=40", {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }),
+  ]);
+
+  const contactsData = await contactsRes.json().catch(() => ({}));
   const chatsData = await chatsRes.json().catch(() => ({}));
+  const contacts = Array.isArray(contactsData?.contacts) ? contactsData.contacts : [];
   const chats = Array.isArray(chatsData?.chats)
     ? chatsData.chats.filter(
         (c: any) =>
@@ -73,23 +169,26 @@ async function fetchContactMessagesFromWhapi(
       )
     : [];
 
-  const lower = queryText.toLowerCase();
-  const matchedChat =
-    chats.find(
-      (c: any) =>
-        (c.name && lower.includes(String(c.name).toLowerCase())) ||
-        (c.last_message?.from_name &&
-          lower.includes(String(c.last_message.from_name).toLowerCase())) ||
-        (c.last_message?.text?.body &&
-          String(c.last_message.text.body)
-            .toLowerCase()
-            .split(/\s+/)
-            .some((w: string) => w.length > 4 && lower.includes(w)))
-    ) || chats[0];
+  let matchedContact: any = null;
+  if (candidateWords.length > 0) {
+    // Exact or substring match on contact name / pushname
+    matchedContact = contacts.find((c: any) => {
+      const fullName = `${c.name || ""} ${c.pushname || ""}`.toLowerCase();
+      return candidateWords.some(
+        (w) =>
+          fullName.includes(w) ||
+          (w.length >= 4 &&
+            fullName
+              .split(/\s+/)
+              .some((part) => part.length >= 3 && (w.includes(part) || part.includes(w.slice(0, 4)))))
+      );
+    });
+  }
 
-  if (matchedChat?.id) {
+  if (matchedContact?.id) {
+    const chatId = `${String(matchedContact.id).replace(/@.*$/, "")}@s.whatsapp.net`;
     const res = await fetch(
-      `https://gate.whapi.cloud/messages/list/${encodeURIComponent(matchedChat.id)}?count=40`,
+      `https://gate.whapi.cloud/messages/list/${encodeURIComponent(chatId)}?count=30`,
       {
         method: "GET",
         headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
@@ -98,13 +197,34 @@ async function fetchContactMessagesFromWhapi(
     );
     const data = await res.json().catch(() => ({}));
     const msgs = Array.isArray(data?.messages) ? data.messages : [];
-    const digits = String(matchedChat.id).replace(/@.*$/, "");
+    const digits = String(matchedContact.id).replace(/@.*$/, "");
     return {
-      targetChatId: matchedChat.id,
+      targetChatId: chatId,
+      contactName: matchedContact.name || matchedContact.pushname || `+${digits}`,
+      contactPhone: `+${digits}`,
+      messages: msgs,
+    };
+  }
+
+  const fallbackChat = chats[0];
+  if (fallbackChat?.id) {
+    const res = await fetch(
+      `https://gate.whapi.cloud/messages/list/${encodeURIComponent(fallbackChat.id)}?count=30`,
+      {
+        method: "GET",
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    const msgs = Array.isArray(data?.messages) ? data.messages : [];
+    const digits = String(fallbackChat.id).replace(/@.*$/, "");
+    return {
+      targetChatId: fallbackChat.id,
       contactName:
-        matchedChat.name ||
-        matchedChat.last_message?.from_name ||
-        `Contact +${digits}`,
+        fallbackChat.name ||
+        fallbackChat.last_message?.from_name ||
+        `+${digits}`,
       contactPhone: `+${digits}`,
       messages: msgs,
     };
@@ -112,7 +232,7 @@ async function fetchContactMessagesFromWhapi(
 
   return {
     targetChatId: "",
-    contactName: "WhatsApp Applicant",
+    contactName: "WhatsApp Contact",
     contactPhone: "",
     messages: fallbackMessages,
   };
@@ -142,7 +262,6 @@ function parseWhatsAppFinanceIntake(
     .map((m: any) => m.text?.body || m.document?.caption || m.image?.caption || "")
     .join("\n");
 
-  // Try to detect Account Holder / Full Name inside message text if present
   const holderMatch = combinedText.match(
     /(?:account holder|full name|name|applicant)[:\s]+([A-Za-z\s]{3,35})/i
   );
@@ -169,7 +288,6 @@ function parseWhatsAppFinanceIntake(
       lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
   );
 
-  // Extract ALL documents & images from the contact's WhatsApp messages
   const extractedDocs: {
     docType: string;
     originalName: string;
@@ -258,7 +376,6 @@ export async function GET(req: NextRequest) {
 
   try {
     if (action === "messages") {
-      // Fetch both the dedicated AutoFame AI Agent group AND recent contact chats
       const [groupRes, chatsRes, listRes] = await Promise.all([
         fetch(
           `https://gate.whapi.cloud/messages/list/${encodeURIComponent(AUTOFAME_AGENT_GROUP_ID)}?count=20`,
@@ -523,16 +640,19 @@ ${
           newestMsg.document?.caption ||
           newestMsg.image?.caption ||
           "finance";
-        const lowerIn = incomingText.toLowerCase();
+        const lowerIn = incomingText.toLowerCase().trim();
+        const cars = Array.isArray(context?.cars) ? context.cars : [];
+        const availableCars = cars.filter((c: any) => c.status === "AVAILABLE");
+        const soldCars = cars.filter((c: any) => c.status === "SOLD");
+        const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
 
         let replyBody = "";
 
-        // Check if the user in the WhatsApp group is asking to extract info from another contact & fill/email application!
+        // 1. Extract Contact Info & Fill/Email Application Form
         if (
           (lowerIn.includes("take") ||
             lowerIn.includes("extract") ||
-            lowerIn.includes("fill") ||
-            lowerIn.includes("from")) &&
+            lowerIn.includes("fill")) &&
           (lowerIn.includes("application") ||
             lowerIn.includes("form") ||
             lowerIn.includes("email") ||
@@ -542,7 +662,7 @@ ${
           const contactData = await fetchContactMessagesFromWhapi(incomingText, whapiToken);
           const intake = parseWhatsAppFinanceIntake(
             contactData.messages,
-            context?.cars || [],
+            cars,
             contactData.contactPhone,
             contactData.contactName
           );
@@ -596,8 +716,58 @@ ${intake.documents.map((d, i) => `${i + 1}. ${d.originalName} (${d.docType})`).j
             }),
           }).catch(() => {});
 
-          replyBody = `✅ *Extracted & Filled Finance Application Form*\n\n• *Contact*: ${intake.fullName} (${intake.phone})\n• *Vehicle*: ${intake.carName} (R${Number(intake.carPrice || 0).toLocaleString()} ZAR)\n• *Details Extracted*: ${intake.employerName || "Transcript captured"}\n• *Attachments Included*: ${intake.documents.length} file(s)\n• *Emailed To*: ${targetRecipient} via alexsouthflow3@gmail.com`;
-        } else if (
+          replyBody = `✅ *FINANCE APPLICATION EXTRACTED & EMAILED*\n━━━━━━━━━━━━━━━━━━━━\n\n👤 *Applicant:* ${intake.fullName}\n📞 *Phone:* ${intake.phone}\n🚘 *Vehicle:* ${intake.carName} (R${Number(intake.carPrice || 0).toLocaleString()} ZAR)\n🏦 *Details:* ${intake.employerName || "Transcript captured"}\n📎 *Attachments:* ${intake.documents.length} file(s) attached\n✉️ *Sent To:* ${targetRecipient}`;
+        }
+        // 2. Ask about last message / conversation with a specific contact (e.g. "What was my last message with Mableza")
+        else if (
+          lowerIn.includes("last message") ||
+          lowerIn.includes("message with") ||
+          lowerIn.includes("chat with") ||
+          lowerIn.includes("what did")
+        ) {
+          const contactData = await fetchContactMessagesFromWhapi(incomingText, whapiToken);
+          const recentMsgs = contactData.messages.slice(0, 5);
+          if (recentMsgs.length === 0) {
+            replyBody = `💬 *Chat with ${contactData.contactName} (${contactData.contactPhone})*\n\nNo recent messages found in this chat.`;
+          } else {
+            const formattedChat = recentMsgs
+              .map((m: any) => {
+                const who = m.from_me ? "You" : contactData.contactName;
+                const text =
+                  m.text?.body ||
+                  m.document?.caption ||
+                  m.image?.caption ||
+                  (m.document ? `[Document: ${m.document.filename || "File"}]` : "") ||
+                  (m.image ? "[Photo Attachment]" : "[Voice/Media]");
+                const time = m.timestamp
+                  ? new Date(m.timestamp * 1000).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "";
+                return `• *${who}* (${time}):\n  "${text}"`;
+              })
+              .join("\n\n");
+
+            replyBody = `💬 *RECENT MESSAGES WITH ${contactData.contactName.toUpperCase()}*\n📞 *Number:* ${contactData.contactPhone}\n━━━━━━━━━━━━━━━━━━━━\n\n${formattedChat}`;
+          }
+        }
+        // 3. Create / Generate a Quote (e.g. "Create a quote for one of it" or "Quote for Toyota Fortuner")
+        else if (lowerIn.includes("quote") || lowerIn.includes("quotation")) {
+          const matchedCar =
+            cars.find(
+              (c: any) =>
+                lowerIn.includes(c.make?.toLowerCase() || "") ||
+                lowerIn.includes((c.model?.toLowerCase() || "").split(" ")[0])
+            ) ||
+            availableCars[0] ||
+            cars[0];
+          replyBody = formatVehicleQuoteForWhatsApp(matchedCar);
+        }
+        // 4. Exact Count Questions
+        else if (
           lowerIn.includes("how many message") ||
           lowerIn.includes("how many whatsapp") ||
           lowerIn.includes("how many chat")
@@ -608,43 +778,46 @@ ${intake.documents.map((d, i) => `${i + 1}. ${d.originalName} (${d.docType})`).j
           });
           const chatsData = await chatsRes.json().catch(() => ({}));
           replyBody = `${chatsData?.total || (chatsData?.chats || []).length}`;
-        } else {
-          // Standard direct dealership database answer
-          const cars = Array.isArray(context?.cars) ? context.cars : [];
-          const availableCars = cars.filter((c: any) => c.status === "AVAILABLE");
-          const soldCars = cars.filter((c: any) => c.status === "SOLD");
-          const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
-
-          if (lowerIn.includes("how many available")) {
-            replyBody = `${availableCars.length}`;
-          } else if (lowerIn.includes("how many sold")) {
-            replyBody = `${soldCars.length}`;
-          } else if (lowerIn.includes("how many repair")) {
-            replyBody = `${repairs.length}`;
-          } else if (
-            lowerIn.includes("how many car") ||
-            lowerIn.includes("how many vehicle") ||
-            lowerIn.includes("how many do we have") ||
-            lowerIn === "cars"
-          ) {
-            replyBody = `${cars.length}`;
-          } else {
-            const matchedCars = cars.filter(
-              (c: any) =>
-                lowerIn.includes(c.make?.toLowerCase() || "") ||
-                lowerIn.includes((c.model?.toLowerCase() || "").split(" ")[0])
+        } else if (lowerIn.includes("how many available")) {
+          replyBody = `${availableCars.length}`;
+        } else if (lowerIn.includes("how many sold")) {
+          replyBody = `${soldCars.length}`;
+        } else if (lowerIn.includes("how many repair")) {
+          replyBody = `${repairs.length}`;
+        } else if (
+          lowerIn.includes("how many car") ||
+          lowerIn.includes("how many vehicle") ||
+          lowerIn.includes("how many do we have") ||
+          lowerIn === "cars" ||
+          lowerIn === "how many"
+        ) {
+          replyBody = `${cars.length}`;
+        }
+        // 5. List Cars / Showroom Stock
+        else if (
+          lowerIn.includes("list") ||
+          lowerIn.includes("stock") ||
+          lowerIn.includes("inventory") ||
+          lowerIn.includes("show cars") ||
+          lowerIn.includes("all cars")
+        ) {
+          replyBody = formatCarsForWhatsApp(cars, "AUTOFAME SHOWROOM INVENTORY", 12);
+        }
+        // 6. Specific Brand / Model Search
+        else {
+          const matchedCars = cars.filter(
+            (c: any) =>
+              lowerIn.includes(c.make?.toLowerCase() || "") ||
+              lowerIn.includes((c.model?.toLowerCase() || "").split(" ")[0])
+          );
+          if (matchedCars.length > 0) {
+            replyBody = formatCarsForWhatsApp(
+              matchedCars,
+              `MATCHING VEHICLES (${matchedCars.length})`,
+              10
             );
-            if (matchedCars.length > 0) {
-              replyBody = matchedCars
-                .slice(0, 8)
-                .map(
-                  (c: any) =>
-                    `• *${c.year} ${c.make} ${c.model}* — R${Number(c.price || 0).toLocaleString()} ZAR (${c.status})`
-                )
-                .join("\n");
-            } else {
-              replyBody = `${cars.length}`;
-            }
+          } else {
+            replyBody = formatCarsForWhatsApp(cars, "AUTOFAME SHOWROOM INVENTORY", 10);
           }
         }
 
