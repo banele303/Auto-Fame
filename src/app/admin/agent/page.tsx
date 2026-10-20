@@ -541,7 +541,13 @@ function getDirectAnswerOnly(
     return `| Vehicle | Price | Mileage | Transmission | Status |\n| :--- | :---: | :---: | :--- | :---: |\n${rows}`;
   }
 
-  if (lower.includes("list") || lower.includes("inventory") || lower.includes("showroom")) {
+  if (
+    lower.includes("list") ||
+    lower.includes("inventory") ||
+    lower.includes("showroom") ||
+    lower.includes("stock") ||
+    lower.includes("all cars")
+  ) {
     if (cars.length === 0) return "0";
     const rows = cars
       .map(
@@ -550,6 +556,16 @@ function getDirectAnswerOnly(
       )
       .join("\n");
     return `| Vehicle | Price | Mileage | Transmission | Status |\n| :--- | :---: | :---: | :--- | :---: |\n${rows}`;
+  }
+
+  if (lower.includes("quote") || lower.includes("quotation")) {
+    const qCar = availableCars[0] || cars[0];
+    if (!qCar) return "0";
+    const price = Number(qCar.price || 0);
+    const deposit = Math.round(price * 0.1);
+    const loan = price - deposit;
+    const estMonthly = Math.round(price * 0.9 * 0.0218);
+    return `| Quote Item | Details |\n| :--- | :--- |\n| **Vehicle** | **${qCar.year} ${qCar.make} ${qCar.model}** (#AF-${qCar.id}) |\n| **Retail Price** | R${price.toLocaleString()} ZAR |\n| **10% Deposit** | R${deposit.toLocaleString()} ZAR |\n| **Principal Loan** | R${loan.toLocaleString()} ZAR |\n| **Est. Monthly (72 mo @ 11.75%)** | **~R${estMonthly.toLocaleString()} ZAR / month** |`;
   }
 
   return null;
@@ -800,22 +816,6 @@ export default function AdminAutoFameAgentPage() {
       fetchLiveWhatsAppChannel(false);
     }
   }, []);
-
-  // Automatically listen and reply to messages sent to "AutoFame AI Agent" on WhatsApp
-  useEffect(() => {
-    if (!dealershipContext) return;
-    const interval = setInterval(() => {
-      fetch("/api/whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "agent_auto_reply",
-          context: dealershipContext,
-        }),
-      }).catch(() => {});
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [dealershipContext]);
 
   // Pre-populate default car in Finance Application Container when cars load
   useEffect(() => {

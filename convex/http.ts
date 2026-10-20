@@ -127,4 +127,129 @@ http.route({
   }),
 });
 
+/**
+ * Whapi.Cloud Real-Time Push Webhook Endpoint (/webhook/whapi)
+ * Zero-polling webhook: Whapi pushes incoming WhatsApp messages here immediately.
+ */
+http.route({
+  path: "/webhook/whapi",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const payload = await request.json();
+      const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+      if (messages.length === 0) {
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const newestMsg = messages[0];
+      if (!newestMsg || newestMsg.source === "api" || newestMsg.type === "action") {
+        return new Response(JSON.stringify({ ok: true, ignored: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const chatId = newestMsg.chat_id || newestMsg.from;
+      // Only auto-reply in the dedicated AutoFame AI Agent group (120363413508068515@g.us)
+      if (chatId !== "120363413508068515@g.us") {
+        return new Response(JSON.stringify({ ok: true, skippedChat: chatId }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const incomingText = (
+        newestMsg.text?.body ||
+        newestMsg.document?.caption ||
+        newestMsg.image?.caption ||
+        ""
+      ).trim();
+      const lower = incomingText.toLowerCase();
+
+      const context = await ctx.runQuery(api.agent.getDealershipContext, {});
+      const cars = Array.isArray(context?.cars) ? context.cars : [];
+      const availableCars = cars.filter((c: any) => c.status === "AVAILABLE");
+      const soldCars = cars.filter((c: any) => c.status === "SOLD");
+      const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
+
+      let replyBody = "";
+      if (lower.includes("how many available")) {
+        replyBody = `${availableCars.length}`;
+      } else if (lower.includes("how many sold")) {
+        replyBody = `${soldCars.length}`;
+      } else if (lower.includes("how many repair")) {
+        replyBody = `${repairs.length}`;
+      } else if (
+        lower.includes("how many car") ||
+        lower.includes("how many vehicle") ||
+        lower.includes("how many do we have") ||
+        lower === "cars" ||
+        lower === "how many"
+      ) {
+        replyBody = `${cars.length}`;
+      } else if (lower.includes("quote") || lower.includes("quotation")) {
+        const qCar =
+          cars.find(
+            (c: any) =>
+              lower.includes(c.make?.toLowerCase() || "") ||
+              lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
+          ) ||
+          availableCars[0] ||
+          cars[0];
+        const price = Number(qCar?.price || 0);
+        const dep = Math.round(price * 0.1);
+        const loan = price - dep;
+        const est = Math.round(price * 0.9 * 0.0218);
+        replyBody = `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n\n🚘 *Vehicle:* ${qCar.year} ${qCar.make} ${qCar.model}\n🔢 *Stock ID:* #AF-${qCar.id}\n⚙️ *Specs:* ${Number(qCar.mileage || 0).toLocaleString()} km • ${qCar.transmission || "Auto"} • ${qCar.fuelType || "Petrol"}\n\n💳 *FINANCE BREAKDOWN*\n• *Retail Price:* R${price.toLocaleString()} ZAR\n• *10% Deposit:* R${dep.toLocaleString()} ZAR\n• *Principal Loan:* R${loan.toLocaleString()} ZAR\n• *Monthly (72 mo):* *~R${est.toLocaleString()} ZAR / month*`;
+      } else {
+        const matched = cars.filter(
+          (c: any) =>
+            lower.includes(c.make?.toLowerCase() || "") ||
+            lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
+        );
+        const targetList = matched.length > 0 ? matched : cars;
+        const items = targetList.slice(0, 12).map((c: any, idx: number) => {
+          const price = Number(c.price || 0);
+          const est = Math.round(price * 0.9 * 0.0218);
+          const badge =
+            c.status === "AVAILABLE"
+              ? "🟢 *AVAILABLE*"
+              : c.status === "SOLD"
+              ? "🔴 *SOLD*"
+              : `🟡 *${c.status}*`;
+          return `*${idx + 1}. ${c.year} ${c.make} ${c.model}*\n💰 *R${price.toLocaleString()} ZAR* (~R${est.toLocaleString()}/mo)\n⚙️ ${Number(c.mileage || 0).toLocaleString()} km • ${c.transmission || "Auto"} • ${c.fuelType || "Petrol"}\n${badge}`;
+        });
+        replyBody = `🚘 *AUTOFAME SHOWROOM INVENTORY*\n📊 *Showing ${items.length} of ${targetList.length} Vehicles* (${availableCars.length} Available)\n━━━━━━━━━━━━━━━━━━━━\n\n${items.join("\n\n")}`;
+      }
+
+      await fetch("https://gate.whapi.cloud/messages/text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: "Bearer ohxDDFSuvqRvl4DKZLu7eEYUfbAEkCil",
+        },
+        body: JSON.stringify({
+          to: "120363413508068515@g.us",
+          body: replyBody,
+        }),
+      });
+
+      return new Response(JSON.stringify({ ok: true, replied: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (err: any) {
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }),
+});
+
 export default http;
