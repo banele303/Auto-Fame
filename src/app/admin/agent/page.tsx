@@ -6,8 +6,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Link from "next/link";
 import {
-  Sparkles,
+  Bot,
   Send,
   Plus,
   Trash2,
@@ -15,6 +16,7 @@ import {
   Check,
   X,
   User,
+  Users,
   FileText,
   PhoneCall,
   ExternalLink,
@@ -1801,7 +1803,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
         <div className="p-3.5 border-b border-[#262420] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Sparkles className="h-4 w-4" />
+              <Bot className="h-4 w-4" />
             </div>
             <span className="text-sm font-serif font-bold text-[#f5f2eb] tracking-tight">
               AutoFame Agent
@@ -1831,6 +1833,22 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               Configure
             </button>
           </div>
+
+          <Link
+            href="/admin/crm"
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 transition text-left"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Users className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#f5f2eb] truncate">Dealership CRM</p>
+                <p className="text-[10px] text-emerald-300 truncate">
+                  {waContacts.length || 108} Contacts &amp; Pipeline
+                </p>
+              </div>
+            </div>
+            <ExternalLink className="h-3 w-3 text-emerald-400 shrink-0" />
+          </Link>
 
           <button
             onClick={() => handleSendMessage("list all cars in inventory")}
@@ -1998,6 +2016,14 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/admin/crm"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 transition shadow-sm"
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>Dealership CRM</span>
+            </Link>
+
             <button
               onClick={() =>
                 setComposeDrawerMode(composeDrawerMode === "finance" ? null : "finance")
@@ -2038,7 +2064,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               <div className="py-10 space-y-8">
                 <div className="text-center max-w-2xl mx-auto space-y-3">
                   <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400">
-                    <Sparkles className="h-6 w-6" />
+                    <Bot className="h-6 w-6" />
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-bold text-[#f5f2eb] font-serif">
                     AutoFame Dealership Agent
@@ -2123,7 +2149,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                 >
                   {isAssistant && (
                     <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                      <Sparkles className="h-4 w-4" />
+                      <Bot className="h-4 w-4" />
                     </div>
                   )}
 
@@ -3042,7 +3068,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                         }}
                         className="px-2 py-1 rounded-md bg-[#24221e] hover:bg-[#2e2b26] border border-[#38342d] text-[10px] text-[#eae7e1]"
                       >
-                        ✨ AI Smart Reply
+                        AI Smart Reply
                       </button>
 
                       <button

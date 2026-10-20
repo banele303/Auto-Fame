@@ -410,4 +410,37 @@ export default defineSchema({
   })
   .index("by_eventType", ["eventType"])
   .index("by_createdAt", ["createdAt"]),
+
+  // ── Full-Stack Dealership & Omnichannel CRM Contacts & Deals ──
+  crmContacts: defineTable({
+    contactKey: v.string(), // Normalized phone digits or chatId
+    chatId: v.string(),
+    name: v.string(),
+    phone: v.string(),
+    email: v.optional(v.string()),
+    idNumber: v.optional(v.string()),
+    address: v.optional(v.string()),
+    employerName: v.optional(v.string()),
+    jobTitle: v.optional(v.string()),
+    monthlyIncomeGross: v.optional(v.number()),
+    monthlyExpenses: v.optional(v.number()),
+    stage: v.string(), // "NEW_LEAD" | "CONTACTED" | "QUOTE_SENT" | "FINANCE_APP" | "FICA_VERIFIED" | "BANK_SUBMITTED" | "CLOSED_WON"
+    priority: v.string(), // "HOT" | "WARM" | "NORMAL"
+    source: v.string(), // "WHATSAPP" | "EMAIL" | "WEBSITE" | "SHOWROOM"
+    assignedCarId: v.optional(v.number()),
+    assignedCarName: v.optional(v.string()),
+    dealValueZar: v.optional(v.number()),
+    depositZar: v.optional(v.number()),
+    lastMessage: v.optional(v.string()),
+    lastContactedLabel: v.optional(v.string()),
+    lastContactedAt: v.string(),
+    isRecentChat: v.optional(v.boolean()),
+    notes: v.optional(v.string()),
+    ficaDocsCount: v.optional(v.number()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+  .index("by_contactKey", ["contactKey"])
+  .index("by_stage", ["stage"])
+  .index("by_lastContactedAt", ["lastContactedAt"]),
 });

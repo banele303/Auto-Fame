@@ -13,7 +13,7 @@ import AppSidebar from "@/components/AppSidebar";
 
 
 
-import { Shield, Sparkles, Loader2, LogIn } from "lucide-react";
+import { Shield, ShieldCheck, Loader2, LogIn } from "lucide-react";
 import { checkAdminAuth, setAdminAuthState } from "./adminAuth";
 
 export default function AdminLayout({
@@ -98,10 +98,10 @@ export default function AdminLayout({
     window.location.reload();
   };
 
-  // If on the standalone AI Agent page, bypass all admin layout wrappers and loading screens
-  if (pathname?.startsWith("/admin/agent")) {
+  // If on the standalone AI Agent or Full CRM page, bypass all admin layout wrappers and loading screens
+  if (pathname?.startsWith("/admin/agent") || pathname?.startsWith("/admin/crm")) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-[#1f1e1b] text-[#eae7e1] selection:bg-emerald-500 selection:text-white">
+      <div className="h-screen w-screen overflow-hidden bg-[#141311] text-[#eae7e1] selection:bg-emerald-500 selection:text-white">
         {children}
       </div>
     );
@@ -139,7 +139,7 @@ export default function AdminLayout({
             onClick={handleQuickLocalLogin}
             className="px-5 py-2.5 rounded-lg bg-[#1f1d19] hover:bg-[#2c2923] border border-[#3d3931] text-emerald-400 font-medium text-xs tracking-wide uppercase transition-colors flex items-center gap-2"
           >
-            <Sparkles className="w-4 h-4" /> Quick Local Admin Access
+            <ShieldCheck className="w-4 h-4" /> Quick Local Admin Access
           </button>
         </div>
         {redirecting && (
@@ -186,11 +186,12 @@ const AdminDashboardContent = ({ children }: { children: React.ReactNode }) => {
   }, [open, setOpen]);
   
   const pathname = usePathname();
-  const isAgentPage = pathname?.startsWith("/admin/agent");
+  const isAgentPage =
+    pathname?.startsWith("/admin/agent") || pathname?.startsWith("/admin/crm");
 
   if (isAgentPage) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-[#1f1e1b] text-[#eae7e1] selection:bg-emerald-500 selection:text-white">
+      <div className="h-screen w-screen overflow-hidden bg-[#141311] text-[#eae7e1] selection:bg-emerald-500 selection:text-white">
         {children}
       </div>
     );

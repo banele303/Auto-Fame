@@ -26,9 +26,10 @@ import {
   DollarSign,
   Building,
   Activity,
-  Sparkles,
+  Share2,
   ImageIcon,
   Bot,
+  Briefcase,
 } from "lucide-react";
 import { NAVBAR_HEIGHT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -74,10 +75,11 @@ const AppSidebar = ({ userType }: AppSidebarProps) => {
   const adminLinks = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
     { icon: Bot, label: "AI Copilot Agent", href: "/admin/agent" },
+    { icon: Briefcase, label: "Dealership CRM", href: "/admin/crm" },
     { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
     { icon: Activity, label: "Web Traffic", href: "/admin/analytics/traffic" },
     { icon: Car, label: "Cars", href: "/admin/cars" },
-    { icon: Sparkles, label: "Omnichannel Studio", href: "/admin/cars/quick-publish" },
+    { icon: Share2, label: "Omnichannel Studio", href: "/admin/cars/quick-publish" },
     { icon: Users, label: "Employees", href: "/admin/employees" },
     { icon: UserCheck, label: "Customers", href: "/admin/customers" },
     { icon: MessageSquare, label: "Inquiries", href: "/admin/inquiries" },

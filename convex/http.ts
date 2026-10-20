@@ -153,21 +153,47 @@ http.route({
         });
       }
 
-      const chatId = newestMsg.chat_id || newestMsg.from;
+      const chatId = newestMsg.chat_id || newestMsg.from || "";
+      const incomingText = (
+        newestMsg.text?.body ||
+        newestMsg.document?.caption ||
+        newestMsg.image?.caption ||
+        (newestMsg.document ? `[Document: ${newestMsg.document.filename || "File"}]` : "") ||
+        ""
+      ).trim();
+
+      // Automatically sync every WhatsApp contact & latest message into Convex CRM
+      if (chatId && !chatId.includes("@newsletter")) {
+        const cleanDigits = String(chatId).replace(/@.*$/, "");
+        const displayPhone = cleanDigits.startsWith("27")
+          ? `+27 ${cleanDigits.slice(2, 4)} ${cleanDigits.slice(4, 7)} ${cleanDigits.slice(7)}`
+          : `+${cleanDigits}`;
+        const senderName =
+          newestMsg.from_name && !newestMsg.from_me
+            ? newestMsg.from_name
+            : `Contact ${displayPhone}`;
+        try {
+          await ctx.runMutation((api as any).crm.upsertCrmContact, {
+            contactKey: cleanDigits,
+            chatId: String(chatId),
+            name: senderName,
+            phone: displayPhone,
+            lastMessage: incomingText || "WhatsApp Message",
+            lastContactedLabel: "Just Now • Live",
+            lastContactedAt: new Date().toISOString(),
+            isRecentChat: true,
+          });
+        } catch {}
+      }
+
       // Only auto-reply in the dedicated AutoFame AI Agent group (120363413508068515@g.us)
       if (chatId !== "120363413508068515@g.us") {
-        return new Response(JSON.stringify({ ok: true, skippedChat: chatId }), {
+        return new Response(JSON.stringify({ ok: true, syncedToCrm: true, chatId }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      const incomingText = (
-        newestMsg.text?.body ||
-        newestMsg.document?.caption ||
-        newestMsg.image?.caption ||
-        ""
-      ).trim();
       const lower = incomingText.toLowerCase();
 
       const context = await ctx.runQuery(api.agent.getDealershipContext, {});

@@ -12,6 +12,7 @@ import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
 import type * as blogs from "../blogs.js";
 import type * as cars from "../cars.js";
+import type * as crm from "../crm.js";
 import type * as dealerships from "../dealerships.js";
 import type * as files from "../files.js";
 import type * as financing from "../financing.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   blogs: typeof blogs;
   cars: typeof cars;
+  crm: typeof crm;
   dealerships: typeof dealerships;
   files: typeof files;
   financing: typeof financing;
