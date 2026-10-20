@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
  * 1. Sending WhatsApp text messages via https://gate.whapi.cloud/messages/text
  * 2. Sending PDF & document attachments (e.g. Finance Application Forms, Pre-approval PDFs, Spec sheets) via https://gate.whapi.cloud/messages/document
  * 3. Intake of customer financial details & FICA attachments to forward to dealership email / CRM
- * 4. Gemini AI processing for parsing incoming WhatsApp financial packets
+ * 4. AutoFame AI Copilot processing for parsing incoming WhatsApp financial packets
  */
 export async function POST(req: NextRequest) {
   try {

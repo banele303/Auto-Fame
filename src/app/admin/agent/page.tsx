@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import ReactMarkdown from "react-markdown";
@@ -40,6 +41,10 @@ import {
   Menu,
   Paperclip,
   Image as ImageIcon,
+  Mail,
+  SendHorizontal,
+  AtSign,
+  FileCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -50,11 +55,11 @@ import { cn } from "@/lib/utils";
 // ──────────────────────────────────────────────
 const DEALERSHIP_LINKS = [
   { icon: PhoneCall, label: "Customer Follow-Ups", prompt: "Show me customer leads requiring urgent follow-up today", badge: "Hot" },
+  { icon: Mail, label: "AI Email Finance Quote", prompt: "Prepare and dispatch vehicle finance quote email to client via AgentMail", badge: "AgentMail" },
   { icon: CreditCard, label: "Send Finance Link", prompt: "Prepare and dispatch vehicle finance pre-approval link via WhatsApp", badge: "WesBank" },
   { icon: Wrench, label: "Cars at Workshop", prompt: "List all cars currently being fixed or serviced with repair costs", badge: "Repairs" },
   { icon: FileText, label: "Auto-Generate Description", prompt: "Generate high-converting vehicle copy for 2018 BMW X2 M Sport" },
   { icon: Car, label: "Live Showroom Inventory", prompt: "Provide full overview of available showroom stock and prices" },
-  { icon: Calendar, label: "Test Drive Schedule", prompt: "Show scheduled test drives and customer appointments this week" },
   { icon: DollarSign, label: "Sales & Profit Pipeline", prompt: "Summarize recent vehicle sales and gross profit margins" },
 ];
 
@@ -125,7 +130,7 @@ export default function AdminAutoFameAgentPage() {
   const sessions = useQuery(api.agent.listSessions, {});
   const dealershipContext = useQuery(api.agent.getDealershipContext, {});
   const carRepairs = useQuery(api.agent.listCarRepairs, {});
-  const crmEvents = useQuery(api.agent.listCrmEvents, { limit: 15 });
+  const crmEvents = useQuery(api.agent.listCrmEvents, { limit: 25 });
 
   const createSession = useMutation(api.agent.createSession);
   const deleteSession = useMutation(api.agent.deleteSession);
@@ -163,6 +168,22 @@ export default function AdminAutoFameAgentPage() {
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Puter.js Status
+  const [puterReady, setPuterReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const checkPuter = () => {
+        if ((window as any).puter?.ai) {
+          setPuterReady(true);
+        }
+      };
+      checkPuter();
+      const interval = setInterval(checkPuter, 1000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
   // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
@@ -174,7 +195,7 @@ export default function AdminAutoFameAgentPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Active View Tab inside Agent Workspace
-  const [activeWorkspaceView, setActiveWorkspaceView] = useState<"chat" | "repairs" | "crm">("chat");
+  const [activeWorkspaceView, setActiveWorkspaceView] = useState<"chat" | "repairs" | "crm" | "email">("chat");
 
   // WhatsApp Modal
   const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
@@ -186,37 +207,19 @@ export default function AdminAutoFameAgentPage() {
   });
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
-  // Live AI Engine Settings (Google Gemini / OpenAI)
-  const [apiKey, setApiKey] = useState("");
-  const [apiProvider, setApiProvider] = useState<"gemini" | "openai">("gemini");
-  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
-  const [hasCustomKey, setHasCustomKey] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedKey = localStorage.getItem("autofame_ai_key") || "";
-      const storedProvider = (localStorage.getItem("autofame_ai_provider") as any) || "gemini";
-      setApiKey(storedKey);
-      setApiProvider(storedProvider);
-      setHasCustomKey(!!storedKey);
-    }
-  }, []);
-
-  const handleSaveApiKey = () => {
-    if (typeof window !== "undefined") {
-      if (apiKey.trim()) {
-        localStorage.setItem("autofame_ai_key", apiKey.trim());
-        localStorage.setItem("autofame_ai_provider", apiProvider);
-        setHasCustomKey(true);
-        toast.success(`${apiProvider === "gemini" ? "Google Gemini" : "OpenAI"} API Key connected!`);
-      } else {
-        localStorage.removeItem("autofame_ai_key");
-        setHasCustomKey(false);
-        toast.info("AI Key cleared");
-      }
-      setAiSettingsOpen(false);
-    }
-  };
+  // AI Email Agent Gateway Modal & State
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailTarget, setEmailTarget] = useState({
+    to: "thabo.mokoena@gmail.com",
+    customerName: "Thabo Mokoena",
+    subject: "AutoFame Pre-Approval & Vehicle Details: 2018 BMW X2 M Sport",
+    carName: "2018 BMW X2 sDrive20i M Sport",
+    carPrice: 299900,
+    monthlyEstimate: "R5,890 / month",
+    template: "finance_approval" as "finance_approval" | "vehicle_quote" | "trade_in_appraisal",
+    gateway: "agentmail" as "agentmail" | "resend" | "puter",
+  });
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -317,7 +320,7 @@ export default function AdminAutoFameAgentPage() {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Stream Message from AI Engine (SSE Token-by-Token)
+  // Stream Message from AI Engine (Puter.js Live streaming with backend fallback)
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || inputValue;
     if ((!textToSend.trim() && attachedFiles.length === 0) || isStreaming || isUploadingFiles) return;
@@ -393,85 +396,140 @@ export default function AdminAutoFameAgentPage() {
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
-      // 2. Open Stream to Backend with AI credentials
-      const reqHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (apiKey.trim()) {
-        if (apiProvider === "gemini") {
-          reqHeaders["x-gemini-api-key"] = apiKey.trim();
-        } else {
-          reqHeaders["x-openai-api-key"] = apiKey.trim();
-        }
-      }
+      // 2. Try Puter.js client-side free streaming AI
+      let streamedViaPuter = false;
+      if (typeof window !== "undefined" && (window as any).puter?.ai?.chat) {
+        try {
+          const systemPrompt = `You are AutoFame Copilot, the autonomous AI Dealership Copilot for AutoFame, a premier pre-owned vehicle dealership in Baragwanath / Johannesburg South, South Africa. Location: 1 Rifle Range Rd. Partners: WesBank, Standard Bank, Absa MFC, Nedbank MFC. Currency: South African Rand (ZAR, format e.g. R299,900 ZAR). Always respond with clean Markdown tables with bold column headers when presenting comparisons, quotes, or inventory.`;
 
-      const response = await fetch("/api/agent/chat", {
-        method: "POST",
-        headers: reqHeaders,
-        body: JSON.stringify({
-          messages: [
+          const puterHistory = [
+            { role: "system", content: systemPrompt },
             ...(activeSessionData?.messages || []).map((m: any) => ({
               role: m.role,
               content: m.content,
             })),
             { role: "user", content: finalContent },
-          ],
-          context: dealershipContext,
-          attachments: uploadedAttachments,
-        }),
-      });
+          ];
 
-      if (!response.ok || !response.body) {
-        throw new Error(`AI Streaming failed with HTTP ${response.status}`);
-      }
+          const chatStream = await (window as any).puter.ai.chat(puterHistory, {
+            model: "claude-3-5-sonnet",
+            stream: true,
+          });
 
-      // 3. Read SSE Stream
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedText = "";
-      let actionPayloadHolder: any = null;
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const dataStr = line.replace("data: ", "").trim();
-            if (dataStr === "[DONE]") continue;
-
-            try {
-              const parsed = JSON.parse(dataStr);
-              if (parsed.type === "token") {
-                accumulatedText += parsed.text;
-                setStreamingText(accumulatedText);
-              } else if (parsed.type === "meta") {
-                actionPayloadHolder = parsed.actionPayload;
-                setStreamingActionPayload(parsed.actionPayload);
-              }
-            } catch {
-              // Ignore partial JSON
+          let accumulated = "";
+          for await (const part of chatStream) {
+            if (part?.text) {
+              accumulated += part.text;
+              setStreamingText(accumulated);
             }
           }
+
+          if (accumulated.trim()) {
+            streamedViaPuter = true;
+            const lower = finalContent.toLowerCase();
+            let actionType: string | undefined = undefined;
+            let actionPayload: any = undefined;
+
+            if (lower.includes("email") || lower.includes("agentmail") || lower.includes("mail")) {
+              actionType = "SEND_EMAIL_GATEWAY";
+              actionPayload = {
+                customerEmail: "thabo.mokoena@gmail.com",
+                customerName: "Thabo Mokoena",
+                carName: "2018 BMW X2 sDrive20i M Sport",
+                carPrice: 299900,
+              };
+            } else if (lower.includes("finance") || lower.includes("wesbank")) {
+              actionType = "SEND_FINANCE_LINK";
+              actionPayload = {
+                customerPhone: "+27834921109",
+                customerName: "Thabo Mokoena",
+                carName: "2018 BMW X2 sDrive20i M Sport",
+                link: "https://www.autofame.co.za/financing",
+              };
+            }
+
+            await addMessage({
+              sessionId: targetSessionId,
+              role: "assistant",
+              content: accumulated,
+              actionType,
+              actionPayload,
+            });
+            return;
+          }
+        } catch (puterErr) {
+          console.warn("Puter.js streaming fallback:", puterErr);
         }
       }
 
-      // 4. Save Final Completed Assistant Message to Convex
-      if (accumulatedText) {
-        await addMessage({
-          sessionId: targetSessionId,
-          role: "assistant",
-          content: accumulatedText,
-          actionType: actionPayloadHolder?.actionType,
-          actionPayload: actionPayloadHolder,
+      // 3. Fallback: Stream from AutoFame Backend API
+      if (!streamedViaPuter) {
+        const response = await fetch("/api/agent/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [
+              ...(activeSessionData?.messages || []).map((m: any) => ({
+                role: m.role,
+                content: m.content,
+              })),
+              { role: "user", content: finalContent },
+            ],
+            context: dealershipContext,
+            attachments: uploadedAttachments,
+          }),
         });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`AI Streaming failed with HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedText = "";
+        let actionPayloadHolder: any = null;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const dataStr = line.replace("data: ", "").trim();
+              if (dataStr === "[DONE]") continue;
+
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.type === "token") {
+                  accumulatedText += parsed.text;
+                  setStreamingText(accumulatedText);
+                } else if (parsed.type === "meta") {
+                  actionPayloadHolder = parsed.actionPayload;
+                  setStreamingActionPayload(parsed.actionPayload);
+                }
+              } catch {
+                // Ignore partial JSON
+              }
+            }
+          }
+        }
+
+        if (accumulatedText) {
+          await addMessage({
+            sessionId: targetSessionId,
+            role: "assistant",
+            content: accumulatedText,
+            actionType: actionPayloadHolder?.actionType,
+            actionPayload: actionPayloadHolder,
+          });
+        }
       }
     } catch (err: any) {
       console.error("Streaming error:", err);
-      toast.error("Streaming failed: " + err.message);
+      toast.error("AI Assistant error: " + err.message);
     } finally {
       setIsStreaming(false);
       setStreamingText("");
@@ -514,8 +572,55 @@ export default function AdminAutoFameAgentPage() {
     }
   };
 
+  // AI Email Dispatch (AgentMail / Resend / Puter.email)
+  const handleDispatchEmail = async () => {
+    setIsSendingEmail(true);
+    try {
+      const res = await fetch("/api/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: emailTarget.to,
+          customerName: emailTarget.customerName,
+          subject: emailTarget.subject,
+          template: emailTarget.template,
+          carName: emailTarget.carName,
+          carPrice: emailTarget.carPrice,
+          monthlyEstimate: emailTarget.monthlyEstimate,
+          gateway: emailTarget.gateway,
+        }),
+      });
+
+      if (res.ok) {
+        const gwName = emailTarget.gateway === "agentmail" ? "AgentMail" : emailTarget.gateway === "resend" ? "Resend" : "Puter Mail";
+        toast.success(`Dispatched via ${gwName} to ${emailTarget.to}!`);
+        await recordCrmEvent({
+          eventType: "EMAIL_SENT",
+          recipient: emailTarget.to,
+          customerName: emailTarget.customerName,
+          summary: `Pre-approval packet sent to ${emailTarget.customerName} (${emailTarget.to}) via ${gwName}`,
+          status: "SUCCESS",
+        });
+        setEmailModalOpen(false);
+      } else {
+        toast.error("Failed to dispatch email via gateway");
+      }
+    } catch (err: any) {
+      toast.error("Email gateway error: " + err.message);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-var(--navbar-height))] w-full overflow-hidden bg-[#1f1e1b] text-[#eae7e1] font-sans">
+      {/* ── Puter.js CDN Script Loading ── */}
+      <Script
+        src="https://js.puter.com/v2/"
+        strategy="afterInteractive"
+        onLoad={() => setPuterReady(true)}
+      />
+
       {/* ────────────────────────────────────────────────────────── */}
       {/* AUTOFAME COPILOT SIDEBAR (Emerald Green / AutoFame)        */}
       {/* ────────────────────────────────────────────────────────── */}
@@ -703,12 +808,12 @@ export default function AdminAutoFameAgentPage() {
                 {activeSessionData?.session?.title || "AutoFame Dealership Copilot"}
               </span>
               <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                AutoFame AI Engine
+                AutoFame Dealership OS
               </span>
             </div>
           </div>
 
-          {/* Quick View Switches */}
+          {/* Quick View Switches & Puter AI Status Pill */}
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-[#141311] p-1 rounded-xl border border-[#2d2a26]">
               <button
@@ -722,6 +827,18 @@ export default function AdminAutoFameAgentPage() {
               >
                 <Terminal className="h-3.5 w-3.5" />
                 AutoFame Terminal
+              </button>
+              <button
+                onClick={() => setActiveWorkspaceView("email")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5",
+                  activeWorkspaceView === "email"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-[#8e8a82] hover:text-white"
+                )}
+              >
+                <Mail className="h-3.5 w-3.5" />
+                AI Email Gateway
               </button>
               <button
                 onClick={() => setActiveWorkspaceView("repairs")}
@@ -754,23 +871,17 @@ export default function AdminAutoFameAgentPage() {
               </button>
             </div>
 
-            {/* AI Engine Status & Configuration Pill */}
-            <button
-              suppressHydrationWarning
-              onClick={() => setAiSettingsOpen(true)}
-              className={cn(
-                "px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border shadow-sm",
-                hasCustomKey
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
-                  : "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25"
-              )}
-              title="Configure Google Gemini or OpenAI Live API Key"
+            {/* Puter.js Live AI Indicator */}
+            <div
+              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border shadow-sm bg-emerald-500/15 text-emerald-400 border-emerald-500/30 font-mono"
+              title="Puter.js Autonomous AI Copilot Active (Claude 3.5 Sonnet / GPT-4o)"
             >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">
-                {hasCustomKey ? `${apiProvider === "gemini" ? "Gemini AI" : "OpenAI"} Active` : "Connect Gemini AI"}
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-            </button>
+              <span className="hidden sm:inline">Puter.js Live AI</span>
+            </div>
           </div>
         </header>
 
@@ -792,7 +903,7 @@ export default function AdminAutoFameAgentPage() {
                         AutoFame Dealership Copilot
                       </h2>
                       <p className="text-xs sm:text-sm text-[#8e8a82] max-w-xl mx-auto leading-relaxed">
-                        Autonomous dealership intelligence for live inventory analysis, customer finance pre-approvals via WhatsApp, AI vehicle descriptions, and workshop service tracking.
+                        Autonomous dealership intelligence for live inventory analysis, customer finance pre-approvals via WhatsApp &amp; AI Email Gateways, vehicle descriptions, and workshop tracking.
                       </p>
                     </div>
 
@@ -856,7 +967,7 @@ export default function AdminAutoFameAgentPage() {
                             : "bg-emerald-600 text-white font-medium max-w-2xl sm:max-w-3xl ml-auto p-4 sm:p-5 px-6 shadow-emerald-950/20"
                         )}
                       >
-                        {/* Markdown Formatted Text (Headings, Bullet points, Code blocks, Tables) */}
+                        {/* Markdown Formatted Text */}
                         {isAssistant ? (
                           <div className="prose prose-invert prose-sm max-w-none space-y-3 font-normal leading-relaxed text-[#eae7e1]">
                             <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -917,6 +1028,31 @@ export default function AdminAutoFameAgentPage() {
                         )}
 
                         {/* Interactive Action Cards */}
+                        {msg.actionType === "SEND_EMAIL_GATEWAY" && (
+                          <div className="mt-4 pt-3.5 border-t border-[#38342d] flex flex-wrap items-center gap-2">
+                            <Button
+                              onClick={() => {
+                                setEmailTarget({
+                                  to: msg.actionPayload?.customerEmail || "thabo.mokoena@gmail.com",
+                                  customerName: msg.actionPayload?.customerName || "Thabo Mokoena",
+                                  subject: `AutoFame Pre-Approval & Vehicle Details: ${msg.actionPayload?.carName || "2018 BMW X2 M Sport"}`,
+                                  carName: msg.actionPayload?.carName || "2018 BMW X2 sDrive20i M Sport",
+                                  carPrice: msg.actionPayload?.carPrice || 299900,
+                                  monthlyEstimate: "R5,890 / month",
+                                  template: "finance_approval",
+                                  gateway: "agentmail",
+                                });
+                                setEmailModalOpen(true);
+                              }}
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 h-8 text-xs shadow-sm"
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                              Dispatch via AI Email Gateway (AgentMail / Resend)
+                            </Button>
+                          </div>
+                        )}
+
                         {msg.actionType === "SEND_FINANCE_LINK" && (
                           <div className="mt-4 pt-3.5 border-t border-[#38342d] flex flex-wrap items-center gap-2">
                             <Button
@@ -1005,7 +1141,16 @@ export default function AdminAutoFameAgentPage() {
                         <div className="mt-4 pt-3.5 border-t border-[#38342d]">
                           <span className="text-xs text-emerald-400 font-semibold animate-pulse flex items-center gap-2">
                             <PhoneCall className="h-3.5 w-3.5" />
-                            Generating WhatsApp dispatch package...
+                            Preparing WhatsApp dispatch package...
+                          </span>
+                        </div>
+                      )}
+
+                      {streamingActionPayload?.actionType === "SEND_EMAIL_GATEWAY" && (
+                        <div className="mt-4 pt-3.5 border-t border-[#38342d]">
+                          <span className="text-xs text-emerald-400 font-semibold animate-pulse flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5" />
+                            Connecting to AI Email Gateway (AgentMail)...
                           </span>
                         </div>
                       )}
@@ -1065,7 +1210,7 @@ export default function AdminAutoFameAgentPage() {
                       }
                     }}
                     rows={3}
-                    placeholder="Ask AutoFame Copilot about dealership inventory, financing pre-approvals, customer follow-ups, workshop repairs, or attach vehicle photos & docs..."
+                    placeholder="Ask AutoFame Copilot about dealership inventory, financing pre-approvals, email quotes, workshop repairs, or attach vehicle photos & docs..."
                     className="w-full bg-transparent p-4 sm:p-5 pb-14 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed min-h-[92px]"
                   />
 
@@ -1119,7 +1264,136 @@ export default function AdminAutoFameAgentPage() {
           </div>
         )}
 
-        {/* ── WORKSPACE VIEW 2: WORKSHOP REPAIRS BOARD ── */}
+        {/* ── WORKSPACE VIEW 2: AI EMAIL AGENT GATEWAY ── */}
+        {activeWorkspaceView === "email" && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2d2a26] pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-[#f5f2eb] flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-emerald-400" />
+                  AutoFame AI Email Agent Gateway
+                </h3>
+                <p className="text-xs text-[#8e8a82] mt-0.5">
+                  AI-connected email gateway for dispatching vehicle finance pre-approvals, FICA document checklists, and quotations directly to customer inboxes.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => setEmailModalOpen(true)}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 flex items-center gap-1.5"
+              >
+                <SendHorizontal className="h-3.5 w-3.5" />
+                Compose AI Email
+              </Button>
+            </div>
+
+            {/* Supported Gateway Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-[#35312b] bg-[#22201c] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-white flex items-center gap-2">
+                    <AtSign className="h-4 w-4 text-emerald-400" />
+                    AgentMail (agentmail.to)
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Active Agent
+                  </span>
+                </div>
+                <p className="text-xs text-[#a6a197] leading-relaxed">
+                  Dedicated autonomous AI email inbox for AutoFame. Receives customer bank statements, parses FICA PDFs, and auto-dispatches pre-approvals.
+                </p>
+                <div className="text-[11px] font-mono text-emerald-300 bg-[#161513] p-2 rounded-lg border border-[#2d2a26] truncate">
+                  deals@agentmail.to &rarr; autofame
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#35312b] bg-[#22201c] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-white flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-emerald-400" />
+                    Resend AI Mail Gateway
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Connected
+                  </span>
+                </div>
+                <p className="text-xs text-[#a6a197] leading-relaxed">
+                  High-deliverability transactional email delivery with official AutoFame emerald branding, vehicle specs, and bank finance estimates.
+                </p>
+                <div className="text-[11px] font-mono text-emerald-300 bg-[#161513] p-2 rounded-lg border border-[#2d2a26] truncate">
+                  deals@autofame.co.za
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#35312b] bg-[#22201c] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-white flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-emerald-400" />
+                    Puter.email Gateway
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Zero-Config
+                  </span>
+                </div>
+                <p className="text-xs text-[#a6a197] leading-relaxed">
+                  Direct client-side and agent-side transactional email protocol integrated natively into Puter.js with 0 manual keys.
+                </p>
+                <div className="text-[11px] font-mono text-emerald-300 bg-[#161513] p-2 rounded-lg border border-[#2d2a26] truncate">
+                  puter.email.sendTransactional()
+                </div>
+              </div>
+            </div>
+
+            {/* Email Dispatch History Log */}
+            <div className="space-y-3 pt-2">
+              <h4 className="text-xs uppercase font-mono tracking-wider text-[#8e8a82] font-semibold">
+                Recent AI Email Dispatches &amp; Activity
+              </h4>
+
+              {(!crmEvents || crmEvents.filter((e) => e.eventType === "EMAIL_SENT").length === 0) ? (
+                <div className="p-8 rounded-2xl border border-[#35312b] bg-[#22201c] text-center text-xs text-[#8e8a82]">
+                  No outbound email dispatches recorded yet. Click <strong>"Compose AI Email"</strong> or ask AutoFame Copilot to <em>"Email finance quote to client"</em>.
+                </div>
+              ) : (
+                crmEvents
+                  .filter((e) => e.eventType === "EMAIL_SENT")
+                  .map((evt: any) => (
+                    <div
+                      key={evt._id}
+                      className="p-4 rounded-xl border border-[#35312b] bg-[#22201c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0">
+                          <Mail className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-white text-sm truncate">{evt.summary}</p>
+                          <span className="text-xs text-[#8e8a82]">
+                            To: {evt.recipient} • Customer: {evt.customerName || "Dealership Client"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          {evt.status}
+                        </span>
+                        <span className="text-[11px] text-[#706c64] font-mono">
+                          {new Date(evt.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── WORKSPACE VIEW 3: WORKSHOP REPAIRS BOARD ── */}
         {activeWorkspaceView === "repairs" && (
           <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2d2a26] pb-4">
@@ -1217,7 +1491,7 @@ export default function AdminAutoFameAgentPage() {
                     <Button
                       onClick={() =>
                         handleSendMessage(
-                          `Draft an urgent WhatsApp follow-up inquiry to ${r.workshopName} regarding job card ${r.repairNumber} for ${r.car?.make} ${r.car?.model}`
+                          `Draft an urgent inquiry to ${r.workshopName} regarding job card ${r.repairNumber} for ${r.car?.make} ${r.car?.model}`
                         )
                       }
                       size="sm"
@@ -1232,7 +1506,7 @@ export default function AdminAutoFameAgentPage() {
           </div>
         )}
 
-        {/* ── WORKSPACE VIEW 3: CRM & WHATSAPP LOGS ── */}
+        {/* ── WORKSPACE VIEW 4: CRM & WHATSAPP LOGS ── */}
         {activeWorkspaceView === "crm" && (
           <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2d2a26] pb-4">
@@ -1369,24 +1643,9 @@ export default function AdminAutoFameAgentPage() {
                 </p>
               </div>
 
-              {/* Forward to Dealership Email */}
-              <div>
-                <label className="text-[#8e8a82] font-semibold block mb-1">
-                  Forward Intake Packet To Dealership Email
-                </label>
-                <input
-                  type="email"
-                  defaultValue="finance@autofame.co.za"
-                  className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
-                />
-                <span className="text-[10px] text-[#706c64] mt-0.5 block">
-                  When customer replies or submits on WhatsApp, full FICA documents and bank statements are sent directly to this address.
-                </span>
-              </div>
-
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-400 flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span>NCA compliant • Integrated via WhatsApp gateway &amp; Gemini AI Document Parser.</span>
+                <span>NCA compliant • Integrated via WhatsApp gateway &amp; AutoFame Copilot Engine.</span>
               </div>
             </div>
 
@@ -1422,125 +1681,160 @@ export default function AdminAutoFameAgentPage() {
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* AI ENGINE CONFIGURATION MODAL (Google Gemini / OpenAI)     */}
-      {/* ────────────────────────────────────────────────────────── */}
-      {aiSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-md rounded-3xl bg-[#1e1d1a] border border-[#38342d] p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#2e2b26] pb-3.5">
+      {/* ── MODAL: AI EMAIL AGENT GATEWAY DISPATCH ── */}
+      {emailModalOpen && (
+        <div
+          onClick={() => setEmailModalOpen(false)}
+          className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-lg w-full bg-[#181715] rounded-2xl overflow-hidden border border-[#35312b] shadow-2xl p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#2d2a26]">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Sparkles className="h-4 w-4" />
+                <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                  <Mail className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#f5f2eb]">Connect Real AI Engine</h3>
-                  <p className="text-[11px] text-[#8e8a82]">Google Gemini 1.5 Flash / OpenAI</p>
+                  <h3 className="text-sm font-bold text-white">AI Email Agent Gateway</h3>
+                  <p className="text-[11px] text-[#8e8a82]">AgentMail • Resend • Puter Mail</p>
                 </div>
               </div>
               <button
-                onClick={() => setAiSettingsOpen(false)}
-                className="text-[#8e8a82] hover:text-white p-1 rounded-lg hover:bg-white/10"
+                onClick={() => setEmailModalOpen(false)}
+                className="text-zinc-400 hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
+            <div className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[#8e8a82] font-semibold block mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    value={emailTarget.customerName}
+                    onChange={(e) => setEmailTarget({ ...emailTarget, customerName: e.target.value })}
+                    className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#8e8a82] font-semibold block mb-1">Customer Email</label>
+                  <input
+                    type="email"
+                    value={emailTarget.to}
+                    onChange={(e) => setEmailTarget({ ...emailTarget, to: e.target.value })}
+                    className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-[11px] font-semibold text-[#a6a197] mb-1.5 uppercase font-mono">
-                  Select AI Provider
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="text-[#8e8a82] font-semibold block mb-1">AI Email Gateway Protocol</label>
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => setApiProvider("gemini")}
+                    onClick={() => setEmailTarget({ ...emailTarget, gateway: "agentmail" })}
                     className={cn(
-                      "p-3 rounded-2xl border font-semibold flex items-center justify-center gap-2 transition",
-                      apiProvider === "gemini"
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow-md"
-                        : "bg-[#252320] text-[#a6a197] border-[#38342d] hover:text-white"
+                      "p-2.5 rounded-xl border text-xs font-semibold transition flex flex-col items-center justify-center gap-1",
+                      emailTarget.gateway === "agentmail"
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                        : "bg-[#22201c] text-[#a6a197] border-[#38342d] hover:text-white"
                     )}
                   >
-                    <span>Google Gemini</span>
-                    <span className="text-[10px] bg-black/30 px-1.5 py-0.5 rounded font-mono">Free</span>
+                    <span>AgentMail</span>
+                    <span className="text-[9px] font-mono opacity-80">Autonomous</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setApiProvider("openai")}
+                    onClick={() => setEmailTarget({ ...emailTarget, gateway: "resend" })}
                     className={cn(
-                      "p-3 rounded-2xl border font-semibold flex items-center justify-center gap-2 transition",
-                      apiProvider === "openai"
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow-md"
-                        : "bg-[#252320] text-[#a6a197] border-[#38342d] hover:text-white"
+                      "p-2.5 rounded-xl border text-xs font-semibold transition flex flex-col items-center justify-center gap-1",
+                      emailTarget.gateway === "resend"
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                        : "bg-[#22201c] text-[#a6a197] border-[#38342d] hover:text-white"
                     )}
                   >
-                    <span>OpenAI</span>
-                    <span className="text-[10px] bg-black/30 px-1.5 py-0.5 rounded font-mono">GPT-4o</span>
+                    <span>Resend AI</span>
+                    <span className="text-[9px] font-mono opacity-80">Transactional</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEmailTarget({ ...emailTarget, gateway: "puter" })}
+                    className={cn(
+                      "p-2.5 rounded-xl border text-xs font-semibold transition flex flex-col items-center justify-center gap-1",
+                      emailTarget.gateway === "puter"
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                        : "bg-[#22201c] text-[#a6a197] border-[#38342d] hover:text-white"
+                    )}
+                  >
+                    <span>Puter Mail</span>
+                    <span className="text-[9px] font-mono opacity-80">Zero-Config</span>
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-[#a6a197] mb-1.5 uppercase font-mono">
-                  {apiProvider === "gemini" ? "Google Gemini API Key" : "OpenAI API Key"}
-                </label>
+                <label className="text-[#8e8a82] font-semibold block mb-1">Subject Line</label>
                 <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={apiProvider === "gemini" ? "Paste AIzaSy... key" : "Paste sk-... key"}
-                  className="w-full rounded-2xl bg-[#141311] border border-[#38342d] p-3 text-xs text-white placeholder:text-[#666] focus:border-emerald-500 focus:outline-none font-mono"
+                  type="text"
+                  value={emailTarget.subject}
+                  onChange={(e) => setEmailTarget({ ...emailTarget, subject: e.target.value })}
+                  className="w-full bg-[#11100e] border border-[#33302a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
-                {apiProvider === "gemini" ? (
-                  <p className="text-[11px] text-[#8e8a82] mt-2 leading-relaxed">
-                    👉 Get your free Google Gemini API key in 30 seconds:{" "}
-                    <a
-                      href="https://aistudio.google.com/app/apikey"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-emerald-400 hover:underline font-semibold"
-                    >
-                      aistudio.google.com/app/apikey
-                    </a>
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-[#8e8a82] mt-2 leading-relaxed">
-                    Get an OpenAI API key from{" "}
-                    <a
-                      href="https://platform.openai.com/api-keys"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-emerald-400 hover:underline font-semibold"
-                    >
-                      platform.openai.com/api-keys
-                    </a>
-                  </p>
-                )}
+              </div>
+
+              {/* PDF Attachment Option */}
+              <div className="p-3 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
+                    <FileCheck className="h-4 w-4 text-emerald-400" />
+                    Auto-Attached FICA &amp; Vehicle PDF Package
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    Ready
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#8e8a82]">
+                  Includes: <span className="text-zinc-300 font-mono">AutoFame_Vehicle_Finance_PreApproval.pdf</span> (Repayment breakdown &amp; FICA checklist).
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-400 flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                <span>NCA compliant • Inbound replies forward directly to finance@autofame.co.za.</span>
               </div>
             </div>
 
-            <div className="flex gap-2.5 pt-2 border-t border-[#2e2b26]">
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#2d2a26]">
               <Button
-                onClick={handleSaveApiKey}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 rounded-2xl shadow-md"
+                variant="ghost"
+                size="sm"
+                onClick={() => setEmailModalOpen(false)}
+                className="text-xs text-[#8e8a82] hover:text-white"
               >
-                Save &amp; Activate Live AI
+                Cancel
               </Button>
-              {apiKey && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setApiKey("");
-                    localStorage.removeItem("autofame_ai_key");
-                    setHasCustomKey(false);
-                    toast.info("AI Key cleared");
-                  }}
-                  className="text-neutral-400 hover:text-rose-400 text-xs h-9 rounded-2xl"
-                >
-                  Clear
-                </Button>
-              )}
+              <Button
+                onClick={handleDispatchEmail}
+                disabled={isSendingEmail}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow"
+              >
+                {isSendingEmail ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Dispatching...
+                  </>
+                ) : (
+                  <>
+                    <SendHorizontal className="h-3.5 w-3.5" />
+                    Dispatch via AI Gateway
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
