@@ -26,7 +26,8 @@ import {
   AlertCircle,
   Calculator,
   Star,
-  ImageIcon
+  ImageIcon,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -642,21 +643,21 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 gap-4">
                 <Button 
                   variant="outline" 
-                  className="justify-start h-auto py-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/20 text-amber-300 transition-all shadow-sm"
+                  className="justify-start h-auto py-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 hover:border-emerald-500/50 hover:bg-emerald-500/20 text-emerald-300 transition-all shadow-sm"
                   onClick={() => router.push('/admin/agent')}
                 >
                   <div className="flex items-center">
-                    <div className="bg-amber-500/20 border border-amber-500/40 p-2 rounded-full mr-3 text-amber-400">
+                    <div className="bg-emerald-500/20 border border-emerald-500/40 p-2 rounded-full mr-3 text-emerald-400">
                       <Sparkles className="h-5 w-5" />
                     </div>
                     <div className="text-left">
                       <p className="font-semibold text-white flex items-center gap-2">
                         AutoFame AI Copilot Agent
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                          Claude Powered
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          Live Canvas
                         </span>
                       </p>
-                      <p className="text-xs text-zinc-400">Manage chat history, send WhatsApp finance links, track workshop repairs & AI copy</p>
+                      <p className="text-xs text-zinc-400">Manage chat history, send WhatsApp finance links, track workshop repairs &amp; Gmail inbox</p>
                     </div>
                   </div>
                 </Button>
