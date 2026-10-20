@@ -323,7 +323,11 @@ function getDirectAnswerOnly(
     lower.includes("whatsapp") ||
     lower.includes("whatsaapp") ||
     lower.includes("what app") ||
-    lower.includes("whapi");
+    lower.includes("whapi") ||
+    lower.includes("last contacted") ||
+    lower.includes("contact list") ||
+    lower.includes("show the list") ||
+    lower.includes("show contacts");
 
   // 1. EXACT COUNT QUESTIONS -> Return ONLY the number
   if (
@@ -647,7 +651,11 @@ export default function AdminAutoFameAgentPage() {
   const [waChannelMessages, setWaChannelMessages] = useState<any[]>([]);
   const [waContacts, setWaContacts] = useState<any[]>([]);
   const [waSearchQuery, setWaSearchQuery] = useState("");
+  const [waFilterTab, setWaFilterTab] = useState<"recent" | "all">("recent");
   const [selectedWaContact, setSelectedWaContact] = useState<any>(null);
+  const [showAddContactForm, setShowAddContactForm] = useState(false);
+  const [newContactName, setNewContactName] = useState("");
+  const [newContactPhone, setNewContactPhone] = useState("");
 
   // ── COMPACT COMPOSE DRAWER (Closed by default so Main Canvas is 100% wide!) ──
   const [composeDrawerMode, setComposeDrawerMode] = useState<
@@ -760,15 +768,40 @@ export default function AdminAutoFameAgentPage() {
       const res = await fetch("/api/whatsapp?action=messages");
       const data = await res.json();
       if (res.ok) {
+        let customContacts: any[] = [];
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("autofame_custom_wa_contacts");
+            if (raw) customContacts = JSON.parse(raw);
+          } catch {}
+        }
+
         if (Array.isArray(data.contacts)) {
-          setWaContacts(data.contacts);
-          if (!selectedWaContact && data.contacts.length > 0) {
-            setSelectedWaContact(data.contacts[1] || data.contacts[0]);
-            setCanvasWaPhone(data.contacts[1]?.phone || data.contacts[0]?.phone || "");
+          const seenIds = new Set<string>();
+          const merged = [...customContacts, ...data.contacts].filter((c) => {
+            if (!c?.id || seenIds.has(c.id)) return false;
+            seenIds.add(c.id);
+            return true;
+          });
+          setWaContacts(merged);
+          if (!selectedWaContact && merged.length > 0) {
+            setSelectedWaContact(merged[1] || merged[0]);
+            setCanvasWaPhone(merged[1]?.phone || merged[0]?.phone || "");
           }
         }
         if (Array.isArray(data.messages)) {
-          setWaChannelMessages(data.messages);
+          const customMsgs = customContacts.map((c) => ({
+            id: `custom-${c.id}`,
+            fromMe: false,
+            source: "mobile",
+            from: c.phone,
+            fromName: c.name,
+            chatId: c.chatId,
+            type: "text",
+            text: c.lastMessage || "Added Contact",
+            timestamp: c.timestamp || new Date().toISOString(),
+          }));
+          setWaChannelMessages([...customMsgs, ...data.messages]);
         }
         if (autoFillFinance && data.intakePreview) {
           const intake = data.intakePreview;
@@ -794,6 +827,61 @@ export default function AdminAutoFameAgentPage() {
         }
       }
     } catch {}
+  };
+
+  const handleAddCustomContact = async () => {
+    const rawName = newContactName.trim();
+    const rawPhone = newContactPhone.trim();
+    if (!rawPhone) {
+      toast.error("Please enter the contact's WhatsApp phone number.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_contact",
+          name: rawName || rawPhone,
+          phone: rawPhone,
+        }),
+      });
+      const data = await res.json();
+      const added = data?.contact || {
+        id: rawPhone.replace(/\D/g, ""),
+        chatId: `${rawPhone.replace(/\D/g, "")}@s.whatsapp.net`,
+        name: rawName || rawPhone,
+        phone: rawPhone,
+        lastMessage: "Added Contact — Ready to chat",
+        timestamp: new Date().toISOString(),
+        lastContactedLabel: "Just Added",
+        isRecentChat: true,
+      };
+
+      if (typeof window !== "undefined") {
+        let existing: any[] = [];
+        try {
+          const raw = localStorage.getItem("autofame_custom_wa_contacts");
+          if (raw) existing = JSON.parse(raw);
+        } catch {}
+        const updatedCustom = [added, ...existing.filter((c) => c.id !== added.id)];
+        localStorage.setItem("autofame_custom_wa_contacts", JSON.stringify(updatedCustom));
+      }
+
+      setWaContacts((prev) => [added, ...prev.filter((c) => c.id !== added.id)]);
+      setSelectedWaContact(added);
+      setCanvasWaPhone(added.phone);
+      const firstName = added.name.split(" ")[0];
+      setCanvasWaMessage(
+        `Hi ${firstName}, this is AutoFame Dealership Johannesburg South. How can we assist you with vehicle stock, quotes, or finance today?`
+      );
+      setNewContactName("");
+      setNewContactPhone("");
+      setShowAddContactForm(false);
+      toast.success(`Added & selected ${added.name} (${added.phone})`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add contact");
+    }
   };
 
   useEffect(() => {
@@ -2726,19 +2814,88 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
             {/* ── MODE 3: TWO-WAY WHATSAPP AGENT — CONTACT SEARCH, SELECTOR & REPLY ── */}
             {composeDrawerMode === "whatsapp" && (
               <>
-                {/* 1. Search & Choose Contact to Talk To */}
+                {/* 1. Search, Filter by Last Contacted & Add Any Missing Contact */}
                 <div className="p-3 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
-                      1. Choose or Search Contact ({waContacts.length} Synced)
+                      1. Choose or Search Contact ({waContacts.length})
                     </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddContactForm((prev) => !prev)}
+                        className="px-2 py-0.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-[10px] font-semibold text-emerald-300"
+                      >
+                        {showAddContactForm ? "Close" : "+ Add Contact"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fetchLiveWhatsAppChannel(false)}
+                        className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Sync
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Add Contact Form (for any contact not yet in the list) */}
+                  {showAddContactForm && (
+                    <div className="p-2.5 rounded-lg bg-[#12110f] border border-emerald-500/40 space-y-2">
+                      <p className="text-[10px] font-mono uppercase text-emerald-400 font-semibold">
+                        Add Missing WhatsApp Contact
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <input
+                          type="text"
+                          value={newContactName}
+                          onChange={(e) => setNewContactName(e.target.value)}
+                          placeholder="Contact Name (e.g. John)"
+                          className="bg-[#1b1a17] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-emerald-500"
+                        />
+                        <input
+                          type="text"
+                          value={newContactPhone}
+                          onChange={(e) => setNewContactPhone(e.target.value)}
+                          placeholder="Phone (e.g. 082 123 4567)"
+                          className="bg-[#1b1a17] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={handleAddCustomContact}
+                        className="w-full h-7 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold rounded-lg"
+                      >
+                        + Add &amp; Select Contact
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Filter Tabs: Last Contacted vs All Contacts */}
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => fetchLiveWhatsAppChannel(false)}
-                      className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1"
+                      onClick={() => setWaFilterTab("recent")}
+                      className={cn(
+                        "flex-1 py-1.5 px-2 rounded-lg text-[10px] font-semibold border transition",
+                        waFilterTab === "recent"
+                          ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                          : "bg-[#12110f] border-[#262420] text-[#8e8a82] hover:text-white"
+                      )}
                     >
-                      <RefreshCw className="h-3 w-3" />
-                      Sync All
+                      🕒 Last Contacted ({waContacts.filter((c) => c.isRecentChat || c.lastContactedLabel).length || 15})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWaFilterTab("all")}
+                      className={cn(
+                        "flex-1 py-1.5 px-2 rounded-lg text-[10px] font-semibold border transition",
+                        waFilterTab === "all"
+                          ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                          : "bg-[#12110f] border-[#262420] text-[#8e8a82] hover:text-white"
+                      )}
+                    >
+                      📒 All Contacts ({waContacts.length})
                     </button>
                   </div>
 
@@ -2747,7 +2904,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                       type="text"
                       value={waSearchQuery}
                       onChange={(e) => setWaSearchQuery(e.target.value)}
-                      placeholder={`Search all ${waContacts.length} contacts by name, phone, or message...`}
+                      placeholder={`Search ${waContacts.length} contacts by name, phone, or message...`}
                       className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
                     />
                     {waSearchQuery && (
@@ -2764,13 +2921,18 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                   <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
                     {waContacts
                       .filter((c) => {
-                        if (!waSearchQuery.trim()) return true;
-                        const q = waSearchQuery.toLowerCase();
-                        return (
-                          c.name?.toLowerCase().includes(q) ||
-                          c.phone?.toLowerCase().includes(q) ||
-                          c.lastMessage?.toLowerCase().includes(q)
-                        );
+                        if (waSearchQuery.trim()) {
+                          const q = waSearchQuery.toLowerCase();
+                          return (
+                            c.name?.toLowerCase().includes(q) ||
+                            c.phone?.toLowerCase().includes(q) ||
+                            c.lastMessage?.toLowerCase().includes(q)
+                          );
+                        }
+                        if (waFilterTab === "recent") {
+                          return Boolean(c.isRecentChat || c.lastContactedLabel);
+                        }
+                        return true;
                       })
                       .map((c, idx) => {
                         const isSelected = selectedWaContact?.id === c.id;
@@ -2806,14 +2968,21 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                               {initials}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold truncate">{c.name}</p>
+                              <div className="flex items-center justify-between gap-1">
+                                <p className="text-xs font-semibold truncate">{c.name}</p>
+                                {c.lastContactedLabel && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 shrink-0">
+                                    {c.lastContactedLabel}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[10px] text-[#8e8a82] truncate">
                                 {c.lastMessage || c.phone}
                               </p>
+                              <p className="text-[9px] font-mono text-emerald-400/80">
+                                {c.phone}
+                              </p>
                             </div>
-                            <span className="text-[10px] font-mono text-emerald-400 shrink-0">
-                              {c.phone}
-                            </span>
                           </button>
                         );
                       })}

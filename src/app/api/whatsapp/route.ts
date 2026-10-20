@@ -21,6 +21,8 @@ const SYNCED_WHAPI_CONTACTS: {
   lastMessage?: string;
   fromMe?: boolean;
   timestamp?: string;
+  lastContactedLabel?: string;
+  isRecentChat?: boolean;
 }[] = [
   {
     id: AUTOFAME_AGENT_GROUP_ID,
@@ -29,7 +31,130 @@ const SYNCED_WHAPI_CONTACTS: {
     phone: "+27 63 199 5124",
     lastMessage: "AutoFame Dealership AI Agent Channel — Ask inventory, quotes, or finance",
     fromMe: false,
-    timestamp: new Date().toISOString(),
+    timestamp: "2026-10-20T10:30:00.000Z",
+    lastContactedLabel: "Today • Live Agent",
+    isRecentChat: true,
+  },
+  {
+    id: "27602471161",
+    chatId: "27602471161@s.whatsapp.net",
+    name: "Contact +27 60 247 1161",
+    phone: "+27 60 247 1161",
+    lastMessage: "Morning",
+    fromMe: true,
+    timestamp: "2026-10-20T08:52:42.000Z",
+    lastContactedLabel: "Today 10:52 AM",
+    isRecentChat: true,
+  },
+  {
+    id: "27697642905",
+    chatId: "27697642905@s.whatsapp.net",
+    name: "Precious",
+    phone: "+27 69 764 2905",
+    lastMessage: "😂lol",
+    fromMe: false,
+    timestamp: "2026-10-20T08:12:20.000Z",
+    lastContactedLabel: "Today 10:12 AM",
+    isRecentChat: true,
+  },
+  {
+    id: "27637310437",
+    chatId: "27637310437@s.whatsapp.net",
+    name: "Contact +27 63 731 0437",
+    phone: "+27 63 731 0437",
+    lastMessage: "Morning Sir I hope you good, wanted to ask if its not yet sorted this side...",
+    fromMe: true,
+    timestamp: "2026-10-20T05:10:08.000Z",
+    lastContactedLabel: "Today 07:10 AM",
+    isRecentChat: true,
+  },
+  {
+    id: "27747404229",
+    chatId: "27747404229@s.whatsapp.net",
+    name: "Client +27 74 740 4229",
+    phone: "+27 74 740 4229",
+    lastMessage: "Going to cost only R432 — Okay and that will cost how much",
+    fromMe: true,
+    timestamp: "2026-10-20T05:08:47.000Z",
+    lastContactedLabel: "Today 07:08 AM",
+    isRecentChat: true,
+  },
+  {
+    id: "27736936626",
+    chatId: "27736936626@s.whatsapp.net",
+    name: "Thamu (+27 73 693 6626)",
+    phone: "+27 73 693 6626",
+    lastMessage: "Awe Thamu",
+    fromMe: true,
+    timestamp: "2026-10-19T17:17:27.000Z",
+    lastContactedLabel: "Yesterday 19:17",
+    isRecentChat: true,
+  },
+  {
+    id: "27631227343",
+    chatId: "27631227343@s.whatsapp.net",
+    name: "Blesz (Mableza)",
+    phone: "+27 63 122 7343",
+    lastMessage: "Recent WhatsApp Chat — Blesz",
+    fromMe: false,
+    timestamp: "2026-10-19T14:20:00.000Z",
+    lastContactedLabel: "Yesterday 16:20",
+    isRecentChat: true,
+  },
+  {
+    id: "27689523316",
+    chatId: "27689523316@s.whatsapp.net",
+    name: "Contact +27 68 952 3316",
+    phone: "+27 68 952 3316",
+    lastMessage: "Hello",
+    fromMe: true,
+    timestamp: "2026-10-19T13:33:53.000Z",
+    lastContactedLabel: "Yesterday 15:33",
+    isRecentChat: true,
+  },
+  {
+    id: "27762232914",
+    chatId: "27762232914@s.whatsapp.net",
+    name: "Contact +27 76 223 2914",
+    phone: "+27 76 223 2914",
+    lastMessage: "Thanks I got the message",
+    fromMe: true,
+    timestamp: "2026-10-19T12:31:57.000Z",
+    lastContactedLabel: "Yesterday 14:31",
+    isRecentChat: true,
+  },
+  {
+    id: "27833482059",
+    chatId: "27833482059@s.whatsapp.net",
+    name: "Advance Auto (Tshepo Seepe)",
+    phone: "+27 83 348 2059",
+    lastMessage: "Advance Auto Dealership Contact",
+    fromMe: false,
+    timestamp: "2026-10-19T12:00:00.000Z",
+    lastContactedLabel: "Yesterday 14:00",
+    isRecentChat: true,
+  },
+  {
+    id: "27781286020",
+    chatId: "27781286020@s.whatsapp.net",
+    name: "JD Auto Cars",
+    phone: "+27 78 128 6020",
+    lastMessage: "JD Auto Cars Contact",
+    fromMe: false,
+    timestamp: "2026-10-19T11:30:00.000Z",
+    lastContactedLabel: "Yesterday 13:30",
+    isRecentChat: true,
+  },
+  {
+    id: "27733256354",
+    chatId: "27733256354@s.whatsapp.net",
+    name: "Imperial (Imperial Cons, Anytech S)",
+    phone: "+27 73 325 6354",
+    lastMessage: "Imperial Contact",
+    fromMe: false,
+    timestamp: "2026-10-19T11:00:00.000Z",
+    lastContactedLabel: "Yesterday 13:00",
+    isRecentChat: true,
   },
   {
     id: "27837324229",
@@ -40,96 +165,19 @@ const SYNCED_WHAPI_CONTACTS: {
       "Bank: Capitec | Account Holder: MS MARIA ENGELBRECHT | Business Name: West Bulk Bags | Account Type: Entrepreneur Account | Account number: 2558165883",
     fromMe: false,
     timestamp: "2026-10-19T10:08:25.000Z",
+    lastContactedLabel: "Yesterday 12:08",
+    isRecentChat: true,
   },
   {
-    id: "27747404229",
-    chatId: "27747404229@s.whatsapp.net",
-    name: "Client +27 74 740 4229",
-    phone: "+27 74 740 4229",
-    lastMessage: "Okay and that will cost how much (Re: Going to cost only R432)",
-    fromMe: false,
-    timestamp: "2026-10-20T05:08:47.000Z",
-  },
-  {
-    id: "27697642905",
-    chatId: "27697642905@s.whatsapp.net",
-    name: "Precious",
-    phone: "+27 69 764 2905",
-    lastMessage: "😂lol",
-    fromMe: false,
-    timestamp: "2026-10-20T08:12:20.000Z",
-  },
-  {
-    id: "27631227343",
-    chatId: "27631227343@s.whatsapp.net",
-    name: "Blesz",
-    phone: "+27 63 122 7343",
-    lastMessage: "Saved WhatsApp Contact",
-    fromMe: false,
-    timestamp: "2026-10-19T14:20:00.000Z",
-  },
-  {
-    id: "27833482059",
-    chatId: "27833482059@s.whatsapp.net",
-    name: "Advance Auto (Tshepo Seepe)",
-    phone: "+27 83 348 2059",
-    lastMessage: "Advance Auto Dealership Contact",
-    fromMe: false,
-    timestamp: "2026-10-19T12:00:00.000Z",
-  },
-  {
-    id: "27781286020",
-    chatId: "27781286020@s.whatsapp.net",
-    name: "JD Auto Cars",
-    phone: "+27 78 128 6020",
-    lastMessage: "JD Auto Cars Contact",
-    fromMe: false,
-    timestamp: "2026-10-19T11:30:00.000Z",
-  },
-  {
-    id: "27733256354",
-    chatId: "27733256354@s.whatsapp.net",
-    name: "Imperial (Imperial Cons, Anytech S)",
-    phone: "+27 73 325 6354",
-    lastMessage: "Imperial Contact",
-    fromMe: false,
-    timestamp: "2026-10-19T11:00:00.000Z",
-  },
-  {
-    id: "27602471161",
-    chatId: "27602471161@s.whatsapp.net",
-    name: "Contact +27 60 247 1161",
-    phone: "+27 60 247 1161",
+    id: "27656379695",
+    chatId: "27656379695@s.whatsapp.net",
+    name: "Contact +27 65 637 9695",
+    phone: "+27 65 637 9695",
     lastMessage: "Morning",
     fromMe: true,
-    timestamp: "2026-10-20T08:52:42.000Z",
-  },
-  {
-    id: "27637310437",
-    chatId: "27637310437@s.whatsapp.net",
-    name: "Contact +27 63 731 0437",
-    phone: "+27 63 731 0437",
-    lastMessage: "Morning Sir I hope you good, wanted to ask if its not yet sorted this side...",
-    fromMe: true,
-    timestamp: "2026-10-20T05:10:08.000Z",
-  },
-  {
-    id: "27736936626",
-    chatId: "27736936626@s.whatsapp.net",
-    name: "Thamu (+27 73 693 6626)",
-    phone: "+27 73 693 6626",
-    lastMessage: "Awe Thamu",
-    fromMe: true,
-    timestamp: "2026-10-19T17:17:27.000Z",
-  },
-  {
-    id: "27762232914",
-    chatId: "27762232914@s.whatsapp.net",
-    name: "Contact +27 76 223 2914",
-    phone: "+27 76 223 2914",
-    lastMessage: "Thanks I got the message",
-    fromMe: true,
-    timestamp: "2026-10-19T12:31:57.000Z",
+    timestamp: "2026-10-19T09:59:02.000Z",
+    lastContactedLabel: "Yesterday 11:59",
+    isRecentChat: true,
   },
   {
     id: "27799363808",
@@ -139,6 +187,8 @@ const SYNCED_WHAPI_CONTACTS: {
     lastMessage: "Am good my brother Its Alex here...",
     fromMe: true,
     timestamp: "2026-10-19T09:35:20.000Z",
+    lastContactedLabel: "Yesterday 11:35",
+    isRecentChat: true,
   },
   { id: "27791065911", chatId: "27791065911@s.whatsapp.net", name: "Weja (wellew)", phone: "+27 79 106 5911", lastMessage: "Saved Phonebook Contact" },
   { id: "27610162097", chatId: "27610162097@s.whatsapp.net", name: "Zach", phone: "+27 61 016 2097", lastMessage: "Saved Phonebook Contact" },
@@ -641,6 +691,52 @@ export async function POST(req: NextRequest) {
       process.env.WHAPI_API_TOKEN ||
       process.env.NEXT_PUBLIC_WHAPI_TOKEN ||
       DEFAULT_WHAPI_TOKEN;
+
+    // ──────────────────────────────────────────────────────────────
+    // ACTION 0: Add or Update a Contact in the WhatsApp Directory
+    // ──────────────────────────────────────────────────────────────
+    if (action === "add_contact") {
+      const rawPhone = String(to || body.phone || "").trim();
+      const rawName = String(customerName || body.name || rawPhone).trim();
+      if (!rawPhone) {
+        return NextResponse.json(
+          { error: "Contact phone number is required." },
+          { status: 400 }
+        );
+      }
+      const chatId = normalizeToChatId(rawPhone);
+      const id = chatId.replace(/@.*$/, "");
+      const formattedDisplayPhone = rawPhone.startsWith("+")
+        ? rawPhone
+        : rawPhone.startsWith("0") && rawPhone.replace(/\D/g, "").length === 10
+        ? "+27 " + rawPhone.replace(/\D/g, "").slice(1)
+        : "+" + id;
+
+      const existingIdx = SYNCED_WHAPI_CONTACTS.findIndex(
+        (c) => c.id === id || c.chatId === chatId
+      );
+      const newEntry = {
+        id,
+        chatId,
+        name: rawName,
+        phone: formattedDisplayPhone,
+        lastMessage: message || "Added Contact — Ready to chat",
+        fromMe: false,
+        timestamp: new Date().toISOString(),
+        lastContactedLabel: "Just Now",
+        isRecentChat: true,
+      };
+      if (existingIdx >= 0) {
+        SYNCED_WHAPI_CONTACTS.splice(existingIdx, 1);
+      }
+      SYNCED_WHAPI_CONTACTS.unshift(newEntry);
+
+      return NextResponse.json({
+        success: true,
+        contact: newEntry,
+        contacts: SYNCED_WHAPI_CONTACTS,
+      });
+    }
 
     // ──────────────────────────────────────────────────────────────
     // ACTION A: Extract Info & Attachments from Any WhatsApp Contact,
