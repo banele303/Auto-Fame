@@ -302,7 +302,8 @@ function buildClientWhatsAppPayload(query: string, context: any) {
 function getDirectAnswerOnly(
   query: string,
   context: any,
-  inboxEmails: any[]
+  inboxEmails: any[],
+  waChannelMessages: any[] = []
 ): string | null {
   const lower = query.toLowerCase().trim();
   const cars = Array.isArray(context?.cars) ? context.cars : [];
@@ -318,7 +319,20 @@ function getDirectAnswerOnly(
   );
   const totalValue = availableCars.reduce((s: number, c: any) => s + (c.price || 0), 0);
 
+  const isWhatsAppQuery =
+    lower.includes("whatsapp") ||
+    lower.includes("whatsaapp") ||
+    lower.includes("what app") ||
+    lower.includes("whapi");
+
   // 1. EXACT COUNT QUESTIONS -> Return ONLY the number
+  if (
+    (lower.includes("how many") && isWhatsAppQuery) ||
+    lower.includes("how many message") ||
+    lower.includes("how many chat")
+  ) {
+    return `${waChannelMessages.length}`;
+  }
   if (lower.includes("how many available") || lower.includes("available cars")) {
     return `${availableCars.length}`;
   }
@@ -341,9 +355,10 @@ function getDirectAnswerOnly(
     return `${realLeads.length}`;
   }
   if (
-    lower.includes("how many email") ||
-    lower.includes("how many imail") ||
-    lower.includes("how many wmail")
+    !isWhatsAppQuery &&
+    (lower.includes("how many email") ||
+      lower.includes("how many imail") ||
+      lower.includes("how many wmail"))
   ) {
     if (lower.includes("yesterday") || lower.includes("yerstady")) {
       return `${inboxEmails.filter((e) => e.isYesterday).length}`;
@@ -368,7 +383,24 @@ function getDirectAnswerOnly(
     return `${totalCars}`;
   }
 
-  // 2. FINANCE APPLICATION COMPLETENESS & BANK SUBMISSION CHECK
+  // 2. WHATSAPP MESSAGES & CONTACTS TABLE (Checked BEFORE email so "whatsapp not email" returns WhatsApp!)
+  if (isWhatsAppQuery && !lower.includes("send link") && !lower.includes("compose")) {
+    if (waChannelMessages.length === 0) {
+      return "0";
+    }
+    const rows = waChannelMessages
+      .slice(0, 12)
+      .map(
+        (m: any) =>
+          `| **${m.fromName || "Contact"}** | ${m.from || m.chatId} | ${(m.text || "")
+            .replace(/\n+/g, " ")
+            .slice(0, 90)} | **${new Date(m.timestamp).toLocaleDateString()}** |`
+      )
+      .join("\n");
+    return `| WhatsApp Contact | Phone / Chat ID | Message / Attachment | Date |\n| :--- | :--- | :--- | :---: |\n${rows}`;
+  }
+
+  // 3. FINANCE APPLICATION COMPLETENESS & BANK SUBMISSION CHECK
   if (
     lower.includes("finance") ||
     lower.includes("bank") ||
@@ -396,8 +428,9 @@ function getDirectAnswerOnly(
     return `| Applicant | SA ID | Vehicle & Price | Gross Income | Proof Docs | Bank Verification |\n| :--- | :--- | :--- | :---: | :---: | :--- |\n${rows}`;
   }
 
-  // 3. INBOX / EMAIL QUERIES -> Cleanly formatted table
+  // 4. INBOX / EMAIL QUERIES -> Cleanly formatted table
   if (
+    !isWhatsAppQuery &&
     (lower.includes("email") ||
       lower.includes("imail") ||
       lower.includes("wmail") ||
@@ -768,6 +801,22 @@ export default function AdminAutoFameAgentPage() {
     }
   }, []);
 
+  // Automatically listen and reply to messages sent to "AutoFame AI Agent" on WhatsApp
+  useEffect(() => {
+    if (!dealershipContext) return;
+    const interval = setInterval(() => {
+      fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "agent_auto_reply",
+          context: dealershipContext,
+        }),
+      }).catch(() => {});
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [dealershipContext]);
+
   // Pre-populate default car in Finance Application Container when cars load
   useEffect(() => {
     const cars = dealershipContext?.cars || [];
@@ -1120,6 +1169,11 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
           cc: finEmail.trim() || undefined,
           subject: bankSubject,
           body: bankBody,
+          attachments: Object.values(finProofDocs).map((d) => ({
+            filename: d.originalName,
+            url: d.url,
+            mime: d.mime,
+          })),
         }),
       });
       const data = await res.json();
@@ -1331,6 +1385,109 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
         : "Hello");
 
     const lower = finalContent.toLowerCase();
+
+    // Check if the user is asking to extract info from a WhatsApp contact, fill the application form, and send via email with attachments
+    const isExtractAndFillCommand =
+      (lower.includes("take") ||
+        lower.includes("extract") ||
+        lower.includes("fill")) &&
+      (lower.includes("application") ||
+        lower.includes("form") ||
+        lower.includes("contact") ||
+        lower.includes("user") ||
+        /(?:\+?27|0)\s*\d{2}\s*\d{3}\s*\d{4}|\b27\d{9}\b/.test(finalContent));
+
+    if (isExtractAndFillCommand) {
+      await addMessage({
+        sessionId: targetSessionId,
+        role: "user",
+        content: finalContent,
+        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+      });
+
+      try {
+        const extractRes = await fetch("/api/whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "extract_contact_and_submit",
+            query: finalContent,
+            bankEmail: bankEmail || "alexsouthflow3@gmail.com",
+            fromEmail: connectedGmail,
+            appPassword: gmailAppPassword,
+            context: dealershipContext,
+          }),
+        });
+        const extractData = await extractRes.json();
+        const intake = extractData?.intake;
+
+        if (intake) {
+          setFinFirstName(intake.firstName || "Client");
+          setFinLastName(intake.lastName || "");
+          setFinPhone(intake.phone || "");
+          if (intake.email) setFinEmail(intake.email);
+          if (intake.idNumber) setFinIdNumber(intake.idNumber);
+          if (intake.address) setFinAddress(intake.address);
+          if (intake.employerName) setFinEmployerName(intake.employerName);
+          if (intake.carName) setFinCarName(intake.carName);
+          if (intake.carPrice) setFinCarPrice(intake.carPrice);
+          if (intake.monthlyIncomeGross) setFinMonthlyIncome(intake.monthlyIncomeGross);
+          if (Array.isArray(intake.documents) && intake.documents.length > 0) {
+            const docMap: Record<string, any> = {};
+            intake.documents.forEach((d: any) => {
+              docMap[d.docType] = d;
+            });
+            setFinProofDocs((prev) => ({ ...prev, ...docMap }));
+          }
+          openFinanceContainer();
+
+          await saveFinanceContainer({
+            applicationId: finAppId,
+            firstName: intake.firstName || "Client",
+            lastName: intake.lastName || "",
+            idNumber: intake.idNumber || "",
+            phone: intake.phone || "",
+            email: intake.email || "",
+            address: intake.address || "Johannesburg",
+            carId: intake.carId,
+            carName: intake.carName || "Selected Vehicle",
+            carPrice: intake.carPrice || 0,
+            downPaymentAmount: Math.round((intake.carPrice || 0) * 0.1),
+            termMonths: 72,
+            employmentStatus: "EMPLOYED",
+            employerName: intake.employerName || "Verified via WhatsApp",
+            jobTitle: "Applicant",
+            monthlyIncomeGross: intake.monthlyIncomeGross || 0,
+            monthlyExpenses: 0,
+            documents: intake.documents || [],
+            status: extractData.emailDispatched ? "SUBMITTED_TO_BANK" : "PENDING",
+          }).catch(() => {});
+        }
+
+        const summaryTable = `| Field | Extracted Value from WhatsApp |\n| :--- | :--- |\n| **Applicant** | ${
+          intake?.fullName || extractData?.contactName || "Contact"
+        } |\n| **WhatsApp Phone** | ${intake?.phone || "—"} |\n| **Vehicle & Price** | ${
+          intake?.carName || "—"
+        } (R${Number(intake?.carPrice || 0).toLocaleString()} ZAR) |\n| **Bank / Employer Info** | ${
+          intake?.employerName || "Captured from Chat"
+        } |\n| **Attachments Extracted** | ${(intake?.documents || []).length} File(s) |\n| **Email Dispatch Status** | **${
+          extractData?.emailDispatched
+            ? `✅ Sent with attachments to ${extractData.emailRecipient}`
+            : "📋 Form Container Filled & Ready"
+        }** |`;
+
+        await addMessage({
+          sessionId: targetSessionId,
+          role: "assistant",
+          content: summaryTable,
+          actionType: "FINANCE_CONTAINER",
+        });
+        return;
+      } catch (err: any) {
+        toast.error("Extraction error: " + err.message);
+      }
+    }
+
     const isFinanceContainerRequest =
       lower.includes("finance") ||
       lower.includes("bank") ||
@@ -1345,10 +1502,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
     const isWhatsAppRequest =
       !isFinanceContainerRequest &&
       !isComposeEmail &&
-      (lower.includes("whatsapp") ||
-        lower.includes("what app") ||
-        lower.includes("whapi") ||
-        lower.includes("send link"));
+      (lower.includes("send link") || lower.includes("compose whatsapp"));
 
     let actionPayload: any = null;
     if (isFinanceContainerRequest) {
@@ -1370,7 +1524,12 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
-      const directAnswer = getDirectAnswerOnly(finalContent, dealershipContext, inboxEmails);
+      const directAnswer = getDirectAnswerOnly(
+        finalContent,
+        dealershipContext,
+        inboxEmails,
+        waChannelMessages
+      );
 
       if (directAnswer !== null) {
         await addMessage({

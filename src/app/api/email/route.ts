@@ -7,6 +7,13 @@ export const runtime = "nodejs";
 const DEFAULT_GMAIL_USER = "alexsouthflow3@gmail.com";
 const DEFAULT_GMAIL_PASS = "dmjjjsyxcpqpdwlb";
 
+interface EmailAttachmentInput {
+  filename: string;
+  url?: string;
+  base64?: string;
+  mime?: string;
+}
+
 interface SendEmailPayload {
   action?: "send" | "verify" | "inbox";
   fromEmail?: string;
@@ -19,6 +26,7 @@ interface SendEmailPayload {
   carName?: string;
   carPrice?: number;
   limit?: number;
+  attachments?: EmailAttachmentInput[];
 }
 
 export interface GmailInboxMessage {
@@ -285,6 +293,7 @@ function executeGmailSmtp(options: {
   subject?: string;
   text?: string;
   html?: string;
+  resolvedAttachments?: { filename: string; mime: string; base64: string }[];
 }): Promise<{ ok: boolean; response?: string; messageId?: string }> {
   return new Promise((resolve, reject) => {
     const cleanPass = options.pass.replace(/\s+/g, "");
@@ -408,8 +417,13 @@ function executeGmailSmtp(options: {
             return reject(new Error(`DATA command failed: ${line}`));
           }
           step = 8;
-          const boundary = `----=_Part_${Date.now()}`;
-          const headers = [
+          const mixedBoundary = `----=_Mixed_${Date.now()}`;
+          const altBoundary = `----=_Alt_${Date.now()}`;
+          const hasAttachments =
+            Array.isArray(options.resolvedAttachments) &&
+            options.resolvedAttachments.length > 0;
+
+          const headers: string[] = [
             `From: "AutoFame Dealership" <${options.user}>`,
             `To: ${options.to}`,
             ...(options.cc ? [`Cc: ${options.cc}`] : []),
@@ -417,23 +431,65 @@ function executeGmailSmtp(options: {
             `Message-ID: ${messageId}`,
             `Date: ${new Date().toUTCString()}`,
             `MIME-Version: 1.0`,
-            `Content-Type: multipart/alternative; boundary="${boundary}"`,
-            ``,
-            `--${boundary}`,
-            `Content-Type: text/plain; charset="UTF-8"`,
-            `Content-Transfer-Encoding: base64`,
-            ``,
-            Buffer.from(options.text || "", "utf8").toString("base64"),
-            ``,
-            `--${boundary}`,
-            `Content-Type: text/html; charset="UTF-8"`,
-            `Content-Transfer-Encoding: base64`,
-            ``,
-            Buffer.from(options.html || "", "utf8").toString("base64"),
-            ``,
-            `--${boundary}--`,
-            `.`,
           ];
+
+          if (hasAttachments) {
+            headers.push(
+              `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+              ``,
+              `--${mixedBoundary}`,
+              `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+              ``,
+              `--${altBoundary}`,
+              `Content-Type: text/plain; charset="UTF-8"`,
+              `Content-Transfer-Encoding: base64`,
+              ``,
+              Buffer.from(options.text || "", "utf8").toString("base64"),
+              ``,
+              `--${altBoundary}`,
+              `Content-Type: text/html; charset="UTF-8"`,
+              `Content-Transfer-Encoding: base64`,
+              ``,
+              Buffer.from(options.html || "", "utf8").toString("base64"),
+              ``,
+              `--${altBoundary}--`
+            );
+
+            for (const att of options.resolvedAttachments!) {
+              const safeName = (att.filename || "Document.pdf").replace(/["\r\n]/g, "");
+              const wrappedBase64 = att.base64.replace(/(.{76})/g, "$1\r\n");
+              headers.push(
+                ``,
+                `--${mixedBoundary}`,
+                `Content-Type: ${att.mime || "application/octet-stream"}; name="${safeName}"`,
+                `Content-Disposition: attachment; filename="${safeName}"`,
+                `Content-Transfer-Encoding: base64`,
+                ``,
+                wrappedBase64
+              );
+            }
+
+            headers.push(``, `--${mixedBoundary}--`, `.`);
+          } else {
+            headers.push(
+              `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+              ``,
+              `--${altBoundary}`,
+              `Content-Type: text/plain; charset="UTF-8"`,
+              `Content-Transfer-Encoding: base64`,
+              ``,
+              Buffer.from(options.text || "", "utf8").toString("base64"),
+              ``,
+              `--${altBoundary}`,
+              `Content-Type: text/html; charset="UTF-8"`,
+              `Content-Transfer-Encoding: base64`,
+              ``,
+              Buffer.from(options.html || "", "utf8").toString("base64"),
+              ``,
+              `--${altBoundary}--`,
+              `.`
+            );
+          }
           sendLine(headers.join("\r\n"));
         } else if (step === 8) {
           if (code !== 250) {
@@ -556,6 +612,32 @@ export async function POST(req: NextRequest) {
     const htmlContent = buildHtmlEmail(payload, senderEmail);
     const textContent = body || subject;
 
+    // Fetch and encode any file attachments (from URLs or base64)
+    const resolvedAttachments: { filename: string; mime: string; base64: string }[] = [];
+    if (Array.isArray(payload.attachments) && payload.attachments.length > 0) {
+      for (const att of payload.attachments) {
+        try {
+          if (att.base64) {
+            resolvedAttachments.push({
+              filename: att.filename || "Attachment.pdf",
+              mime: att.mime || "application/octet-stream",
+              base64: att.base64,
+            });
+          } else if (att.url && att.url.startsWith("http")) {
+            const fileRes = await fetch(att.url);
+            if (fileRes.ok) {
+              const arrayBuf = await fileRes.arrayBuffer();
+              resolvedAttachments.push({
+                filename: att.filename || "Attachment.pdf",
+                mime: att.mime || fileRes.headers.get("content-type") || "application/octet-stream",
+                base64: Buffer.from(arrayBuf).toString("base64"),
+              });
+            }
+          }
+        } catch {}
+      }
+    }
+
     const smtpResult = await executeGmailSmtp({
       user: senderEmail,
       pass: appPassword,
@@ -564,6 +646,7 @@ export async function POST(req: NextRequest) {
       subject,
       text: textContent,
       html: htmlContent,
+      resolvedAttachments,
     });
 
     return NextResponse.json({
