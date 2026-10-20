@@ -3,7 +3,6 @@ import { mutation } from "./_generated/server";
 export const seedInitialData = mutation({
   args: {},
   handler: async (ctx) => {
-    // Purge any legacy demo repairs that were previously seeded
     const existingRepairs = await ctx.db.query("carRepairs").collect();
     let purgedRepairs = 0;
     for (const r of existingRepairs) {
@@ -13,7 +12,6 @@ export const seedInitialData = mutation({
       }
     }
 
-    // Purge any legacy demo CRM events that were previously seeded
     const existingEvents = await ctx.db.query("crmEvents").collect();
     let purgedEvents = 0;
     for (const ev of existingEvents) {
@@ -23,6 +21,21 @@ export const seedInitialData = mutation({
       }
     }
 
-    return { status: "demo_purged", purgedRepairs, purgedEvents };
+    // Purge legacy "✉️ Gmail Channel (elexsouthflow@gmail.com) — Compose Email" messages
+    const existingMessages = await ctx.db.query("agentMessages").collect();
+    let purgedMessages = 0;
+    for (const m of existingMessages) {
+      if (
+        m.content?.includes("Gmail Channel (") ||
+        m.content?.includes("elexsouthflow@gmail.com") ||
+        m.content?.includes("Review the fields below and click Send with Gmail") ||
+        m.content?.includes("autofame.dealers@gmail.com")
+      ) {
+        await ctx.db.delete(m._id);
+        purgedMessages++;
+      }
+    }
+
+    return { status: "demo_purged", purgedRepairs, purgedEvents, purgedMessages };
   },
 });

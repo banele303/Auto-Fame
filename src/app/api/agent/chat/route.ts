@@ -59,7 +59,7 @@ function getRealFormSubmissions(context: any) {
     })),
     ...testDrives.map((td: any) => ({
       type: "Test Drive Booking",
-      customerName: td.customerName || "Showroom Client",
+      customerName: inqName(td),
       email: td.customerEmail || "",
       phone: td.customerPhone || "",
       vehicle: td.carName || `Car #${td.carId}`,
@@ -70,6 +70,10 @@ function getRealFormSubmissions(context: any) {
       date: td.createdAt || "",
     })),
   ];
+}
+
+function inqName(td: any) {
+  return td.customerName || "Showroom Client";
 }
 
 function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com") {
@@ -208,68 +212,15 @@ function buildWhatsAppDraftFromQuery(query: string, context: any) {
   };
 }
 
-function buildSystemPrompt(context: any, connectedGmail: string) {
-  const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
-  const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
-  const realLeads = getRealFormSubmissions(context);
-
-  const inventorySummary =
-    cars.length > 0
-      ? cars
-          .map(
-            (c) =>
-              `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`
-          )
-          .join("\n")
-      : "0 vehicles";
-
-  const repairSummary =
-    repairs.length > 0
-      ? repairs
-          .map(
-            (r) =>
-              `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`
-          )
-          .join("\n")
-      : "0 repairs";
-
-  const formsSummary =
-    realLeads.length > 0
-      ? realLeads
-          .map(
-            (f) =>
-              `- [${f.type}] ${f.customerName} (Email: ${f.email || "N/A"}, Phone: ${f.phone || "N/A"}) | ${f.vehicle} | ${f.details} | Status: ${f.status}`
-          )
-          .join("\n")
-      : "0 form submissions";
-
-  return `You are AutoFame Agent.
-DATABASE FACTS:
-- Total Cars: ${cars.length}
-- Available Cars: ${cars.filter((c) => c.status === "AVAILABLE").length}
-- Sold Cars: ${cars.filter((c) => c.status === "SOLD").length}
-- Workshop Cars: ${cars.filter((c) => c.status === "MAINTENANCE" || c.status === "REPAIR").length}
-- Form Leads: ${realLeads.length}
-- Connected Gmail: ${connectedGmail}
-
-INVENTORY:
-${inventorySummary}
-
-LEADS:
-${formsSummary}
-
-REPAIRS:
-${repairSummary}
-
-STRICT OUTPUT RULE:
-- Give ONLY the direct answer to what the user asked. Do NOT include any extra commentary, greetings, tables, or explanations.
-- For example, if the user asks "how many cars" or "how many cars do we have", respond with ONLY the number: ${cars.length}`;
-}
-
 /**
- * Direct Answer Engine — Gives ONLY the exact answer requested
+ * Direct Dealership & Inbox Answer Engine
  */
-function generateDirectDatabaseAnswer(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com"): string {
+function generateDirectDatabaseAnswer(
+  query: string,
+  context: any,
+  inboxEmails: any[] = [],
+  connectedGmail = "alexsouthflow3@gmail.com"
+): string {
   const lower = query.toLowerCase().trim();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
   const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
@@ -282,20 +233,12 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
   const totalShowroomValue = availableCars.reduce((s, c) => s + (c.price || 0), 0);
 
   // 1. EXACT COUNT QUESTIONS -> Return ONLY the number
-  if (
-    lower.includes("how many available") ||
-    lower.includes("available car count")
-  ) {
+  if (lower.includes("how many available") || lower.includes("available car count")) {
     return `${availableCars.length}`;
   }
-
-  if (
-    lower.includes("how many sold") ||
-    lower.includes("sold car count")
-  ) {
+  if (lower.includes("how many sold") || lower.includes("sold car count")) {
     return `${soldCars.length}`;
   }
-
   if (
     lower.includes("how many repair") ||
     lower.includes("how many in workshop") ||
@@ -303,7 +246,6 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
   ) {
     return `${workshopCars.length || repairs.length}`;
   }
-
   if (
     lower.includes("how many form") ||
     lower.includes("how many lead") ||
@@ -312,7 +254,15 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
   ) {
     return `${realLeads.length}`;
   }
-
+  if (lower.includes("how many email") || lower.includes("how many imail") || lower.includes("how many wmail")) {
+    if (lower.includes("yesterday") || lower.includes("yerstady")) {
+      return `${inboxEmails.filter((e) => e.isYesterday).length}`;
+    }
+    if (lower.includes("today")) {
+      return `${inboxEmails.filter((e) => e.isToday).length}`;
+    }
+    return `${inboxEmails.length}`;
+  }
   if (
     lower.includes("how many car") ||
     lower.includes("how many vehicle") ||
@@ -326,36 +276,58 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
     return `${totalCars}`;
   }
 
-  // 2. VALUE / PRICE QUESTIONS -> Return ONLY the price/car
-  if (lower.includes("total value") || lower.includes("showroom value") || lower.includes("inventory value")) {
-    return `R${totalShowroomValue.toLocaleString()} ZAR`;
-  }
-
-  if (lower.includes("cheapest") || lower.includes("lowest price")) {
-    if (cars.length === 0) return "0 cars in database";
-    const cheapest = [...cars].sort((a, b) => (a.price || 0) - (b.price || 0))[0];
-    return `${cheapest.year} ${cheapest.make} ${cheapest.model} — R${(cheapest.price || 0).toLocaleString()} ZAR`;
-  }
-
-  if (lower.includes("most expensive") || lower.includes("highest price")) {
-    if (cars.length === 0) return "0 cars in database";
-    const mostExp = [...cars].sort((a, b) => (b.price || 0) - (a.price || 0))[0];
-    return `${mostExp.year} ${mostExp.make} ${mostExp.model} — R${(mostExp.price || 0).toLocaleString()} ZAR`;
-  }
-
-  // 3. GMAIL / EMAIL COMPOSE
+  // 2. EMAIL INBOX QUERIES (Asking what emails we have / emails from yesterday / today)
   if (
-    lower.includes("email") ||
-    lower.includes("gmail") ||
-    lower.includes("mail") ||
+    (lower.includes("email") ||
+      lower.includes("imail") ||
+      lower.includes("wmail") ||
+      lower.includes("inbox") ||
+      lower.includes("yesterday") ||
+      lower.includes("yerstady")) &&
+    !lower.includes("compose") &&
+    !lower.includes("send") &&
+    !lower.includes("write")
+  ) {
+    const yesterdayOnly = lower.includes("yesterday") || lower.includes("yerstady");
+    const todayOnly = lower.includes("today");
+
+    const filtered = yesterdayOnly
+      ? inboxEmails.filter((e) => e.isYesterday)
+      : todayOnly
+      ? inboxEmails.filter((e) => e.isToday)
+      : inboxEmails;
+
+    if (filtered.length === 0) {
+      return yesterdayOnly
+        ? "0 emails from yesterday."
+        : todayOnly
+        ? "0 emails today."
+        : "0 emails in inbox.";
+    }
+
+    return filtered
+      .slice(0, 10)
+      .map(
+        (e) =>
+          `• **${e.fromName}** (\`${e.fromEmail}\`) — **${e.subject}** (${
+            e.isToday ? "Today" : e.isYesterday ? "Yesterday" : new Date(e.date).toLocaleDateString()
+          })`
+      )
+      .join("\n");
+  }
+
+  // 3. COMPOSE EMAIL
+  if (
     lower.includes("compose") ||
-    lower.includes("imael")
+    lower.includes("send email") ||
+    lower.includes("write email") ||
+    lower.includes("draft email")
   ) {
     const draft = buildGmailDraftFromQuery(query, context, connectedGmail);
-    return `Opened Gmail composer in Canvas (${connectedGmail}${draft.to ? ` → ${draft.to}` : ""}).`;
+    return `Draft ready for ${draft.to || draft.customerName}.`;
   }
 
-  // 4. WHATSAPP COMPOSE
+  // 4. WHATSAPP
   if (
     lower.includes("whatsapp") ||
     lower.includes("what app") ||
@@ -363,10 +335,25 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
     lower.includes("send link")
   ) {
     const waDraft = buildWhatsAppDraftFromQuery(query, context);
-    return `Opened WhatsApp composer in Canvas${waDraft.to ? ` (${waDraft.to})` : ""}.`;
+    return `WhatsApp draft ready${waDraft.to ? ` for ${waDraft.to}` : ""}.`;
   }
 
-  // 5. FORMS / LEADS
+  // 5. VALUE / PRICE QUESTIONS
+  if (lower.includes("total value") || lower.includes("showroom value") || lower.includes("inventory value")) {
+    return `R${totalShowroomValue.toLocaleString()} ZAR`;
+  }
+  if (lower.includes("cheapest") || lower.includes("lowest price")) {
+    if (cars.length === 0) return "0";
+    const cheapest = [...cars].sort((a, b) => (a.price || 0) - (b.price || 0))[0];
+    return `${cheapest.year} ${cheapest.make} ${cheapest.model} — R${(cheapest.price || 0).toLocaleString()} ZAR`;
+  }
+  if (lower.includes("most expensive") || lower.includes("highest price")) {
+    if (cars.length === 0) return "0";
+    const mostExp = [...cars].sort((a, b) => (b.price || 0) - (a.price || 0))[0];
+    return `${mostExp.year} ${mostExp.make} ${mostExp.model} — R${(mostExp.price || 0).toLocaleString()} ZAR`;
+  }
+
+  // 6. FORMS / LEADS
   if (
     lower.includes("form") ||
     lower.includes("submission") ||
@@ -376,13 +363,13 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
     lower.includes("test drive") ||
     lower.includes("customer")
   ) {
-    if (realLeads.length === 0) return "0 form submissions.";
+    if (realLeads.length === 0) return "0";
     return realLeads
       .map((f) => `${f.customerName} (${f.type}) — ${f.email || f.phone || "No contact"} — ${f.status}`)
       .join("\n");
   }
 
-  // 6. BRAND / MODEL MATCH
+  // 7. BRAND / MODEL MATCH
   const matchedCars = cars.filter(
     (c) =>
       lower.includes(c.make?.toLowerCase() || "") ||
@@ -394,7 +381,7 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
       .join("\n");
   }
 
-  // 7. LIST CARS
+  // 8. LIST CARS
   if (lower.includes("list") || lower.includes("inventory") || lower.includes("stock") || lower.includes("cars")) {
     if (cars.length === 0) return "0";
     return cars
@@ -407,7 +394,12 @@ function generateDirectDatabaseAnswer(query: string, context: any, connectedGmai
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, context, connectedGmail = "alexsouthflow3@gmail.com" } = await req.json();
+    const {
+      messages,
+      context,
+      inboxEmails = [],
+      connectedGmail = "alexsouthflow3@gmail.com",
+    } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Messages array required" }), {
@@ -421,11 +413,10 @@ export async function POST(req: NextRequest) {
 
     let actionPayload: any = null;
     if (
-      lowerQuery.includes("email") ||
-      lowerQuery.includes("gmail") ||
-      lowerQuery.includes("mail") ||
       lowerQuery.includes("compose") ||
-      lowerQuery.includes("imael")
+      lowerQuery.includes("send email") ||
+      lowerQuery.includes("draft email") ||
+      lowerQuery.includes("write email")
     ) {
       actionPayload = buildGmailDraftFromQuery(lastUserMessage, context, connectedGmail);
     } else if (
@@ -437,7 +428,12 @@ export async function POST(req: NextRequest) {
       actionPayload = buildWhatsAppDraftFromQuery(lastUserMessage, context);
     }
 
-    const directAnswer = generateDirectDatabaseAnswer(lastUserMessage, context, connectedGmail);
+    const directAnswer = generateDirectDatabaseAnswer(
+      lastUserMessage,
+      context,
+      inboxEmails,
+      connectedGmail
+    );
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
