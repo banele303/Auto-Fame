@@ -305,15 +305,17 @@ function generateDirectDatabaseAnswer(
         : "0 emails in inbox.";
     }
 
-    return filtered
+    const rows = filtered
       .slice(0, 10)
       .map(
         (e) =>
-          `• **${e.fromName}** (\`${e.fromEmail}\`) — **${e.subject}** (${
+          `| **${e.fromName}** | ${e.fromEmail} | ${e.subject} | **${
             e.isToday ? "Today" : e.isYesterday ? "Yesterday" : new Date(e.date).toLocaleDateString()
-          })`
+          }** |`
       )
       .join("\n");
+
+    return `| Sender | Email Address | Subject | Received |\n| :--- | :--- | :--- | :---: |\n${rows}`;
   }
 
   // 3. COMPOSE EMAIL

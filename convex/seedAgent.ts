@@ -21,7 +21,6 @@ export const seedInitialData = mutation({
       }
     }
 
-    // Purge legacy "✉️ Gmail Channel (elexsouthflow@gmail.com) — Compose Email" messages
     const existingMessages = await ctx.db.query("agentMessages").collect();
     let purgedMessages = 0;
     for (const m of existingMessages) {
@@ -29,7 +28,8 @@ export const seedInitialData = mutation({
         m.content?.includes("Gmail Channel (") ||
         m.content?.includes("elexsouthflow@gmail.com") ||
         m.content?.includes("Review the fields below and click Send with Gmail") ||
-        m.content?.includes("autofame.dealers@gmail.com")
+        m.content?.includes("autofame.dealers@gmail.com") ||
+        m.content?.includes("• **Google**")
       ) {
         await ctx.db.delete(m._id);
         purgedMessages++;

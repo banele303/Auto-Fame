@@ -27,26 +27,17 @@ import {
   SlidersHorizontal,
   MessageSquare,
   ShieldCheck,
-  PanelRightClose,
-  PanelRightOpen,
-  Layers,
   Car,
-  ClipboardList,
-  Search,
-  RefreshCw,
-  Inbox,
   Wrench,
-  Calculator,
-  Maximize2,
-  Minimize2,
   Wand2,
-  Clock,
-  Reply,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+// ──────────────────────────────────────────────
+// Fixed ReactMarkdown v10 Components (Inline Code + Clean Tables)
+// ──────────────────────────────────────────────
 const markdownComponents = {
   h1: ({ node, ...props }: any) => (
     <h1 className="text-base sm:text-lg font-bold text-[#f5f2eb] font-serif mt-3 mb-2" {...props} />
@@ -61,23 +52,55 @@ const markdownComponents = {
     <p className="text-sm sm:text-base leading-relaxed text-[#f5f2eb] mb-2 last:mb-0" {...props} />
   ),
   ul: ({ node, ...props }: any) => (
-    <ul className="list-disc list-outside pl-5 space-y-1 my-2 text-xs sm:text-sm text-[#dedad2]" {...props} />
+    <ul className="list-disc list-outside pl-5 space-y-1.5 my-2 text-xs sm:text-sm text-[#dedad2]" {...props} />
   ),
   ol: ({ node, ...props }: any) => (
-    <ol className="list-decimal list-outside pl-5 space-y-1 my-2 text-xs sm:text-sm text-[#dedad2]" {...props} />
+    <ol className="list-decimal list-outside pl-5 space-y-1.5 my-2 text-xs sm:text-sm text-[#dedad2]" {...props} />
   ),
   li: ({ node, ...props }: any) => <li className="leading-relaxed" {...props} />,
-  code: ({ node, inline, ...props }: any) => {
-    if (inline) {
+  code: ({ node, className, children, ...props }: any) => {
+    const isBlock = Boolean(className) || String(children).includes("\n");
+    if (!isBlock) {
       return (
         <code
-          className="px-1.5 py-0.5 rounded bg-[#161513] border border-[#38342d] text-emerald-300 font-mono text-xs"
+          className="inline px-1.5 py-0.5 rounded bg-[#161513] border border-[#38342d] text-emerald-300 font-mono text-xs"
           {...props}
-        />
+        >
+          {children}
+        </code>
       );
     }
-    return <code className="block text-xs font-mono text-[#eae7e1] leading-relaxed" {...props} />;
+    return (
+      <code className="block text-xs font-mono text-[#eae7e1] leading-relaxed" {...props}>
+        {children}
+      </code>
+    );
   },
+  pre: ({ node, ...props }: any) => (
+    <div className="my-3 rounded-xl border border-[#38342d] bg-[#141311] p-3.5 overflow-x-auto">
+      <pre className="text-xs font-mono text-[#eae7e1]" {...props} />
+    </div>
+  ),
+  table: ({ node, ...props }: any) => (
+    <div className="overflow-x-auto my-2 rounded-xl border border-[#38342d] bg-[#171614] shadow-md">
+      <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[540px]" {...props} />
+    </div>
+  ),
+  thead: ({ node, ...props }: any) => (
+    <thead
+      className="bg-[#211f1b] text-[#eae7e1] border-b border-[#38342d] font-mono uppercase tracking-wider text-[11px]"
+      {...props}
+    />
+  ),
+  th: ({ node, ...props }: any) => (
+    <th className="px-4 py-2.5 font-semibold text-emerald-400 whitespace-nowrap" {...props} />
+  ),
+  td: ({ node, ...props }: any) => (
+    <td className="px-4 py-2.5 border-t border-[#2b2823] text-[#dedad2] align-middle" {...props} />
+  ),
+  tr: ({ node, ...props }: any) => (
+    <tr className="hover:bg-[#201e1a] transition-colors" {...props} />
+  ),
 };
 
 function extractRealLeads(context: any) {
@@ -93,7 +116,6 @@ function extractRealLeads(context: any) {
       phone: f.phone || "",
       vehicle: f.loanAmount ? `Loan: R${Number(f.loanAmount).toLocaleString()} ZAR` : "Vehicle Finance",
       status: f.status || "PENDING",
-      date: f.applicationDate || "",
     })),
     ...inquiries.map((inq: any) => ({
       type: "Vehicle Inquiry",
@@ -102,7 +124,6 @@ function extractRealLeads(context: any) {
       phone: inq.customerPhone || "",
       vehicle: inq.carName || `Car #${inq.carId}`,
       status: inq.status || "NEW",
-      date: inq.createdAt || "",
     })),
     ...testDrives.map((td: any) => ({
       type: "Test Drive Booking",
@@ -111,7 +132,6 @@ function extractRealLeads(context: any) {
       phone: td.customerPhone || "",
       vehicle: td.carName || `Car #${td.carId}`,
       status: td.completed ? "COMPLETED" : "SCHEDULED",
-      date: td.createdAt || "",
     })),
   ];
 }
@@ -253,17 +273,13 @@ function buildClientWhatsAppPayload(query: string, context: any) {
 }
 
 /**
- * Direct Dealership & Multi-Channel Answer Engine
+ * Direct Dealership Answer Engine (Clean Formatting & Direct Counts)
  */
 function getDirectAnswerOnly(
   query: string,
   context: any,
-  inboxEmails: any[],
-  connectedGmail: string
-): {
-  directAnswer: string | null;
-  openCanvasTab?: "command" | "inventory" | "forms" | "gmail" | "whatsapp";
-} {
+  inboxEmails: any[]
+): string | null {
   const lower = query.toLowerCase().trim();
   const cars = Array.isArray(context?.cars) ? context.cars : [];
   const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
@@ -279,17 +295,17 @@ function getDirectAnswerOnly(
 
   // 1. EXACT COUNT QUESTIONS -> Return ONLY the number
   if (lower.includes("how many available") || lower.includes("available cars")) {
-    return { directAnswer: `${availableCars.length}` };
+    return `${availableCars.length}`;
   }
   if (lower.includes("how many sold") || lower.includes("sold cars")) {
-    return { directAnswer: `${soldCars.length}` };
+    return `${soldCars.length}`;
   }
   if (
     lower.includes("how many repair") ||
     lower.includes("how many in workshop") ||
     lower.includes("how many maintenance")
   ) {
-    return { directAnswer: `${workshopCars.length || repairs.length}` };
+    return `${workshopCars.length || repairs.length}`;
   }
   if (
     lower.includes("how many form") ||
@@ -297,7 +313,7 @@ function getDirectAnswerOnly(
     lower.includes("how many inquir") ||
     lower.includes("how many application")
   ) {
-    return { directAnswer: `${realLeads.length}` };
+    return `${realLeads.length}`;
   }
   if (
     lower.includes("how many email") ||
@@ -305,12 +321,12 @@ function getDirectAnswerOnly(
     lower.includes("how many wmail")
   ) {
     if (lower.includes("yesterday") || lower.includes("yerstady")) {
-      return { directAnswer: `${inboxEmails.filter((e) => e.isYesterday).length}` };
+      return `${inboxEmails.filter((e) => e.isYesterday).length}`;
     }
     if (lower.includes("today")) {
-      return { directAnswer: `${inboxEmails.filter((e) => e.isToday).length}` };
+      return `${inboxEmails.filter((e) => e.isToday).length}`;
     }
-    return { directAnswer: `${inboxEmails.length}` };
+    return `${inboxEmails.length}`;
   }
   if (
     lower.includes("how many car") ||
@@ -324,10 +340,10 @@ function getDirectAnswerOnly(
     lower === "cars" ||
     lower === "how many"
   ) {
-    return { directAnswer: `${totalCars}` };
+    return `${totalCars}`;
   }
 
-  // 2. INBOX / EMAIL QUERIES (Asking what emails we have / emails from yesterday / today)
+  // 2. INBOX / EMAIL QUERIES -> Cleanly formatted table
   if (
     (lower.includes("email") ||
       lower.includes("imail") ||
@@ -350,78 +366,61 @@ function getDirectAnswerOnly(
       : inboxEmails;
 
     if (filtered.length === 0) {
-      return {
-        directAnswer: yesterdayOnly ? "0" : todayOnly ? "0" : "0",
-        openCanvasTab: "gmail",
-      };
+      return "0";
     }
 
-    const listStr = filtered
-      .slice(0, 8)
+    const rows = filtered
+      .slice(0, 10)
       .map(
         (e) =>
-          `• **${e.fromName}** (\`${e.fromEmail}\`) — **${e.subject}** (${
+          `| **${e.fromName}** | ${e.fromEmail} | ${e.subject} | **${
             e.isToday
               ? "Today"
               : e.isYesterday
               ? "Yesterday"
               : new Date(e.date).toLocaleDateString()
-          })`
+          }** |`
       )
       .join("\n");
 
-    return {
-      directAnswer: listStr,
-      openCanvasTab: "gmail",
-    };
+    return `| Sender | Email Address | Subject | Received |\n| :--- | :--- | :--- | :---: |\n${rows}`;
   }
 
-  // 3. COMPOSE EMAIL
+  // 3. COMPOSE EMAIL / WHATSAPP
   if (
     lower.includes("compose") ||
     lower.includes("send email") ||
     lower.includes("write email") ||
     lower.includes("draft email")
   ) {
-    return {
-      directAnswer: "Email composer ready in Canvas.",
-      openCanvasTab: "gmail",
-    };
+    return "Composer opened.";
   }
 
-  // 4. WHATSAPP
   if (
     lower.includes("whatsapp") ||
     lower.includes("what app") ||
     lower.includes("whapi") ||
     lower.includes("send link")
   ) {
-    return {
-      directAnswer: "WhatsApp composer ready in Canvas.",
-      openCanvasTab: "whatsapp",
-    };
+    return "WhatsApp composer opened.";
   }
 
-  // 5. VALUE / PRICE QUESTIONS
+  // 4. VALUE / PRICE QUESTIONS
   if (lower.includes("total value") || lower.includes("showroom value")) {
-    return { directAnswer: `R${totalValue.toLocaleString()} ZAR` };
+    return `R${totalValue.toLocaleString()} ZAR`;
   }
   if (lower.includes("cheapest") || lower.includes("lowest price")) {
-    if (cars.length === 0) return { directAnswer: "0" };
+    if (cars.length === 0) return "0";
     const cheapest = [...cars].sort((a: any, b: any) => (a.price || 0) - (b.price || 0))[0];
-    return {
-      directAnswer: `${cheapest.year} ${cheapest.make} ${cheapest.model} — R${(cheapest.price || 0).toLocaleString()} ZAR`,
-    };
+    return `${cheapest.year} ${cheapest.make} ${cheapest.model} — R${(cheapest.price || 0).toLocaleString()} ZAR`;
   }
   if (lower.includes("most expensive") || lower.includes("highest price")) {
-    if (cars.length === 0) return { directAnswer: "0" };
+    if (cars.length === 0) return "0";
     const mostExp = [...cars].sort((a: any, b: any) => (b.price || 0) - (a.price || 0))[0];
-    return {
-      directAnswer: `${mostExp.year} ${mostExp.make} ${mostExp.model} — R${(mostExp.price || 0).toLocaleString()} ZAR`,
-    };
+    return `${mostExp.year} ${mostExp.make} ${mostExp.model} — R${(mostExp.price || 0).toLocaleString()} ZAR`;
   }
 
-  // 6. FORMS / LEADS
+  // 5. FORMS / LEADS -> Cleanly formatted table
   if (
     lower.includes("form") ||
     lower.includes("submission") ||
@@ -430,49 +429,44 @@ function getDirectAnswerOnly(
     lower.includes("applicant") ||
     lower.includes("test drive")
   ) {
-    if (realLeads.length === 0) return { directAnswer: "0", openCanvasTab: "forms" };
-    return {
-      directAnswer: realLeads
-        .map((f) => `• **${f.customerName}** (${f.type}) — ${f.email || f.phone || "No contact"} — ${f.status}`)
-        .join("\n"),
-      openCanvasTab: "forms",
-    };
+    if (realLeads.length === 0) return "0";
+    const rows = realLeads
+      .map(
+        (f) =>
+          `| **${f.customerName}** | ${f.type} | ${f.email || "—"} | ${f.phone || "—"} | ${f.vehicle} | **${f.status}** |`
+      )
+      .join("\n");
+    return `| Customer | Form Type | Email | Phone | Vehicle / Loan | Status |\n| :--- | :--- | :--- | :--- | :--- | :---: |\n${rows}`;
   }
 
-  // 7. BRAND / MODEL MATCH
+  // 6. BRAND / MODEL MATCH -> Cleanly formatted table
   const matchedCars = cars.filter(
     (c: any) =>
       lower.includes(c.make?.toLowerCase() || "") ||
       lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
   );
   if (matchedCars.length > 0) {
-    return {
-      directAnswer: matchedCars
-        .map(
-          (c: any) =>
-            `• **${c.year} ${c.make} ${c.model}** — R${(c.price || 0).toLocaleString()} ZAR (${(c.mileage || 0).toLocaleString()} km, ${c.status})`
-        )
-        .join("\n"),
-      openCanvasTab: "inventory",
-    };
+    const rows = matchedCars
+      .map(
+        (c: any) =>
+          `| **${c.year} ${c.make} ${c.model}** | R${(c.price || 0).toLocaleString()} ZAR | ${(c.mileage || 0).toLocaleString()} km | ${c.transmission || "Auto"} | **${c.status}** |`
+      )
+      .join("\n");
+    return `| Vehicle | Price | Mileage | Transmission | Status |\n| :--- | :---: | :---: | :--- | :---: |\n${rows}`;
   }
 
   if (lower.includes("list") || lower.includes("inventory") || lower.includes("showroom")) {
-    return {
-      directAnswer:
-        cars.length === 0
-          ? "0"
-          : cars
-              .map(
-                (c: any) =>
-                  `• **${c.year} ${c.make} ${c.model}** — R${(c.price || 0).toLocaleString()} ZAR (${c.status})`
-              )
-              .join("\n"),
-      openCanvasTab: "inventory",
-    };
+    if (cars.length === 0) return "0";
+    const rows = cars
+      .map(
+        (c: any) =>
+          `| **${c.year} ${c.make} ${c.model}** | R${(c.price || 0).toLocaleString()} ZAR | ${(c.mileage || 0).toLocaleString()} km | ${c.transmission || "Auto"} | **${c.status}** |`
+      )
+      .join("\n");
+    return `| Vehicle | Price | Mileage | Transmission | Status |\n| :--- | :---: | :---: | :--- | :---: |\n${rows}`;
   }
 
-  return { directAnswer: null };
+  return null;
 }
 
 function buildStrictSystemPrompt(context: any, inboxEmails: any[], connectedGmail: string) {
@@ -508,14 +502,12 @@ Database facts:
 - Available cars: ${cars.filter((c: any) => c.status === "AVAILABLE").length}
 - Sold cars: ${cars.filter((c: any) => c.status === "SOLD").length}
 - Form submissions: ${realLeads.length}
-- Connected Gmail (${connectedGmail}) Inbox Count: ${inboxEmails.length} (Today: ${
-    inboxEmails.filter((e: any) => e.isToday).length
-  }, Yesterday: ${inboxEmails.filter((e: any) => e.isYesterday).length})
+- Connected Gmail (${connectedGmail}) Inbox Count: ${inboxEmails.length}
 - Inbox Emails: ${emailSummary}
 - Vehicles: ${inventorySummary}
 
 CRITICAL INSTRUCTION:
-Reply ONLY with the exact direct answer requested. Do NOT include any greetings, explanations, or extra words. If asked a count (like "how many cars"), reply ONLY with the digits (e.g. "${cars.length}").`;
+Reply ONLY with the exact direct answer requested. Do NOT include any greetings, explanations, or extra words. If asked a count (like "how many cars"), reply ONLY with the digits (e.g. "${cars.length}"). If listing items, use a Markdown table.`;
 }
 
 export default function AdminAutoFameAgentPage() {
@@ -542,30 +534,17 @@ export default function AdminAutoFameAgentPage() {
   // Connected Channels State (alexsouthflow3@gmail.com)
   const [connectedGmail, setConnectedGmail] = useState("alexsouthflow3@gmail.com");
   const [gmailAppPassword, setGmailAppPassword] = useState("dmjjjsyxcpqpdwlb");
-  const [gmailVerified, setGmailVerified] = useState(true);
   const [gmailVerifyError, setGmailVerifyError] = useState<string | null>(null);
   const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 11 942 1200");
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
 
-  // ── LIVE GMAIL INBOX STATE (Today, Yesterday, All) ──
+  // Live Gmail Inbox (Today, Yesterday, All)
   const [inboxEmails, setInboxEmails] = useState<any[]>([]);
-  const [inboxFilter, setInboxFilter] = useState<"all" | "today" | "yesterday" | "compose">("all");
-  const [selectedInboxEmail, setSelectedInboxEmail] = useState<any | null>(null);
 
-  // ── CLAUDE-STYLE DEALERSHIP CANVAS STATE ──
-  const [canvasOpen, setCanvasOpen] = useState(true);
-  // Wide by default; compacts when "Compose with AI" is clicked!
-  const [isComposeWithAiCompact, setIsComposeWithAiCompact] = useState(false);
-  const [activeCanvasTab, setActiveCanvasTab] = useState<
-    "command" | "inventory" | "forms" | "gmail" | "whatsapp"
-  >("command");
+  // ── COMPACT COMPOSE DRAWER (Closed by default so Main Canvas is 100% wide!) ──
+  const [composeDrawerMode, setComposeDrawerMode] = useState<"gmail" | "whatsapp" | null>(null);
 
-  // Finance Calculator State in Dealership Command Canvas
-  const [calcPrice, setCalcPrice] = useState(299900);
-  const [calcDepositPct, setCalcDepositPct] = useState(10);
-  const [calcMonths, setCalcMonths] = useState(72);
-
-  // Canvas Gmail Composer State
+  // Gmail Composer State
   const [canvasTo, setCanvasTo] = useState("");
   const [canvasCc, setCanvasCc] = useState("");
   const [canvasSubject, setCanvasSubject] = useState(
@@ -576,15 +555,12 @@ export default function AdminAutoFameAgentPage() {
   );
   const [canvasEmailSent, setCanvasEmailSent] = useState(false);
 
-  // Canvas WhatsApp Composer State
+  // WhatsApp Composer State
   const [canvasWaPhone, setCanvasWaPhone] = useState("");
   const [canvasWaMessage, setCanvasWaMessage] = useState(
     "Hi, this is AutoFame Dealership Johannesburg South. Here is your fast-track vehicle finance link: https://www.autofame.co.za/financing"
   );
   const [canvasWaSent, setCanvasWaSent] = useState(false);
-
-  // Canvas Inventory Filter
-  const [inventorySearch, setInventorySearch] = useState("");
 
   // Chat Input State
   const [inputValue, setInputValue] = useState("");
@@ -609,7 +585,6 @@ export default function AdminAutoFameAgentPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch Real Gmail Inbox via IMAP (imap.gmail.com:993)
   const fetchLiveGmailInbox = async (emailAddr = connectedGmail, appPass = gmailAppPassword) => {
     try {
       const res = await fetch("/api/email", {
@@ -625,7 +600,6 @@ export default function AdminAutoFameAgentPage() {
       const data = await res.json();
       if (res.ok && Array.isArray(data.emails)) {
         setInboxEmails(data.emails);
-        setGmailVerified(true);
       }
     } catch {}
   };
@@ -676,28 +650,25 @@ export default function AdminAutoFameAgentPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeSessionData?.messages]);
 
-  const loadIntoGmailCanvas = (payload: {
+  const openGmailComposer = (payload?: {
     to?: string;
     cc?: string;
     subject?: string;
     body?: string;
   }) => {
-    if (payload.to !== undefined) setCanvasTo(payload.to);
-    if (payload.cc !== undefined) setCanvasCc(payload.cc);
-    if (payload.subject) setCanvasSubject(payload.subject);
-    if (payload.body) setCanvasBody(payload.body);
+    if (payload?.to !== undefined) setCanvasTo(payload.to);
+    if (payload?.cc !== undefined) setCanvasCc(payload.cc);
+    if (payload?.subject) setCanvasSubject(payload.subject);
+    if (payload?.body) setCanvasBody(payload.body);
     setCanvasEmailSent(false);
-    setActiveCanvasTab("gmail");
-    setInboxFilter("compose");
-    setCanvasOpen(true);
+    setComposeDrawerMode("gmail");
   };
 
-  const loadIntoWhatsAppCanvas = (payload: { to?: string; message?: string }) => {
-    if (payload.to !== undefined) setCanvasWaPhone(payload.to);
-    if (payload.message) setCanvasWaMessage(payload.message);
+  const openWhatsAppComposer = (payload?: { to?: string; message?: string }) => {
+    if (payload?.to !== undefined) setCanvasWaPhone(payload.to);
+    if (payload?.message) setCanvasWaMessage(payload.message);
     setCanvasWaSent(false);
-    setActiveCanvasTab("whatsapp");
-    setCanvasOpen(true);
+    setComposeDrawerMode("whatsapp");
   };
 
   const handleSendCanvasGmail = async () => {
@@ -842,7 +813,6 @@ export default function AdminAutoFameAgentPage() {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // ── Instant Direct Answer Handler ──
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || inputValue;
     if (!textToSend.trim() && attachedFiles.length === 0) return;
@@ -906,12 +876,10 @@ export default function AdminAutoFameAgentPage() {
     let actionPayload: any = null;
     if (isComposeEmail) {
       actionPayload = buildClientGmailPayload(finalContent, dealershipContext, connectedGmail);
-      loadIntoGmailCanvas(actionPayload);
-      setIsComposeWithAiCompact(true);
+      openGmailComposer(actionPayload);
     } else if (isWhatsAppRequest) {
       actionPayload = buildClientWhatsAppPayload(finalContent, dealershipContext);
-      loadIntoWhatsAppCanvas(actionPayload);
-      setIsComposeWithAiCompact(true);
+      openWhatsAppComposer(actionPayload);
     }
 
     try {
@@ -922,17 +890,7 @@ export default function AdminAutoFameAgentPage() {
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
-      const { directAnswer, openCanvasTab } = getDirectAnswerOnly(
-        finalContent,
-        dealershipContext,
-        inboxEmails,
-        connectedGmail
-      );
-
-      if (openCanvasTab) {
-        setActiveCanvasTab(openCanvasTab);
-        setCanvasOpen(true);
-      }
+      const directAnswer = getDirectAnswerOnly(finalContent, dealershipContext, inboxEmails);
 
       if (directAnswer !== null) {
         await addMessage({
@@ -1034,16 +992,13 @@ export default function AdminAutoFameAgentPage() {
       });
       const data = await res.json();
       if (res.ok && data.connected) {
-        setGmailVerified(true);
         toast.success(`Verified ${trimmedEmail} with Google SMTP & IMAP`);
         fetchLiveGmailInbox(trimmedEmail, cleanedPass);
         setChannelsModalOpen(false);
       } else {
-        setGmailVerified(false);
         setGmailVerifyError(data.error || "Google SMTP rejected the App Password.");
       }
     } catch (err: any) {
-      setGmailVerified(false);
       setGmailVerifyError(err.message);
     }
   };
@@ -1051,47 +1006,23 @@ export default function AdminAutoFameAgentPage() {
   const realCars = Array.isArray(dealershipContext?.cars) ? dealershipContext.cars : [];
   const realRepairs = Array.isArray(dealershipContext?.repairs) ? dealershipContext.repairs : [];
   const realLeads = extractRealLeads(dealershipContext);
-  const availableCars = realCars.filter((c: any) => c.status === "AVAILABLE");
-  const totalShowroomValue = availableCars.reduce((s: number, c: any) => s + (c.price || 0), 0);
-
-  const filteredCars = realCars.filter((c: any) =>
-    `${c.year} ${c.make} ${c.model} ${c.status}`
-      .toLowerCase()
-      .includes(inventorySearch.toLowerCase())
-  );
-
   const todayEmails = inboxEmails.filter((e) => e.isToday);
   const yesterdayEmails = inboxEmails.filter((e) => e.isYesterday);
-  const displayedInboxEmails =
-    inboxFilter === "today"
-      ? todayEmails
-      : inboxFilter === "yesterday"
-      ? yesterdayEmails
-      : inboxEmails;
 
-  // Filter out any legacy "✉️ Gmail Channel (elexsouthflow@gmail.com)" messages
+  // Filter out any legacy poorly-formatted messages
   const cleanMessages = (activeSessionData?.messages || []).filter(
     (m: any) =>
       !m.content?.includes("Gmail Channel (") &&
-      !m.content?.includes("Review the fields below and click Send with Gmail")
+      !m.content?.includes("Review the fields below and click Send with Gmail") &&
+      !m.content?.includes("• **Google**")
   );
-
-  // Finance Calculator Math
-  const loanPrincipal = Math.max(0, calcPrice * (1 - calcDepositPct / 100));
-  const monthlyRate = 0.125 / 12; // 12.5% Prime + 1%
-  const estimatedMonthly =
-    calcMonths > 0
-      ? Math.round(
-          (loanPrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -calcMonths))
-        )
-      : 0;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#181715] text-[#eae7e1] font-sans">
       <Script src="https://js.puter.com/v2/" strategy="afterInteractive" />
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* LEFT SIDEBAR: AGENT CHANNELS & CONVERSATIONS               */}
+      {/* LEFT SIDEBAR: CHANNELS & CONVERSATIONS                     */}
       {/* ────────────────────────────────────────────────────────── */}
       <aside
         className={cn(
@@ -1121,11 +1052,11 @@ export default function AdminAutoFameAgentPage() {
           </Button>
         </div>
 
-        {/* Dealership Channels */}
+        {/* Connected Dealership Channels */}
         <div className="p-3 border-b border-[#262420] space-y-1.5">
           <div className="flex items-center justify-between px-1.5">
             <span className="text-[10px] uppercase font-mono tracking-wider text-[#7d7971] font-semibold">
-              Dealership Channels
+              Connected Channels
             </span>
             <button
               onClick={() => setChannelsModalOpen(true)}
@@ -1136,49 +1067,15 @@ export default function AdminAutoFameAgentPage() {
           </div>
 
           <button
-            onClick={() => {
-              setActiveCanvasTab("command");
-              setIsComposeWithAiCompact(false);
-              setCanvasOpen(true);
-            }}
-            className={cn(
-              "w-full flex items-center justify-between px-2.5 py-2 rounded-xl border transition text-left",
-              canvasOpen && activeCanvasTab === "command"
-                ? "bg-[#22201c] border-emerald-500/40"
-                : "bg-[#181714] hover:bg-[#201e1a] border-[#292621]"
-            )}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Layers className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-[#eae7e1] truncate">Dealership Command</p>
-                <p className="text-[10px] text-[#8e8a82] truncate">
-                  Stock • Finance • Workshop • Feed
-                </p>
-              </div>
-            </div>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveCanvasTab("inventory");
-              setIsComposeWithAiCompact(false);
-              setCanvasOpen(true);
-            }}
-            className={cn(
-              "w-full flex items-center justify-between px-2.5 py-2 rounded-xl border transition text-left",
-              canvasOpen && activeCanvasTab === "inventory"
-                ? "bg-[#22201c] border-emerald-500/40"
-                : "bg-[#181714] hover:bg-[#201e1a] border-[#292621]"
-            )}
+            onClick={() => handleSendMessage("list all cars in inventory")}
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#181714] hover:bg-[#201e1a] border border-[#292621] transition text-left"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <Car className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-medium text-[#eae7e1] truncate">Vehicle Inventory</p>
                 <p className="text-[10px] text-[#8e8a82] truncate">
-                  {realCars.length} Vehicles in Database
+                  {realCars.length} Cars in Database
                 </p>
               </div>
             </div>
@@ -1186,24 +1083,15 @@ export default function AdminAutoFameAgentPage() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveCanvasTab("forms");
-              setIsComposeWithAiCompact(false);
-              setCanvasOpen(true);
-            }}
-            className={cn(
-              "w-full flex items-center justify-between px-2.5 py-2 rounded-xl border transition text-left",
-              canvasOpen && activeCanvasTab === "forms"
-                ? "bg-[#22201c] border-emerald-500/40"
-                : "bg-[#181714] hover:bg-[#201e1a] border-[#292621]"
-            )}
+            onClick={() => handleSendMessage("show website form submissions")}
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#181714] hover:bg-[#201e1a] border border-[#292621] transition text-left"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <Database className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-medium text-[#eae7e1] truncate">Forms &amp; Inquiries</p>
                 <p className="text-[10px] text-[#8e8a82] truncate">
-                  {realLeads.length} Active Website Leads
+                  {realLeads.length} Active Submissions
                 </p>
               </div>
             </div>
@@ -1211,23 +1099,13 @@ export default function AdminAutoFameAgentPage() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveCanvasTab("gmail");
-              setInboxFilter("all");
-              setIsComposeWithAiCompact(false);
-              setCanvasOpen(true);
-            }}
-            className={cn(
-              "w-full flex items-center justify-between px-2.5 py-2 rounded-xl border transition text-left",
-              canvasOpen && activeCanvasTab === "gmail"
-                ? "bg-[#22201c] border-emerald-500/40"
-                : "bg-[#181714] hover:bg-[#201e1a] border-[#292621]"
-            )}
+            onClick={() => handleSendMessage("show emails in our inbox")}
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#181714] hover:bg-[#201e1a] border border-[#292621] transition text-left"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <Mail className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs font-medium text-[#eae7e1] truncate">Gmail Inbox</p>
+                <p className="text-xs font-medium text-[#eae7e1] truncate">Gmail Channel</p>
                 <p className="text-[10px] text-[#8e8a82] font-mono truncate">{connectedGmail}</p>
               </div>
             </div>
@@ -1237,17 +1115,8 @@ export default function AdminAutoFameAgentPage() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveCanvasTab("whatsapp");
-              setIsComposeWithAiCompact(false);
-              setCanvasOpen(true);
-            }}
-            className={cn(
-              "w-full flex items-center justify-between px-2.5 py-2 rounded-xl border transition text-left",
-              canvasOpen && activeCanvasTab === "whatsapp"
-                ? "bg-[#22201c] border-emerald-500/40"
-                : "bg-[#181714] hover:bg-[#201e1a] border-[#292621]"
-            )}
+            onClick={() => openWhatsAppComposer()}
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#181714] hover:bg-[#201e1a] border border-[#292621] transition text-left"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <PhoneCall className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
@@ -1260,11 +1129,11 @@ export default function AdminAutoFameAgentPage() {
           </button>
         </div>
 
-        {/* Recent Chats */}
+        {/* Conversations */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           <div className="px-1.5 mb-1.5">
             <span className="text-[10px] uppercase font-mono tracking-wider text-[#7d7971] font-semibold">
-              Conversations
+              Recents
             </span>
           </div>
 
@@ -1336,11 +1205,11 @@ export default function AdminAutoFameAgentPage() {
       </aside>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* CENTER PANE: AI AGENT CHAT (Expands when Compose with AI)  */}
+      {/* MAIN AGENT CANVAS (WIDE BY DEFAULT — NO EMAIL SIDE PANEL)  */}
       {/* ────────────────────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-[320px] overflow-hidden bg-[#1c1b18]">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#1c1b18]">
         {/* Header */}
-        <header className="h-12 px-4 border-b border-[#2b2823] bg-[#151412] flex items-center justify-between shrink-0">
+        <header className="h-12 px-4 sm:px-6 border-b border-[#2b2823] bg-[#151412] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1348,66 +1217,105 @@ export default function AdminAutoFameAgentPage() {
             >
               <Menu className="h-4 w-4" />
             </button>
-            <span className="font-serif text-sm font-bold text-[#f5f2eb] truncate">
+            <span className="font-serif text-sm sm:text-base font-bold text-[#f5f2eb] truncate">
               {activeSessionData?.session?.title || "AutoFame Agent"}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Compose with AI Toggle — shrinks Canvas to compact width */}
             <button
-              onClick={() => {
-                setIsComposeWithAiCompact(!isComposeWithAiCompact);
-                if (!canvasOpen) setCanvasOpen(true);
-              }}
+              onClick={() =>
+                setComposeDrawerMode(composeDrawerMode === "gmail" ? null : "gmail")
+              }
               className={cn(
                 "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition",
-                isComposeWithAiCompact
+                composeDrawerMode === "gmail"
                   ? "bg-emerald-600 text-white border-emerald-500"
                   : "bg-[#22201c] hover:bg-[#2a2722] text-[#dedad2] border-[#35312b]"
               )}
-              title="Toggle compact Canvas for AI composing"
             >
               <Wand2 className="h-3.5 w-3.5" />
               <span>Compose with AI</span>
             </button>
-
-            <button
-              onClick={() => setCanvasOpen(!canvasOpen)}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition",
-                canvasOpen
-                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35"
-                  : "bg-[#22201c] hover:bg-[#2a2722] text-[#dedad2] border-[#35312b]"
-              )}
-            >
-              {canvasOpen ? (
-                <PanelRightClose className="h-3.5 w-3.5 text-emerald-400" />
-              ) : (
-                <PanelRightOpen className="h-3.5 w-3.5 text-emerald-400" />
-              )}
-              <span>Canvas</span>
-            </button>
           </div>
         </header>
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
-          <div className="max-w-3xl w-full mx-auto space-y-5">
+        {/* Wide Main Canvas Stream */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-14 py-8">
+          <div className="max-w-5xl w-full mx-auto space-y-6">
+            {/* Clean Modern Dealership Overview when Chat is Empty */}
             {cleanMessages.length === 0 && (
-              <div className="py-12 text-center max-w-md mx-auto space-y-3">
-                <div className="inline-flex items-center justify-center h-11 w-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400">
-                  <Sparkles className="h-5 w-5" />
+              <div className="py-10 space-y-8">
+                <div className="text-center max-w-2xl mx-auto space-y-3">
+                  <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-[#f5f2eb] font-serif">
+                    AutoFame Dealership Agent
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#8e8a82]">
+                    Ask anything about vehicle inventory, pricing, finance, workshop repairs, form submissions, or emails.
+                  </p>
                 </div>
-                <h2 className="text-lg font-bold text-[#f5f2eb] font-serif">
-                  Ask AutoFame Agent Anything
-                </h2>
-                <p className="text-xs text-[#8e8a82] leading-relaxed">
-                  Ask about vehicle stock, prices, finance, workshop status, website form leads, or incoming emails from yesterday &amp; today.
-                </p>
+
+                {/* Live Multi-Channel Dealership Status Cards on the Wide Main Canvas */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+                  <button
+                    onClick={() => handleSendMessage("how many cars")}
+                    className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282621] border border-[#35312b] text-left transition"
+                  >
+                    <div className="flex items-center justify-between text-[#8e8a82] text-xs">
+                      <span>Vehicles in Stock</span>
+                      <Car className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1.5">{realCars.length}</p>
+                    <p className="text-[11px] text-emerald-400 mt-0.5">Live Convex Inventory</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleSendMessage("show website form submissions")}
+                    className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282621] border border-[#35312b] text-left transition"
+                  >
+                    <div className="flex items-center justify-between text-[#8e8a82] text-xs">
+                      <span>Form Submissions</span>
+                      <Database className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1.5">{realLeads.length}</p>
+                    <p className="text-[11px] text-[#8e8a82] mt-0.5">Finance &amp; Inquiries</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleSendMessage("how many repairs")}
+                    className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282621] border border-[#35312b] text-left transition"
+                  >
+                    <div className="flex items-center justify-between text-[#8e8a82] text-xs">
+                      <span>Workshop Repairs</span>
+                      <Wrench className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1.5">{realRepairs.length}</p>
+                    <p className="text-[11px] text-[#8e8a82] mt-0.5">Active Service Jobs</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleSendMessage("show emails from yesterday and today")}
+                    className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282621] border border-[#35312b] text-left transition"
+                  >
+                    <div className="flex items-center justify-between text-[#8e8a82] text-xs">
+                      <span>New Emails</span>
+                      <Mail className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1.5">
+                      {todayEmails.length + yesterdayEmails.length}
+                    </p>
+                    <p className="text-[11px] text-emerald-400 mt-0.5">
+                      {todayEmails.length} Today • {yesterdayEmails.length} Yesterday
+                    </p>
+                  </button>
+                </div>
               </div>
             )}
 
+            {/* Wide Chat Messages */}
             {cleanMessages.map((msg: any) => {
               const isAssistant = msg.role === "assistant";
 
@@ -1415,22 +1323,22 @@ export default function AdminAutoFameAgentPage() {
                 <div
                   key={msg._id}
                   className={cn(
-                    "flex gap-3 w-full",
+                    "flex gap-4 w-full",
                     isAssistant ? "justify-start" : "justify-end"
                   )}
                 >
                   {isAssistant && (
-                    <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                      <Sparkles className="h-3.5 w-3.5" />
+                    <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                      <Sparkles className="h-4 w-4" />
                     </div>
                   )}
 
                   <div
                     className={cn(
-                      "rounded-2xl text-sm leading-relaxed",
+                      "rounded-2xl text-sm sm:text-base leading-relaxed",
                       isAssistant
-                        ? "bg-[#24221e] text-[#f5f2eb] border border-[#35312b] px-4 py-3 max-w-2xl"
-                        : "bg-emerald-600 text-white font-medium px-4 py-2.5 max-w-xl ml-auto"
+                        ? "bg-[#24221e] text-[#f5f2eb] border border-[#35312b] px-6 py-4 w-full max-w-4xl"
+                        : "bg-emerald-600 text-white font-medium px-5 py-3.5 max-w-3xl ml-auto"
                     )}
                   >
                     {isAssistant ? (
@@ -1445,8 +1353,8 @@ export default function AdminAutoFameAgentPage() {
                   </div>
 
                   {!isAssistant && (
-                    <div className="h-7 w-7 rounded-lg bg-[#33302a] border border-[#444037] flex items-center justify-center text-[#eae7e1] shrink-0 mt-0.5">
-                      <User className="h-3.5 w-3.5" />
+                    <div className="h-8 w-8 rounded-xl bg-[#33302a] border border-[#444037] flex items-center justify-center text-[#eae7e1] shrink-0 mt-0.5">
+                      <User className="h-4 w-4" />
                     </div>
                   )}
                 </div>
@@ -1457,9 +1365,9 @@ export default function AdminAutoFameAgentPage() {
           </div>
         </div>
 
-        {/* AI Chat Composer */}
-        <div className="p-3.5 bg-[#151412] border-t border-[#2b2823] shrink-0">
-          <div className="max-w-3xl w-full mx-auto">
+        {/* Wide Bottom Prompt Bar */}
+        <div className="p-4 sm:p-5 bg-[#151412] border-t border-[#2b2823] shrink-0">
+          <div className="max-w-5xl w-full mx-auto">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1468,14 +1376,14 @@ export default function AdminAutoFameAgentPage() {
               className="relative rounded-2xl border border-[#38342d] bg-[#22201c] focus-within:border-emerald-500/80 transition"
             >
               {attachedFiles.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-2.5 border-b border-[#2e2b26]">
+                <div className="flex flex-wrap gap-2 p-3 border-b border-[#2e2b26]">
                   {attachedFiles.map((f, i) => (
                     <div
                       key={i}
                       className="flex items-center gap-2 bg-[#282521] border border-[#3d3931] rounded-lg px-2.5 py-1 text-xs"
                     >
                       <FileText className="h-3.5 w-3.5 text-emerald-400" />
-                      <span className="max-w-[150px] truncate">{f.name}</span>
+                      <span className="max-w-[180px] truncate">{f.name}</span>
                       <button type="button" onClick={() => removeAttachedFile(i)}>
                         <X className="h-3 w-3 text-[#8e8a82] hover:text-white" />
                       </button>
@@ -1487,10 +1395,6 @@ export default function AdminAutoFameAgentPage() {
               <textarea
                 ref={textareaRef}
                 value={inputValue}
-                onFocus={() => {
-                  // Automatically make Canvas smaller when user clicks to compose with AI
-                  setIsComposeWithAiCompact(true);
-                }}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -1499,8 +1403,8 @@ export default function AdminAutoFameAgentPage() {
                   }
                 }}
                 rows={2}
-                placeholder="Ask anything (e.g. 'how many cars', 'what emails do we have from yesterday', 'cheapest car')..."
-                className="w-full bg-transparent p-3.5 pb-11 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed"
+                placeholder="Ask anything (e.g. 'how many cars', 'show emails from yesterday', 'list all cars')..."
+                className="w-full bg-transparent p-4 pb-12 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed"
               />
 
               <input
@@ -1512,7 +1416,7 @@ export default function AdminAutoFameAgentPage() {
                 className="hidden"
               />
 
-              <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between gap-2">
+              <div className="absolute bottom-2.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
@@ -1525,15 +1429,20 @@ export default function AdminAutoFameAgentPage() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsComposeWithAiCompact(true);
-                      setInputValue("Compose an email to ");
-                      textareaRef.current?.focus();
-                    }}
+                    onClick={() => openGmailComposer()}
                     className="h-7 px-2.5 rounded-lg bg-[#181715] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
                   >
-                    <Wand2 className="h-3.5 w-3.5 text-emerald-400" />
-                    <span>Compose with AI</span>
+                    <Mail className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Compose Email</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openWhatsAppComposer()}
+                    className="h-7 px-2.5 rounded-lg bg-[#181715] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
+                  >
+                    <PhoneCall className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>WhatsApp</span>
                   </button>
                 </div>
 
@@ -1541,7 +1450,7 @@ export default function AdminAutoFameAgentPage() {
                   type="submit"
                   disabled={!inputValue.trim() && attachedFiles.length === 0}
                   size="sm"
-                  className="h-7 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 disabled:opacity-30"
+                  className="h-7 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 disabled:opacity-30"
                 >
                   <Send className="h-3 w-3" />
                   Send
@@ -1553,907 +1462,131 @@ export default function AdminAutoFameAgentPage() {
       </main>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* RIGHT PANE: WIDE MODERN CLAUDE-STYLE DEALERSHIP CANVAS     */}
-      {/* Wide by default (60%); shrinks to 380px on Compose with AI */}
+      {/* COMPACT COMPOSE DRAWER (ONLY OPENS WHEN COMPOSING WITH AI) */}
       {/* ────────────────────────────────────────────────────────── */}
-      {canvasOpen && (
-        <aside
-          className={cn(
-            "shrink-0 flex flex-col bg-[#131210] border-l border-[#2b2823] z-20 shadow-2xl transition-all duration-300",
-            isComposeWithAiCompact
-              ? "w-full sm:w-[370px] lg:w-[410px]"
-              : "w-full md:w-[56%] lg:w-[60%] xl:w-[62%]"
-          )}
-        >
-          {/* Canvas Header Bar */}
+      {composeDrawerMode && (
+        <aside className="w-full sm:w-[360px] lg:w-[390px] shrink-0 flex flex-col bg-[#131210] border-l border-[#2b2823] z-20 shadow-2xl">
           <div className="h-12 px-4 border-b border-[#27241f] bg-[#171613] flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="h-6 w-6 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <Layers className="h-3.5 w-3.5" />
-              </div>
-              <span className="text-xs font-bold text-[#f5f2eb] tracking-wide">
-                AutoFame Dealership Canvas
-              </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hidden sm:inline">
-                {isComposeWithAiCompact ? "Compact Mode" : "Wide Studio"}
+            <div className="flex items-center gap-2">
+              {composeDrawerMode === "gmail" ? (
+                <Mail className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <PhoneCall className="h-4 w-4 text-emerald-400" />
+              )}
+              <span className="text-xs font-bold text-[#f5f2eb]">
+                {composeDrawerMode === "gmail"
+                  ? `Compose Email (${connectedGmail})`
+                  : "Compose WhatsApp"}
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setIsComposeWithAiCompact(!isComposeWithAiCompact)}
-                className="px-2.5 py-1 rounded-lg bg-[#22201c] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] text-[11px] flex items-center gap-1.5 transition"
-                title={isComposeWithAiCompact ? "Expand Canvas Width" : "Compact Canvas Width"}
-              >
-                {isComposeWithAiCompact ? (
-                  <>
-                    <Maximize2 className="h-3 w-3 text-emerald-400" />
-                    <span>Expand Canvas</span>
-                  </>
-                ) : (
-                  <>
-                    <Minimize2 className="h-3 w-3 text-emerald-400" />
-                    <span>Compact</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => setChannelsModalOpen(true)}
-                className="p-1.5 rounded-lg hover:bg-[#262420] text-[#8e8a82] hover:text-white transition"
-                title="Configure Channels"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-              </button>
-
-              <button
-                onClick={() => setCanvasOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-[#262420] text-[#8e8a82] hover:text-white transition"
-                title="Close Canvas"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Multi-Channel Dealership Navigation Tabs */}
-          <div className="px-4 py-2.5 bg-[#151412] border-b border-[#27241f] flex items-center gap-1.5 overflow-x-auto shrink-0">
             <button
-              onClick={() => {
-                setActiveCanvasTab("command");
-                setIsComposeWithAiCompact(false);
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition whitespace-nowrap",
-                activeCanvasTab === "command"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-[#1f1e1a] text-[#a6a197] hover:text-white border border-[#2e2b26]"
-              )}
+              onClick={() => setComposeDrawerMode(null)}
+              className="p-1.5 rounded-lg hover:bg-[#262420] text-[#8e8a82] hover:text-white transition"
             >
-              <Layers className="h-3.5 w-3.5" />
-              Command Overview
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveCanvasTab("inventory");
-                setIsComposeWithAiCompact(false);
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition whitespace-nowrap",
-                activeCanvasTab === "inventory"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-[#1f1e1a] text-[#a6a197] hover:text-white border border-[#2e2b26]"
-              )}
-            >
-              <Car className="h-3.5 w-3.5" />
-              Showroom Stock ({realCars.length})
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveCanvasTab("forms");
-                setIsComposeWithAiCompact(false);
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition whitespace-nowrap",
-                activeCanvasTab === "forms"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-[#1f1e1a] text-[#a6a197] hover:text-white border border-[#2e2b26]"
-              )}
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Forms &amp; Leads ({realLeads.length})
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveCanvasTab("gmail");
-                setIsComposeWithAiCompact(false);
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition whitespace-nowrap",
-                activeCanvasTab === "gmail"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-[#1f1e1a] text-[#a6a197] hover:text-white border border-[#2e2b26]"
-              )}
-            >
-              <Inbox className="h-3.5 w-3.5" />
-              Emails ({inboxEmails.length})
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveCanvasTab("whatsapp");
-                setIsComposeWithAiCompact(false);
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition whitespace-nowrap",
-                activeCanvasTab === "whatsapp"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-[#1f1e1a] text-[#a6a197] hover:text-white border border-[#2e2b26]"
-              )}
-            >
-              <PhoneCall className="h-3.5 w-3.5" />
-              WhatsApp
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Canvas Main Content Area */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5">
-            {/* ══════════════════════════════════════════════════════════ */}
-            {/* TAB 1: DEALERSHIP COMMAND OVERVIEW (All Channels + Tools)  */}
-            {/* ══════════════════════════════════════════════════════════ */}
-            {activeCanvasTab === "command" && (
-              <div className="space-y-5">
-                {/* Live Dealership KPIs */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div
-                    onClick={() => setActiveCanvasTab("inventory")}
-                    className="p-4 rounded-2xl bg-[#1a1916] border border-[#2d2a24] hover:border-emerald-500/40 cursor-pointer transition"
-                  >
-                    <div className="flex items-center justify-between text-[#8e8a82] text-[11px] font-mono uppercase">
-                      <span>Total Stock</span>
-                      <Car className="h-4 w-4 text-emerald-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1">{realCars.length}</p>
-                    <p className="text-[11px] text-emerald-400 mt-0.5">
-                      {availableCars.length} Available on Floor
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveCanvasTab("inventory")}
-                    className="p-4 rounded-2xl bg-[#1a1916] border border-[#2d2a24] hover:border-emerald-500/40 cursor-pointer transition"
-                  >
-                    <div className="flex items-center justify-between text-[#8e8a82] text-[11px] font-mono uppercase">
-                      <span>Showroom Value</span>
-                      <Calculator className="h-4 w-4 text-emerald-400" />
-                    </div>
-                    <p className="text-lg font-bold text-[#f5f2eb] mt-1.5 font-mono">
-                      R{totalShowroomValue.toLocaleString()}
-                    </p>
-                    <p className="text-[11px] text-[#8e8a82] mt-0.5">ZAR Active Asset Value</p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveCanvasTab("forms")}
-                    className="p-4 rounded-2xl bg-[#1a1916] border border-[#2d2a24] hover:border-emerald-500/40 cursor-pointer transition"
-                  >
-                    <div className="flex items-center justify-between text-[#8e8a82] text-[11px] font-mono uppercase">
-                      <span>Website Leads</span>
-                      <ClipboardList className="h-4 w-4 text-emerald-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1">{realLeads.length}</p>
-                    <p className="text-[11px] text-[#8e8a82] mt-0.5">
-                      Finance &amp; Test Drives
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveCanvasTab("gmail")}
-                    className="p-4 rounded-2xl bg-[#1a1916] border border-[#2d2a24] hover:border-emerald-500/40 cursor-pointer transition"
-                  >
-                    <div className="flex items-center justify-between text-[#8e8a82] text-[11px] font-mono uppercase">
-                      <span>New Emails</span>
-                      <Mail className="h-4 w-4 text-emerald-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1">
-                      {todayEmails.length + yesterdayEmails.length}
-                    </p>
-                    <p className="text-[11px] text-emerald-400 mt-0.5">
-                      {todayEmails.length} Today • {yesterdayEmails.length} Yesterday
-                    </p>
-                  </div>
-                </div>
-
-                {/* Two-Column Dealership Grid: New Emails (Today & Yesterday) + Finance Calculator */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {/* Live Emails from Today & Yesterday */}
-                  <div className="rounded-2xl bg-[#1a1916] border border-[#2d2a24] p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Inbox className="h-4 w-4 text-emerald-400" />
-                        <h3 className="text-xs font-bold text-[#f5f2eb]">
-                          New Emails (Today &amp; Yesterday)
-                        </h3>
-                      </div>
-                      <button
-                        onClick={() => fetchLiveGmailInbox()}
-                        className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1"
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                        Sync
-                      </button>
-                    </div>
-
-                    {inboxEmails.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-[#8e8a82]">
-                        No recent emails in {connectedGmail}.
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {inboxEmails.slice(0, 5).map((email) => (
-                          <div
-                            key={email.seq}
-                            onClick={() => {
-                              setSelectedInboxEmail(email);
-                              setActiveCanvasTab("gmail");
-                              setInboxFilter("all");
-                            }}
-                            className="p-3 rounded-xl bg-[#141311] border border-[#292621] hover:border-emerald-500/40 cursor-pointer transition space-y-1"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-semibold text-[#f5f2eb] truncate">
-                                {email.fromName}
-                              </span>
-                              <span
-                                className={cn(
-                                  "px-2 py-0.5 rounded-full text-[10px] font-mono shrink-0",
-                                  email.isToday
-                                    ? "bg-emerald-500/20 text-emerald-300"
-                                    : email.isYesterday
-                                    ? "bg-amber-500/20 text-amber-300"
-                                    : "bg-[#24221e] text-[#8e8a82]"
-                                )}
-                              >
-                                {email.isToday
-                                  ? "Today"
-                                  : email.isYesterday
-                                  ? "Yesterday"
-                                  : new Date(email.date).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <p className="text-xs text-emerald-400 font-medium truncate">
-                              {email.subject}
-                            </p>
-                            <p className="text-[11px] text-[#8e8a82] line-clamp-1">
-                              {email.snippet}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Interactive SA Dealership Finance & Instalment Desk */}
-                  <div className="rounded-2xl bg-[#1a1916] border border-[#2d2a24] p-4 space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Calculator className="h-4 w-4 text-emerald-400" />
-                        <h3 className="text-xs font-bold text-[#f5f2eb]">
-                          Dealership Finance Calculator (ZAR)
-                        </h3>
-                      </div>
-                      <span className="text-[10px] font-mono text-emerald-400">
-                        WesBank / MFC / Std Bank
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2.5 text-xs">
-                      <div>
-                        <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                          Vehicle Price (R)
-                        </label>
-                        <input
-                          type="number"
-                          value={calcPrice}
-                          onChange={(e) => setCalcPrice(Number(e.target.value) || 0)}
-                          className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-2.5 py-2 text-white font-mono text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                          Deposit (%)
-                        </label>
-                        <input
-                          type="number"
-                          value={calcDepositPct}
-                          onChange={(e) => setCalcDepositPct(Number(e.target.value) || 0)}
-                          className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-2.5 py-2 text-white font-mono text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                          Term (Months)
-                        </label>
-                        <select
-                          value={calcMonths}
-                          onChange={(e) => setCalcMonths(Number(e.target.value))}
-                          className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-2.5 py-2 text-white font-mono text-xs"
-                        >
-                          <option value={48}>48 Mos</option>
-                          <option value={60}>60 Mos</option>
-                          <option value={72}>72 Mos</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-[#12110f] border border-emerald-500/30 flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-mono uppercase text-[#8e8a82]">
-                          Est. Monthly Instalment
-                        </p>
-                        <p className="text-xl font-bold text-emerald-400 font-mono">
-                          R{estimatedMonthly.toLocaleString()} / mo
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          loadIntoGmailCanvas({
-                            subject: `AutoFame Finance Quotation — R${estimatedMonthly.toLocaleString()}/mo`,
-                            body: `Dear Valued Client,\n\nHere is your AutoFame Dealership finance quotation:\n• Vehicle Price: R${calcPrice.toLocaleString()} ZAR\n• Deposit (${calcDepositPct}%): R${Math.round(
-                              (calcPrice * calcDepositPct) / 100
-                            ).toLocaleString()} ZAR\n• Term: ${calcMonths} Months\n• Estimated Instalment: R${estimatedMonthly.toLocaleString()} ZAR / month\n\nWarm regards,\nAutoFame Dealership\n${connectedGmail}`,
-                          });
-                        }}
-                        className="h-8 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-xl"
-                      >
-                        Email Quote
-                      </Button>
-                    </div>
-
-                    {/* Workshop Status Summary */}
-                    <div className="pt-2 border-t border-[#292621] flex items-center justify-between text-xs">
-                      <span className="text-[#8e8a82] flex items-center gap-1.5">
-                        <Wrench className="h-3.5 w-3.5 text-emerald-400" />
-                        Active Workshop Repairs:
-                      </span>
-                      <span className="font-mono font-bold text-white">{realRepairs.length}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Showroom Inventory Quick Roster */}
-                <div className="rounded-2xl bg-[#1a1916] border border-[#2d2a24] p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-[#f5f2eb] flex items-center gap-2">
-                      <Car className="h-4 w-4 text-emerald-400" />
-                      Live Dealership Stock ({realCars.length} Cars)
-                    </h3>
-                    <button
-                      onClick={() => setActiveCanvasTab("inventory")}
-                      className="text-[11px] text-emerald-400 hover:underline"
-                    >
-                      View All &rarr;
-                    </button>
-                  </div>
-
-                  {realCars.length === 0 ? (
-                    <p className="text-xs text-[#8e8a82] py-4 text-center">
-                      0 cars currently in database.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                      {realCars.slice(0, 6).map((car: any) => (
-                        <div
-                          key={car.id}
-                          className="p-3 rounded-xl bg-[#141311] border border-[#292621] flex items-center justify-between gap-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-[#f5f2eb] truncate">
-                              {car.year} {car.make} {car.model}
-                            </p>
-                            <p className="text-[11px] text-emerald-400 font-mono">
-                              R{(car.price || 0).toLocaleString()} ZAR • {car.status}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              const draft = buildClientGmailPayload(
-                                `${car.make} ${car.model}`,
-                                dealershipContext,
-                                connectedGmail
-                              );
-                              loadIntoGmailCanvas(draft);
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-[#24221e] hover:bg-emerald-600 text-white text-[11px] shrink-0 transition"
-                          >
-                            Quote
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════ */}
-            {/* TAB 2: SHOWROOM INVENTORY CANVAS                           */}
-            {/* ══════════════════════════════════════════════════════════ */}
-            {activeCanvasTab === "inventory" && (
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="h-4 w-4 text-[#8e8a82] absolute left-3.5 top-3" />
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs">
+            {composeDrawerMode === "gmail" ? (
+              <>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                    To (Recipient) *
+                  </label>
                   <input
-                    type="text"
-                    value={inventorySearch}
-                    onChange={(e) => setInventorySearch(e.target.value)}
-                    placeholder={`Search ${realCars.length} vehicles by make, model, year, or status...`}
-                    className="w-full bg-[#1a1916] border border-[#2e2b26] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    type="email"
+                    value={canvasTo}
+                    onChange={(e) => {
+                      setCanvasTo(e.target.value);
+                      setCanvasEmailSent(false);
+                    }}
+                    placeholder="client@example.com"
+                    className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500"
                   />
-                </div>
-
-                {filteredCars.length === 0 ? (
-                  <div className="p-10 rounded-2xl bg-[#1a1916] border border-[#2e2b26] text-center text-xs text-[#8e8a82]">
-                    0 vehicles found in database.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                    {filteredCars.map((car: any) => (
-                      <div
-                        key={car.id}
-                        className="p-4 rounded-2xl bg-[#1a1916] border border-[#2e2b26] hover:border-emerald-500/40 transition flex flex-col justify-between gap-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="text-[10px] font-mono text-[#8e8a82]">
-                              ID #{car.id} • {car.transmission || "Automatic"}
-                            </span>
-                            <h4 className="text-sm font-bold text-[#f5f2eb]">
-                              {car.year} {car.make} {car.model}
-                            </h4>
-                            <p className="text-xs font-mono text-emerald-400 font-semibold mt-0.5">
-                              R{(car.price || 0).toLocaleString()} ZAR •{" "}
-                              {(car.mileage || 0).toLocaleString()} km
-                            </p>
-                          </div>
-                          <span
-                            className={cn(
-                              "px-2 py-0.5 rounded-full text-[10px] font-mono",
-                              car.status === "AVAILABLE"
-                                ? "bg-emerald-500/15 text-emerald-400"
-                                : "bg-amber-500/15 text-amber-300"
-                            )}
-                          >
-                            {car.status}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2 border-t border-[#262420]">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const draft = buildClientGmailPayload(
-                                `${car.make} ${car.model}`,
-                                dealershipContext,
-                                connectedGmail
-                              );
-                              loadIntoGmailCanvas(draft);
-                            }}
-                            className="flex-1 py-1.5 px-3 rounded-xl bg-[#25231f] hover:bg-emerald-600 text-white text-xs font-medium transition flex items-center justify-center gap-1.5"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                            Email Quote
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const wa = buildClientWhatsAppPayload(
-                                `${car.make} ${car.model}`,
-                                dealershipContext
-                              );
-                              loadIntoWhatsAppCanvas(wa);
-                            }}
-                            className="flex-1 py-1.5 px-3 rounded-xl bg-[#25231f] hover:bg-emerald-600 text-white text-xs font-medium transition flex items-center justify-center gap-1.5"
-                          >
-                            <PhoneCall className="h-3.5 w-3.5" />
-                            WhatsApp
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════ */}
-            {/* TAB 3: WEBSITE FORMS & LEADS CANVAS                        */}
-            {/* ══════════════════════════════════════════════════════════ */}
-            {activeCanvasTab === "forms" && (
-              <div className="space-y-3">
-                {realLeads.length === 0 ? (
-                  <div className="p-10 rounded-2xl bg-[#1a1916] border border-[#2e2b26] text-center text-xs text-[#8e8a82]">
-                    0 website form submissions in database.
-                  </div>
-                ) : (
-                  realLeads.map((lead, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-2xl bg-[#1a1916] border border-[#2e2b26] flex flex-wrap items-center justify-between gap-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-[#f5f2eb]">
-                            {lead.customerName}
-                          </span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
-                            {lead.type}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#dedad2]">{lead.vehicle}</p>
-                        <p className="text-[11px] text-[#8e8a82] font-mono">
-                          {lead.email || "No email"} • {lead.phone || "No phone"}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {lead.email && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              loadIntoGmailCanvas({
-                                to: lead.email,
-                                subject: `AutoFame Dealership — Regarding your ${lead.type}`,
-                              })
-                            }
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1.5"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                            Email
-                          </button>
-                        )}
-                        {lead.phone && (
-                          <button
-                            type="button"
-                            onClick={() => loadIntoWhatsAppCanvas({ to: lead.phone })}
-                            className="px-3 py-1.5 rounded-xl bg-[#25231f] hover:bg-emerald-600 text-white text-xs font-medium flex items-center gap-1.5"
-                          >
-                            <PhoneCall className="h-3.5 w-3.5" />
-                            WhatsApp
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════ */}
-            {/* TAB 4: LIVE GMAIL INBOX (Today & Yesterday) + COMPOSER     */}
-            {/* ══════════════════════════════════════════════════════════ */}
-            {activeCanvasTab === "gmail" && (
-              <div className="space-y-4">
-                {/* Sub-bar: All Inbox | Today | Yesterday | Compose */}
-                <div className="flex flex-wrap items-center justify-between gap-2 bg-[#1a1916] p-3 rounded-2xl border border-[#2e2b26]">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        setInboxFilter("all");
-                        setSelectedInboxEmail(null);
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-medium transition",
-                        inboxFilter === "all"
-                          ? "bg-emerald-600 text-white"
-                          : "bg-[#12110f] text-[#a6a197] hover:text-white"
-                      )}
-                    >
-                      All Inbox ({inboxEmails.length})
-                    </button>
-                    <button
-                      onClick={() => {
-                        setInboxFilter("today");
-                        setSelectedInboxEmail(null);
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-medium transition",
-                        inboxFilter === "today"
-                          ? "bg-emerald-600 text-white"
-                          : "bg-[#12110f] text-[#a6a197] hover:text-white"
-                      )}
-                    >
-                      Today ({todayEmails.length})
-                    </button>
-                    <button
-                      onClick={() => {
-                        setInboxFilter("yesterday");
-                        setSelectedInboxEmail(null);
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-medium transition",
-                        inboxFilter === "yesterday"
-                          ? "bg-emerald-600 text-white"
-                          : "bg-[#12110f] text-[#a6a197] hover:text-white"
-                      )}
-                    >
-                      Yesterday ({yesterdayEmails.length})
-                    </button>
-                    <button
-                      onClick={() => {
-                        setInboxFilter("compose");
-                        setSelectedInboxEmail(null);
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1",
-                        inboxFilter === "compose"
-                          ? "bg-emerald-600 text-white"
-                          : "bg-[#12110f] text-emerald-400 hover:text-white border border-emerald-500/30"
-                      )}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Compose
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => fetchLiveGmailInbox()}
-                    className="px-2.5 py-1.5 rounded-xl bg-[#12110f] hover:bg-[#24221e] text-[#dedad2] text-xs flex items-center gap-1.5 border border-[#2e2b26]"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5 text-emerald-400" />
-                    Refresh
-                  </button>
-                </div>
-
-                {/* Compose View */}
-                {inboxFilter === "compose" ? (
-                  <div className="rounded-2xl bg-[#1a1916] border border-[#2e2b26] p-4 space-y-3.5 text-xs">
-                    <div className="flex items-center justify-between pb-2 border-b border-[#292621]">
-                      <span className="font-bold text-[#f5f2eb]">
-                        New Email from <code className="text-emerald-400">{connectedGmail}</code>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsComposeWithAiCompact(!isComposeWithAiCompact)}
-                        className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1"
-                      >
-                        <Wand2 className="h-3 w-3" />
-                        {isComposeWithAiCompact ? "Wide View" : "Compact to Compose with AI"}
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                          To (Recipient) *
-                        </label>
-                        <input
-                          type="email"
-                          value={canvasTo}
-                          onChange={(e) => {
-                            setCanvasTo(e.target.value);
-                            setCanvasEmailSent(false);
-                          }}
-                          placeholder="client@example.com"
-                          className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3.5 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                          Cc
-                        </label>
-                        <input
-                          type="email"
-                          value={canvasCc}
-                          onChange={(e) => setCanvasCc(e.target.value)}
-                          placeholder="Optional CC"
-                          className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3.5 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                        Subject *
-                      </label>
-                      <input
-                        type="text"
-                        value={canvasSubject}
-                        onChange={(e) => setCanvasSubject(e.target.value)}
-                        className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3.5 py-2 text-[#f5f2eb] font-medium text-xs focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                        Message Body
-                      </label>
-                      <textarea
-                        rows={10}
-                        value={canvasBody}
-                        onChange={(e) => setCanvasBody(e.target.value)}
-                        className="w-full bg-[#12110f] border border-[#33302a] rounded-xl p-3.5 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500 resize-y"
-                      />
-                    </div>
-
-                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-[#2a2722]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const url = `https://mail.google.com/mail/?authuser=${encodeURIComponent(
-                            connectedGmail
-                          )}&view=cm&fs=1&to=${encodeURIComponent(
-                            canvasTo
-                          )}&cc=${encodeURIComponent(canvasCc)}&su=${encodeURIComponent(
-                            canvasSubject
-                          )}&body=${encodeURIComponent(canvasBody)}`;
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-[#25231f] hover:bg-[#2f2c27] text-[#dedad2] border border-[#38342d]"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
-                        Open in Gmail Web
-                      </button>
-
-                      <Button
-                        type="button"
-                        onClick={handleSendCanvasGmail}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 px-5 rounded-xl flex items-center gap-1.5"
-                      >
-                        {canvasEmailSent ? (
-                          <>
-                            <CheckCircle2 className="h-4 w-4" />
-                            Sent from {connectedGmail}
-                          </>
-                        ) : (
-                          <>
-                            <SendHorizontal className="h-4 w-4" />
-                            Send Email Now
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ) : selectedInboxEmail ? (
-                  /* Selected Incoming Email Reader + Reply with AI */
-                  <div className="rounded-2xl bg-[#1a1916] border border-[#2e2b26] p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-3 border-b border-[#292621] pb-3">
-                      <div>
-                        <button
-                          onClick={() => setSelectedInboxEmail(null)}
-                          className="text-xs text-emerald-400 hover:underline mb-2 inline-block"
-                        >
-                          &larr; Back to Inbox
-                        </button>
-                        <h3 className="text-sm font-bold text-[#f5f2eb]">
-                          {selectedInboxEmail.subject}
-                        </h3>
-                        <p className="text-xs text-[#dedad2] mt-1">
-                          From: <strong>{selectedInboxEmail.fromName}</strong> (
-                          <code className="text-emerald-400">{selectedInboxEmail.fromEmail}</code>)
-                        </p>
-                        <p className="text-[11px] text-[#8e8a82] mt-0.5">
-                          Received: {new Date(selectedInboxEmail.date).toLocaleString()}
-                        </p>
-                      </div>
-
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          loadIntoGmailCanvas({
-                            to: selectedInboxEmail.fromEmail,
-                            subject: `Re: ${selectedInboxEmail.subject}`,
-                            body: `Dear ${selectedInboxEmail.fromName},\n\nThank you for your email to AutoFame Dealership.\n\n\n\nWarm regards,\nAutoFame Dealership\n${connectedGmail}`,
-                          });
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8 px-3.5 rounded-xl flex items-center gap-1.5"
-                      >
-                        <Reply className="h-3.5 w-3.5" />
-                        Reply
-                      </Button>
-                    </div>
-
-                    <div className="text-xs text-[#dedad2] leading-relaxed whitespace-pre-wrap bg-[#12110f] p-4 rounded-xl border border-[#292621]">
-                      {selectedInboxEmail.snippet}
-                    </div>
-                  </div>
-                ) : (
-                  /* Live Inbox List (Today, Yesterday, Earlier) */
-                  <div className="space-y-2">
-                    {displayedInboxEmails.length === 0 ? (
-                      <div className="p-10 rounded-2xl bg-[#1a1916] border border-[#2e2b26] text-center text-xs text-[#8e8a82]">
-                        No emails found for this filter in {connectedGmail}.
-                      </div>
-                    ) : (
-                      displayedInboxEmails.map((email) => (
-                        <div
-                          key={email.seq}
-                          onClick={() => setSelectedInboxEmail(email)}
-                          className="p-3.5 rounded-2xl bg-[#1a1916] border border-[#2e2b26] hover:border-emerald-500/40 cursor-pointer transition flex items-start justify-between gap-3"
-                        >
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-[#f5f2eb] truncate">
-                                {email.fromName}
-                              </span>
-                              <span className="text-[11px] font-mono text-[#8e8a82] truncate">
-                                &lt;{email.fromEmail}&gt;
-                              </span>
-                            </div>
-                            <p className="text-xs font-semibold text-emerald-400 truncate">
-                              {email.subject}
-                            </p>
-                            <p className="text-xs text-[#8e8a82] line-clamp-1">
-                              {email.snippet}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <span
-                              className={cn(
-                                "px-2 py-0.5 rounded-full text-[10px] font-mono flex items-center gap-1",
-                                email.isToday
-                                  ? "bg-emerald-500/20 text-emerald-300"
-                                  : email.isYesterday
-                                  ? "bg-amber-500/20 text-amber-300"
-                                  : "bg-[#24221e] text-[#8e8a82]"
-                              )}
-                            >
-                              <Clock className="h-2.5 w-2.5" />
-                              {email.isToday
-                                ? "Today"
-                                : email.isYesterday
-                                ? "Yesterday"
-                                : new Date(email.date).toLocaleDateString()}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                loadIntoGmailCanvas({
-                                  to: email.fromEmail,
-                                  subject: `Re: ${email.subject}`,
-                                  body: `Dear ${email.fromName},\n\nThank you for contacting AutoFame Dealership.\n\nWarm regards,\nAutoFame Dealership\n${connectedGmail}`,
-                                });
-                              }}
-                              className="px-2 py-1 rounded-lg bg-[#25231f] hover:bg-emerald-600 text-white text-[10px] font-medium flex items-center gap-1"
-                            >
-                              <Reply className="h-2.5 w-2.5" />
-                              Reply
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════ */}
-            {/* TAB 5: WHATSAPP STUDIO CANVAS                              */}
-            {/* ══════════════════════════════════════════════════════════ */}
-            {activeCanvasTab === "whatsapp" && (
-              <div className="rounded-2xl bg-[#1a1916] border border-[#2e2b26] p-4 space-y-4 text-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-[#2a2722]">
-                  <div className="flex items-center gap-2">
-                    <PhoneCall className="h-4 w-4 text-emerald-400" />
-                    <span className="font-bold text-[#f5f2eb]">WhatsApp Dispatch Studio</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    Connected
-                  </span>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                    Recipient WhatsApp Number *
+                    Cc
+                  </label>
+                  <input
+                    type="email"
+                    value={canvasCc}
+                    onChange={(e) => setCanvasCc(e.target.value)}
+                    placeholder="Optional CC"
+                    className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                    Subject *
+                  </label>
+                  <input
+                    type="text"
+                    value={canvasSubject}
+                    onChange={(e) => setCanvasSubject(e.target.value)}
+                    className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-medium text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                    Message Body
+                  </label>
+                  <textarea
+                    rows={10}
+                    value={canvasBody}
+                    onChange={(e) => setCanvasBody(e.target.value)}
+                    className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl p-3 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500 resize-y"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `https://mail.google.com/mail/?authuser=${encodeURIComponent(
+                        connectedGmail
+                      )}&view=cm&fs=1&to=${encodeURIComponent(
+                        canvasTo
+                      )}&cc=${encodeURIComponent(canvasCc)}&su=${encodeURIComponent(
+                        canvasSubject
+                      )}&body=${encodeURIComponent(canvasBody)}`;
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-[#22201c] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b]"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
+                    Gmail Web
+                  </button>
+
+                  <Button
+                    type="button"
+                    onClick={handleSendCanvasGmail}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 px-4 rounded-xl flex items-center gap-1.5"
+                  >
+                    {canvasEmailSent ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Sent
+                      </>
+                    ) : (
+                      <>
+                        <SendHorizontal className="h-4 w-4" />
+                        Send Email
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                    WhatsApp Number *
                   </label>
                   <input
                     type="text"
@@ -2463,7 +1596,7 @@ export default function AdminAutoFameAgentPage() {
                       setCanvasWaSent(false);
                     }}
                     placeholder="+27 82 000 0000"
-                    className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3.5 py-2.5 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
@@ -2475,30 +1608,28 @@ export default function AdminAutoFameAgentPage() {
                     rows={6}
                     value={canvasWaMessage}
                     onChange={(e) => setCanvasWaMessage(e.target.value)}
-                    className="w-full bg-[#12110f] border border-[#33302a] rounded-xl p-3.5 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl p-3 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
-                <div className="pt-2 flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    onClick={handleSendCanvasWhatsApp}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 px-5 rounded-xl flex items-center gap-1.5"
-                  >
-                    {canvasWaSent ? (
-                      <>
-                        <Check className="h-4 w-4" />
-                        Sent
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4" />
-                        Send on WhatsApp
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
+                <Button
+                  type="button"
+                  onClick={handleSendCanvasWhatsApp}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 rounded-xl flex items-center justify-center gap-1.5"
+                >
+                  {canvasWaSent ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Sent
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Send on WhatsApp
+                    </>
+                  )}
+                </Button>
+              </>
             )}
           </div>
         </aside>
