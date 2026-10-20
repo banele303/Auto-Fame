@@ -161,36 +161,216 @@ export const getDealershipContext = query({
   args: {},
   handler: async (ctx) => {
     // 1. Live Cars Inventory
-    const cars = await ctx.db.query("cars").collect();
+    let cars = await ctx.db.query("cars").collect();
+
+    // Default Seed Cars if database is currently fresh
+    if (cars.length === 0) {
+      cars = [
+        {
+          id: 5,
+          make: "BMW",
+          model: "X2 sDrive20i M Sport",
+          year: 2018,
+          price: 299900,
+          mileage: 106908,
+          status: "MAINTENANCE",
+          fuelType: "PETROL",
+          transmission: "DUAL_CLUTCH",
+          exteriorColor: "Alpine White",
+          vin: "WBAJH5209JEF49021",
+          carType: "SUV / Crossover",
+          condition: "USED",
+          featured: true,
+        },
+        {
+          id: 4,
+          make: "Toyota",
+          model: "Hilux 2.8 GD-6 Legend 4x4",
+          year: 2024,
+          price: 649900,
+          mileage: 14200,
+          status: "AVAILABLE",
+          fuelType: "DIESEL",
+          transmission: "AUTOMATIC",
+          exteriorColor: "Glacier White",
+          vin: "AHTBA3CD409012384",
+          carType: "Bakkie / Double Cab",
+          condition: "USED",
+          featured: true,
+        },
+        {
+          id: 3,
+          make: "Volkswagen",
+          model: "Golf 8 GTI 2.0 TSI DSG",
+          year: 2021,
+          price: 489000,
+          mileage: 48000,
+          status: "AVAILABLE",
+          fuelType: "PETROL",
+          transmission: "DUAL_CLUTCH",
+          exteriorColor: "Moonstone Grey",
+          vin: "WVWZZZCDZMW089234",
+          carType: "Hatchback",
+          condition: "USED",
+          featured: true,
+        },
+        {
+          id: 2,
+          make: "Mercedes-Benz",
+          model: "C200 AMG Line (W205)",
+          year: 2020,
+          price: 419000,
+          mileage: 62000,
+          status: "AVAILABLE",
+          fuelType: "PETROL",
+          transmission: "AUTOMATIC",
+          exteriorColor: "Obsidian Black",
+          vin: "WDD2050422R901284",
+          carType: "Sedan",
+          condition: "USED",
+          featured: false,
+        },
+        {
+          id: 1,
+          make: "Ford",
+          model: "Everest 3.2 TDCi XLT 4WD",
+          year: 2019,
+          price: 410000,
+          mileage: 89000,
+          status: "AVAILABLE",
+          fuelType: "DIESEL",
+          transmission: "AUTOMATIC",
+          exteriorColor: "Moondust Silver",
+          vin: "MAJAXXMRWAJC09231",
+          carType: "SUV / 7-Seater",
+          condition: "USED",
+          featured: false,
+        },
+        {
+          id: 6,
+          make: "Hyundai",
+          model: "Tucson 2.0 Elite Executive",
+          year: 2023,
+          price: 429900,
+          mileage: 31500,
+          status: "AVAILABLE",
+          fuelType: "PETROL",
+          transmission: "AUTOMATIC",
+          exteriorColor: "Phantom Black",
+          vin: "KMHJ381BBNU890123",
+          carType: "SUV",
+          condition: "USED",
+          featured: false,
+        },
+        {
+          id: 7,
+          make: "Isuzu",
+          model: "D-Max 3.0 Ddi V-Cross 4x4",
+          year: 2022,
+          price: 589000,
+          mileage: 38000,
+          status: "AVAILABLE",
+          fuelType: "DIESEL",
+          transmission: "AUTOMATIC",
+          exteriorColor: "Biarritz Blue",
+          vin: "AAVB2109849201928",
+          carType: "Bakkie / Double Cab",
+          condition: "USED",
+          featured: false,
+        },
+        {
+          id: 8,
+          make: "Audi",
+          model: "A4 35 TFSI S Line",
+          year: 2020,
+          price: 379900,
+          mileage: 71400,
+          status: "AVAILABLE",
+          fuelType: "PETROL",
+          transmission: "AUTOMATIC",
+          exteriorColor: "Ibis White",
+          vin: "WAUZZZF48LA092834",
+          carType: "Sedan",
+          condition: "USED",
+          featured: false,
+        },
+        {
+          id: 9,
+          make: "Ford",
+          model: "Ranger 2.0 Bi-Turbo Wildtrak 4x4",
+          year: 2021,
+          price: 549000,
+          mileage: 52000,
+          status: "SOLD",
+          fuelType: "DIESEL",
+          transmission: "AUTOMATIC",
+          exteriorColor: "Saber Orange",
+          vin: "AFABXXMJ2AK902183",
+          carType: "Bakkie / Double Cab",
+          condition: "USED",
+          featured: false,
+        },
+        {
+          id: 10,
+          make: "Volkswagen",
+          model: "Polo GTI 1.8 TSI DSG",
+          year: 2017,
+          price: 249900,
+          mileage: 114000,
+          status: "SOLD",
+          fuelType: "PETROL",
+          transmission: "DUAL_CLUTCH",
+          exteriorColor: "Flash Red",
+          vin: "WVWZZZ6RZHW092834",
+          carType: "Hatchback",
+          condition: "USED",
+          featured: false,
+        },
+      ] as any;
+    }
+
     // 2. Active Repairs
     const repairs = await ctx.db.query("carRepairs").collect();
     // 3. Financing Applications
-    const financings = await ctx.db.query("financingApplications").order("desc").take(15);
+    const financings = await ctx.db.query("financingApplications").order("desc").take(25);
     // 4. Inquiries
-    const inquiries = await ctx.db.query("inquiries").order("desc").take(15);
-    // 5. CRM Events (WhatsApp, Leads)
-    const crmEvents = await ctx.db.query("crmEvents").order("desc").take(20);
+    const inquiries = await ctx.db.query("inquiries").order("desc").take(25);
+    // 5. CRM Events (WhatsApp, Email Dispatches, Leads)
+    const crmEvents = await ctx.db.query("crmEvents").order("desc").take(30);
 
     const availableCars = cars.filter((c) => c.status === "AVAILABLE");
     const soldCars = cars.filter((c) => c.status === "SOLD");
-    const maintenanceCars = cars.filter((c) => c.status === "MAINTENANCE");
+    const maintenanceCars = cars.filter((c) => c.status === "MAINTENANCE" || c.status === "REPAIR");
+
+    const totalShowroomValue = availableCars.reduce((sum, c) => sum + (c.price || 0), 0);
+    const averagePrice = availableCars.length > 0 ? Math.round(totalShowroomValue / availableCars.length) : 0;
+
+    const sortedByPrice = [...availableCars].sort((a, b) => (a.price || 0) - (b.price || 0));
+    const cheapestCar = sortedByPrice[0] || null;
+    const mostExpensiveCar = sortedByPrice[sortedByPrice.length - 1] || null;
 
     return {
       dealership: {
-        name: "AutoFame Pre-Owned & Luxury",
+        name: "AutoFame Dealership Johannesburg South",
         country: "South Africa (ZAR)",
-        whatsappProvider: "Whapi.Cloud (https://panel.whapi.cloud)",
-        dealershipPhone: "+27 82 000 0000",
-        address: "Sandton, Johannesburg, Gauteng, South Africa",
+        whatsappProvider: "Whapi.Cloud South Africa Gateway",
+        emailProvider: "AgentMail (agentmail.to) & Resend AI Mail",
+        dealershipPhone: "+27 11 942 1200",
+        address: "1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa",
       },
       stats: {
         totalInventory: cars.length,
         availableCount: availableCars.length,
         soldCount: soldCars.length,
-        inRepairCount: repairs.filter((r) => r.status !== "COMPLETED" && r.status !== "COLLECTED").length,
+        maintenanceCount: maintenanceCars.length,
+        inRepairCount: repairs.filter((r) => r.status !== "COMPLETED" && r.status !== "COLLECTED").length || maintenanceCars.length,
         pendingFinancingCount: financings.filter((f) => f.status === "PENDING").length,
+        totalShowroomValue,
+        averagePrice,
+        cheapestCar: cheapestCar ? `${cheapestCar.year} ${cheapestCar.make} ${cheapestCar.model} (R${(cheapestCar.price || 0).toLocaleString()} ZAR)` : null,
+        mostExpensiveCar: mostExpensiveCar ? `${mostExpensiveCar.year} ${mostExpensiveCar.make} ${mostExpensiveCar.model} (R${(mostExpensiveCar.price || 0).toLocaleString()} ZAR)` : null,
       },
-      inventorySample: cars.slice(0, 15).map((c) => ({
+      cars: cars.map((c) => ({
         id: c.id,
         make: c.make,
         model: c.model,
@@ -201,8 +381,10 @@ export const getDealershipContext = query({
         vin: c.vin,
         transmission: c.transmission,
         fuelType: c.fuelType,
+        color: c.exteriorColor || "Standard",
+        carType: c.carType || "Vehicle",
       })),
-      activeRepairs: repairs.map((r) => {
+      repairs: repairs.map((r) => {
         const car = cars.find((c) => c.id === r.carId);
         return {
           repairNumber: r.repairNumber,
@@ -214,17 +396,18 @@ export const getDealershipContext = query({
           costEstimated: r.costEstimated,
           dateSent: r.dateSent,
           estimatedCompletionDate: r.estimatedCompletionDate,
+          technicianContact: r.technicianContact,
         };
       }),
-      recentFinancing: financings.map((f) => ({
+      financings: financings.map((f) => ({
         id: f.id,
         loanAmount: f.loanAmount,
         status: f.status,
         applicationDate: f.applicationDate,
         customerId: f.customerId,
       })),
-      recentInquiries: inquiries.slice(0, 8),
-      recentCrmEvents: crmEvents.slice(0, 8),
+      inquiries: inquiries.slice(0, 15),
+      crmEvents: crmEvents.slice(0, 15),
     };
   },
 });

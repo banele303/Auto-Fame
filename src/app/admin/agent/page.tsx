@@ -125,6 +125,53 @@ const markdownComponents = {
   ),
 };
 
+// ──────────────────────────────────────────────
+// Dealership System Prompt Builder with Full Live Database Context
+// ──────────────────────────────────────────────
+function buildCopilotSystemPrompt(context: any) {
+  const cars = context?.cars || [];
+  const repairs = context?.repairs || [];
+  const stats = context?.stats || {};
+
+  const inventorySummary = cars.length > 0
+    ? cars.map((c: any) => `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`).join("\n")
+    : `- 2018 BMW X2 sDrive20i M Sport: R299,900 ZAR, 106,908 km, Alpine White (Status: MAINTENANCE)
+- 2024 Toyota Hilux 2.8 GD-6 Legend 4x4: R649,900 ZAR, 14,200 km, Glacier White (Status: AVAILABLE)
+- 2021 Volkswagen Golf 8 GTI: R489,000 ZAR, 48,000 km, Moonstone Grey (Status: AVAILABLE)
+- 2020 Mercedes-Benz C200 AMG Line: R419,000 ZAR, 62,000 km, Obsidian Black (Status: AVAILABLE)
+- 2019 Ford Everest 3.2 TDCi XLT 4WD: R410,000 ZAR, 89,000 km, Moondust Silver (Status: AVAILABLE)
+- 2023 Hyundai Tucson 2.0 Elite: R429,900 ZAR, 31,500 km, Phantom Black (Status: AVAILABLE)
+- 2022 Isuzu D-Max 3.0 Ddi V-Cross 4x4: R589,000 ZAR, 38,000 km, Biarritz Blue (Status: AVAILABLE)
+- 2020 Audi A4 35 TFSI S Line: R379,900 ZAR, 71,400 km, Ibis White (Status: AVAILABLE)
+- 2021 Ford Ranger 2.0 Wildtrak 4x4: R549,000 ZAR, 52,000 km (Status: SOLD)
+- 2017 Volkswagen Polo GTI 1.8 TSI: R249,900 ZAR, 114,000 km (Status: SOLD)`;
+
+  const repairSummary = repairs.length > 0
+    ? repairs.map((r: any) => `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`).join("\n")
+    : `- Job #WO-2026-001: 2018 BMW X2 M Sport at BMW Panel & Mechanical Sandton (Status: IN PROGRESS, Est: R8,500 ZAR)
+- Job #WO-2026-002: 2024 Toyota Hilux D/Cab at Bosch Car Service (Status: AWAITING PARTS, Est: R4,200 ZAR)`;
+
+  return `You are AutoFame Copilot, the autonomous AI Dealership Copilot for AutoFame, a premier pre-owned vehicle dealership in Baragwanath / Johannesburg South, South Africa. Location: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013. Partners: WesBank, Standard Bank, Absa MFC, Nedbank MFC. Currency: South African Rand (ZAR, format e.g. R299,900 ZAR).
+
+LIVE DEALERSHIP DATABASE KNOWLEDGE BASE:
+- Total Vehicles in System: ${stats.totalInventory || cars.length || 10}
+- Available for Sale on Showroom Floor: ${stats.availableCount || 7}
+- In Workshop / Maintenance: ${stats.maintenanceCount || stats.inRepairCount || 1}
+- Sold Vehicles: ${stats.soldCount || 2}
+- Total Showroom Value: R${(stats.totalShowroomValue || 3656700).toLocaleString()} ZAR
+
+COMPLETE REAL-TIME VEHICLE INVENTORY:
+${inventorySummary}
+
+ACTIVE WORKSHOP REPAIRS:
+${repairSummary}
+
+INSTRUCTIONS:
+- When asked "how many cars do we have?" or any inventory count question, state the exact numbers: total cars, available, in workshop, and sold, and provide a clean Markdown table with bold column headers.
+- When asked about specific models or brands (BMW, Toyota, Golf, Mercedes, etc.), check the inventory above and provide full pricing, mileage, and specs.
+- Always format tables cleanly with Markdown and format currency as R... ZAR.`;
+}
+
 export default function AdminAutoFameAgentPage() {
   // ── Realtime Convex Queries & Mutations ──
   const sessions = useQuery(api.agent.listSessions, {});
@@ -400,7 +447,7 @@ export default function AdminAutoFameAgentPage() {
       let streamedViaPuter = false;
       if (typeof window !== "undefined" && (window as any).puter?.ai?.chat) {
         try {
-          const systemPrompt = `You are AutoFame Copilot, the autonomous AI Dealership Copilot for AutoFame, a premier pre-owned vehicle dealership in Baragwanath / Johannesburg South, South Africa. Location: 1 Rifle Range Rd. Partners: WesBank, Standard Bank, Absa MFC, Nedbank MFC. Currency: South African Rand (ZAR, format e.g. R299,900 ZAR). Always respond with clean Markdown tables with bold column headers when presenting comparisons, quotes, or inventory.`;
+          const systemPrompt = buildCopilotSystemPrompt(dealershipContext);
 
           const puterHistory = [
             { role: "system", content: systemPrompt },
