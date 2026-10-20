@@ -531,11 +531,11 @@ export default function AdminAutoFameAgentPage() {
     selectedSessionId ? { sessionId: selectedSessionId } : "skip"
   );
 
-  // Connected Channels State (alexsouthflow3@gmail.com)
+  // Connected Channels State (alexsouthflow3@gmail.com + Whapi STARLD-W5LEE)
   const [connectedGmail, setConnectedGmail] = useState("alexsouthflow3@gmail.com");
   const [gmailAppPassword, setGmailAppPassword] = useState("dmjjjsyxcpqpdwlb");
   const [gmailVerifyError, setGmailVerifyError] = useState<string | null>(null);
-  const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 11 942 1200");
+  const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 63 199 5124 (STARLD-W5LEE)");
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
 
   // Live Gmail Inbox (Today, Yesterday, All)
@@ -624,7 +624,12 @@ export default function AdminAutoFameAgentPage() {
       localStorage.setItem("autofame_connected_gmail", targetEmail);
       localStorage.setItem("autofame_gmail_app_password", targetPass);
 
-      if (savedWa) setConnectedWhatsApp(savedWa);
+      if (savedWa && savedWa !== "+27 11 942 1200") {
+        setConnectedWhatsApp(savedWa);
+      } else {
+        setConnectedWhatsApp("+27 63 199 5124 (STARLD-W5LEE)");
+        localStorage.setItem("autofame_connected_whatsapp", "+27 63 199 5124 (STARLD-W5LEE)");
+      }
 
       fetchLiveGmailInbox(targetEmail, targetPass);
     }
