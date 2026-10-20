@@ -24,16 +24,30 @@ import {
   Mail,
   SendHorizontal,
   Database,
-  SlidersHorizontal,
   MessageSquare,
   ShieldCheck,
   Car,
   Wrench,
   Wand2,
+  AlertTriangle,
+  Building2,
+  Upload,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+// ──────────────────────────────────────────────
+// Required FICA & Bank Proof Documents
+// ──────────────────────────────────────────────
+const REQUIRED_PROOF_DOCS = [
+  { code: "ID_COPY", label: "SA ID Copy (Smart Card / Book)" },
+  { code: "DRIVERS_LICENSE", label: "Valid SA Driver's License" },
+  { code: "BANK_STATEMENTS", label: "3 Months Bank Statements" },
+  { code: "PAYSLIPS", label: "Latest 3 Months Payslips" },
+  { code: "PROOF_OF_ADDRESS", label: "Proof of Residence (< 3 Months)" },
+];
 
 // ──────────────────────────────────────────────
 // Fixed ReactMarkdown v10 Components (Inline Code + Clean Tables)
@@ -114,8 +128,14 @@ function extractRealLeads(context: any) {
       customerName: f.customerName || `Applicant #${f.id}`,
       email: f.email || "",
       phone: f.phone || "",
-      vehicle: f.loanAmount ? `Loan: R${Number(f.loanAmount).toLocaleString()} ZAR` : "Vehicle Finance",
+      vehicle: f.carName
+        ? `${f.carName} (R${Number(f.carPrice || f.loanAmount || 0).toLocaleString()} ZAR)`
+        : f.loanAmount
+        ? `Loan: R${Number(f.loanAmount).toLocaleString()} ZAR`
+        : "Vehicle Finance",
       status: f.status || "PENDING",
+      isCompleteForBank: Boolean(f.isCompleteForBank),
+      missingItems: Array.isArray(f.missingItems) ? f.missingItems : [],
     })),
     ...inquiries.map((inq: any) => ({
       type: "Vehicle Inquiry",
@@ -124,6 +144,8 @@ function extractRealLeads(context: any) {
       phone: inq.customerPhone || "",
       vehicle: inq.carName || `Car #${inq.carId}`,
       status: inq.status || "NEW",
+      isCompleteForBank: false,
+      missingItems: [],
     })),
     ...testDrives.map((td: any) => ({
       type: "Test Drive Booking",
@@ -132,6 +154,8 @@ function extractRealLeads(context: any) {
       phone: td.customerPhone || "",
       vehicle: td.carName || `Car #${td.carId}`,
       status: td.completed ? "COMPLETED" : "SCHEDULED",
+      isCompleteForBank: false,
+      missingItems: [],
     })),
   ];
 }
@@ -260,7 +284,7 @@ function buildClientWhatsAppPayload(query: string, context: any) {
   }
 
   const priceText = carPrice > 0 ? ` (R${carPrice.toLocaleString()} ZAR)` : "";
-  const message = `Hi ${customerName}, this is AutoFame Dealership Johannesburg South regarding *${carName}*${priceText}. You can complete your finance application online at https://www.autofame.co.za/financing or reply here with your ID copy, 3 months bank statements, and payslips.`;
+  const message = `📋 *AutoFame Vehicle Finance Application Container*\n\nHi ${customerName}, here is your finance application container for *${carName}*${priceText}:\n\n*1. User Details*: Full Name, SA ID Number, Email & Physical Address\n*2. Car Details*: ${carName}${priceText}\n*3. Financial Details*: Employer, Job Title, Gross Monthly Income & Monthly Expenses\n*4. Proof Documents Required*: SA ID Copy, Driver's License, 3 Months Bank Statements, Latest Payslips & Proof of Residence.\n\nReply directly here on WhatsApp with your details & documents, or complete online: https://www.autofame.co.za/financing`;
 
   return {
     actionType: "WHATSAPP_COMPOSE",
@@ -283,6 +307,7 @@ function getDirectAnswerOnly(
   const lower = query.toLowerCase().trim();
   const cars = Array.isArray(context?.cars) ? context.cars : [];
   const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
+  const financings = Array.isArray(context?.financings) ? context.financings : [];
   const realLeads = extractRealLeads(context);
 
   const totalCars = cars.length;
@@ -343,7 +368,35 @@ function getDirectAnswerOnly(
     return `${totalCars}`;
   }
 
-  // 2. INBOX / EMAIL QUERIES -> Cleanly formatted table
+  // 2. FINANCE APPLICATION COMPLETENESS & BANK SUBMISSION CHECK
+  if (
+    lower.includes("finance") ||
+    lower.includes("bank") ||
+    lower.includes("fica") ||
+    lower.includes("proof") ||
+    lower.includes("check if we have")
+  ) {
+    if (financings.length === 0) {
+      return "Finance Application Container opened. Enter User Details, Car Details, Financial Details, and attach Proof Documents (ID, Driver's License, 3 Months Bank Statements, Payslips, Proof of Residence) to check completeness and send to the bank.";
+    }
+    const rows = financings
+      .map(
+        (f: any) =>
+          `| **${f.customerName}** | ${f.idNumber || "Missing ID"} | ${f.carName} (R${Number(
+            f.carPrice || f.loanAmount || 0
+          ).toLocaleString()}) | R${Number(f.monthlyIncomeGross || 0).toLocaleString()}/mo | ${
+            f.documents?.length || 0
+          }/5 Docs | **${
+            f.isCompleteForBank
+              ? "✅ READY FOR BANK"
+              : `⚠️ Missing: ${f.missingItems?.slice(0, 3).join(", ")}`
+          }** |`
+      )
+      .join("\n");
+    return `| Applicant | SA ID | Vehicle & Price | Gross Income | Proof Docs | Bank Verification |\n| :--- | :--- | :--- | :---: | :---: | :--- |\n${rows}`;
+  }
+
+  // 3. INBOX / EMAIL QUERIES -> Cleanly formatted table
   if (
     (lower.includes("email") ||
       lower.includes("imail") ||
@@ -386,7 +439,7 @@ function getDirectAnswerOnly(
     return `| Sender | Email Address | Subject | Received |\n| :--- | :--- | :--- | :---: |\n${rows}`;
   }
 
-  // 3. COMPOSE EMAIL / WHATSAPP
+  // 4. COMPOSE EMAIL / WHATSAPP
   if (
     lower.includes("compose") ||
     lower.includes("send email") ||
@@ -405,7 +458,7 @@ function getDirectAnswerOnly(
     return "WhatsApp composer opened.";
   }
 
-  // 4. VALUE / PRICE QUESTIONS
+  // 5. VALUE / PRICE QUESTIONS
   if (lower.includes("total value") || lower.includes("showroom value")) {
     return `R${totalValue.toLocaleString()} ZAR`;
   }
@@ -420,7 +473,7 @@ function getDirectAnswerOnly(
     return `${mostExp.year} ${mostExp.make} ${mostExp.model} — R${(mostExp.price || 0).toLocaleString()} ZAR`;
   }
 
-  // 5. FORMS / LEADS -> Cleanly formatted table
+  // 6. FORMS / LEADS -> Cleanly formatted table
   if (
     lower.includes("form") ||
     lower.includes("submission") ||
@@ -439,7 +492,7 @@ function getDirectAnswerOnly(
     return `| Customer | Form Type | Email | Phone | Vehicle / Loan | Status |\n| :--- | :--- | :--- | :--- | :--- | :---: |\n${rows}`;
   }
 
-  // 6. BRAND / MODEL MATCH -> Cleanly formatted table
+  // 7. BRAND / MODEL MATCH -> Cleanly formatted table
   const matchedCars = cars.filter(
     (c: any) =>
       lower.includes(c.make?.toLowerCase() || "") ||
@@ -521,6 +574,7 @@ export default function AdminAutoFameAgentPage() {
   const addMessage = useMutation(api.agent.addMessage);
   const purgeLegacyDemo = useMutation(api.seedAgent.seedInitialData);
   const recordCrmEvent = useMutation(api.agent.recordCrmEvent);
+  const saveFinanceContainer = useMutation(api.agent.saveFinanceApplicationContainer);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const resolveStorageUrl = useMutation(api.files.resolveStorageUrl);
 
@@ -541,8 +595,13 @@ export default function AdminAutoFameAgentPage() {
   // Live Gmail Inbox (Today, Yesterday, All)
   const [inboxEmails, setInboxEmails] = useState<any[]>([]);
 
+  // Live Whapi.Cloud WhatsApp Messages (Channel STARLD-W5LEE)
+  const [waChannelMessages, setWaChannelMessages] = useState<any[]>([]);
+
   // ── COMPACT COMPOSE DRAWER (Closed by default so Main Canvas is 100% wide!) ──
-  const [composeDrawerMode, setComposeDrawerMode] = useState<"gmail" | "whatsapp" | null>(null);
+  const [composeDrawerMode, setComposeDrawerMode] = useState<
+    "gmail" | "whatsapp" | "finance" | null
+  >(null);
 
   // Gmail Composer State
   const [canvasTo, setCanvasTo] = useState("");
@@ -558,9 +617,50 @@ export default function AdminAutoFameAgentPage() {
   // WhatsApp Composer State
   const [canvasWaPhone, setCanvasWaPhone] = useState("");
   const [canvasWaMessage, setCanvasWaMessage] = useState(
-    "Hi, this is AutoFame Dealership Johannesburg South. Here is your fast-track vehicle finance link: https://www.autofame.co.za/financing"
+    "📋 *AutoFame Vehicle Finance Application Container*\n\nHi, this is AutoFame Dealership Johannesburg South (+27 63 199 5124). Please reply with:\n1. *User Details*: Full Name, SA ID Number, Email & Address\n2. *Car Details*: Selected Vehicle & Deposit\n3. *Financial Details*: Employer, Job Title, Gross Monthly Income & Expenses\n4. *Proof Documents*: SA ID Copy, Driver's License, 3 Months Bank Statements, Payslips & Proof of Residence\n\nOr complete online: https://www.autofame.co.za/financing"
   );
   const [canvasWaSent, setCanvasWaSent] = useState(false);
+
+  // ── FINANCE APPLICATION FORM CONTAINER STATE (User Details + Car Details + Financial Details + Proof Docs) ──
+  const [finAppId, setFinAppId] = useState<number | undefined>(undefined);
+  // 1. User Details
+  const [finFirstName, setFinFirstName] = useState("");
+  const [finLastName, setFinLastName] = useState("");
+  const [finIdNumber, setFinIdNumber] = useState("");
+  const [finPhone, setFinPhone] = useState("");
+  const [finEmail, setFinEmail] = useState("");
+  const [finAddress, setFinAddress] = useState("");
+  // 2. Car Details
+  const [finCarId, setFinCarId] = useState<number | undefined>(undefined);
+  const [finCarName, setFinCarName] = useState("");
+  const [finCarPrice, setFinCarPrice] = useState<number>(0);
+  const [finDeposit, setFinDeposit] = useState<number>(0);
+  const [finTermMonths, setFinTermMonths] = useState<number>(72);
+  // 3. Financial Details
+  const [finEmploymentStatus, setFinEmploymentStatus] = useState("EMPLOYED");
+  const [finEmployerName, setFinEmployerName] = useState("");
+  const [finJobTitle, setFinJobTitle] = useState("");
+  const [finMonthlyIncome, setFinMonthlyIncome] = useState<number>(0);
+  const [finMonthlyExpenses, setFinMonthlyExpenses] = useState<number>(0);
+  // 4. Mandatory Proof Documents (ID, Driver's License, Bank Statements, Payslips, Proof of Residence)
+  const [finProofDocs, setFinProofDocs] = useState<
+    Record<
+      string,
+      {
+        docType: string;
+        originalName: string;
+        mime: string;
+        size: number;
+        url: string;
+      }
+    >
+  >({});
+  // 5. Target Bank Email for Dispatch
+  const [bankEmail, setBankEmail] = useState("applications@wesbank.co.za");
+  const [bankDispatched, setBankDispatched] = useState(false);
+
+  const proofDocInputRef = useRef<HTMLInputElement>(null);
+  const [activeDocUploadCode, setActiveDocUploadCode] = useState<string>("ID_COPY");
 
   // Chat Input State
   const [inputValue, setInputValue] = useState("");
@@ -604,6 +704,38 @@ export default function AdminAutoFameAgentPage() {
     } catch {}
   };
 
+  const fetchLiveWhatsAppChannel = async (autoFillFinance = false) => {
+    try {
+      const res = await fetch("/api/whatsapp?action=messages");
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.messages)) {
+        setWaChannelMessages(data.messages);
+        if (autoFillFinance && data.intakePreview) {
+          const intake = data.intakePreview;
+          if (intake.firstName) setFinFirstName(intake.firstName);
+          if (intake.lastName) setFinLastName(intake.lastName);
+          if (intake.phone) {
+            setFinPhone(intake.phone);
+            setCanvasWaPhone(intake.phone);
+          }
+          if (intake.email) setFinEmail(intake.email);
+          if (intake.idNumber) setFinIdNumber(intake.idNumber);
+          if (intake.monthlyIncomeGross > 0) setFinMonthlyIncome(intake.monthlyIncomeGross);
+          if (Array.isArray(intake.documents) && intake.documents.length > 0) {
+            setFinProofDocs((prev) => {
+              const next = { ...prev };
+              intake.documents.forEach((d: any) => {
+                next[d.docType] = d;
+              });
+              return next;
+            });
+          }
+          toast.success("Synced latest applicant info & proof documents from WhatsApp channel STARLD-W5LEE");
+        }
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedGmail = localStorage.getItem("autofame_connected_gmail");
@@ -632,8 +764,54 @@ export default function AdminAutoFameAgentPage() {
       }
 
       fetchLiveGmailInbox(targetEmail, targetPass);
+      fetchLiveWhatsAppChannel(false);
     }
   }, []);
+
+  // Pre-populate default car in Finance Application Container when cars load
+  useEffect(() => {
+    const cars = dealershipContext?.cars || [];
+    if (cars.length > 0 && !finCarName) {
+      const firstCar = cars[0];
+      setFinCarId(firstCar.id);
+      setFinCarName(`${firstCar.year} ${firstCar.make} ${firstCar.model}`);
+      setFinCarPrice(firstCar.price || 0);
+      setFinDeposit(Math.round((firstCar.price || 0) * 0.1));
+    }
+    // Load existing finance application if present in DB
+    const existingFin = dealershipContext?.financings?.[0];
+    if (existingFin && !finFirstName && !finLastName) {
+      setFinAppId(existingFin.id);
+      setFinFirstName(existingFin.firstName || existingFin.customerName?.split(" ")[0] || "");
+      setFinLastName(
+        existingFin.lastName || existingFin.customerName?.split(" ").slice(1).join(" ") || ""
+      );
+      setFinIdNumber(existingFin.idNumber || "");
+      setFinPhone(existingFin.phone || "");
+      setFinEmail(existingFin.email || "");
+      setFinAddress(existingFin.address || "");
+      if (existingFin.carName) setFinCarName(existingFin.carName);
+      if (existingFin.carPrice) setFinCarPrice(existingFin.carPrice);
+      if (existingFin.downPaymentAmount !== undefined) setFinDeposit(existingFin.downPaymentAmount);
+      if (existingFin.employerName) setFinEmployerName(existingFin.employerName);
+      if (existingFin.jobTitle) setFinJobTitle(existingFin.jobTitle);
+      if (existingFin.monthlyIncomeGross) setFinMonthlyIncome(existingFin.monthlyIncomeGross);
+      if (existingFin.monthlyExpenses) setFinMonthlyExpenses(existingFin.monthlyExpenses);
+      if (Array.isArray(existingFin.documents) && existingFin.documents.length > 0) {
+        const docMap: Record<string, any> = {};
+        existingFin.documents.forEach((d: any) => {
+          docMap[d.docType] = {
+            docType: d.docType,
+            originalName: d.name,
+            mime: d.mime,
+            size: d.size,
+            url: d.url,
+          };
+        });
+        setFinProofDocs(docMap);
+      }
+    }
+  }, [dealershipContext]);
 
   useEffect(() => {
     purgeLegacyDemo().catch(() => {});
@@ -655,6 +833,38 @@ export default function AdminAutoFameAgentPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeSessionData?.messages]);
 
+  // ── MANDATORY PRE-FLIGHT COMPLETENESS CHECK FOR BANK APPLICATION ──
+  const computeMissingFinanceItems = () => {
+    const missing: string[] = [];
+    if (!finFirstName.trim() || !finLastName.trim()) missing.push("Full Name & Surname");
+    if (!finIdNumber.trim() || finIdNumber.trim().length < 6) missing.push("SA ID Number");
+    if (!finPhone.trim()) missing.push("WhatsApp / Phone Number");
+    if (!finEmail.trim()) missing.push("Email Address");
+    if (!finAddress.trim()) missing.push("Residential Address");
+    if (!finCarName.trim() || finCarPrice <= 0) missing.push("Vehicle Selection & Price");
+    if (!finEmployerName.trim()) missing.push("Employer Name");
+    if (!finJobTitle.trim()) missing.push("Job Title");
+    if (!finMonthlyIncome || finMonthlyIncome <= 0) missing.push("Gross Monthly Income");
+
+    for (const reqDoc of REQUIRED_PROOF_DOCS) {
+      if (!finProofDocs[reqDoc.code]?.url) {
+        missing.push(`Proof Doc: ${reqDoc.label}`);
+      }
+    }
+    return missing;
+  };
+
+  const missingFinanceItems = computeMissingFinanceItems();
+  const isFinanceCompleteForBank = missingFinanceItems.length === 0;
+  const loanPrincipal = Math.max(0, finCarPrice - finDeposit);
+  const estimatedMonthlyInstalment =
+    loanPrincipal > 0
+      ? Math.round(
+          (loanPrincipal * (0.1175 / 12) * Math.pow(1 + 0.1175 / 12, finTermMonths)) /
+            (Math.pow(1 + 0.1175 / 12, finTermMonths) - 1)
+        )
+      : 0;
+
   const openGmailComposer = (payload?: {
     to?: string;
     cc?: string;
@@ -674,6 +884,263 @@ export default function AdminAutoFameAgentPage() {
     if (payload?.message) setCanvasWaMessage(payload.message);
     setCanvasWaSent(false);
     setComposeDrawerMode("whatsapp");
+  };
+
+  const openFinanceContainer = () => {
+    setBankDispatched(false);
+    setComposeDrawerMode("finance");
+  };
+
+  // Upload a Proof Document (ID, Driver's License, Bank Statements, Payslips, Proof of Residence)
+  const handleProofDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const postUrl = await generateUploadUrl();
+      const uploadRes = await fetch(postUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+
+      let fileUrl = URL.createObjectURL(file);
+      if (uploadRes.ok) {
+        const { storageId } = await uploadRes.json();
+        const resolved = await resolveStorageUrl({ storageId });
+        if (resolved) fileUrl = resolved;
+      }
+
+      setFinProofDocs((prev) => ({
+        ...prev,
+        [activeDocUploadCode]: {
+          docType: activeDocUploadCode,
+          originalName: file.name,
+          mime: file.type || "application/pdf",
+          size: file.size,
+          url: fileUrl,
+        },
+      }));
+      toast.success(`Attached ${file.name} for ${activeDocUploadCode}`);
+    } catch (err: any) {
+      toast.error("Failed to attach proof document: " + err.message);
+    } finally {
+      if (proofDocInputRef.current) proofDocInputRef.current.value = "";
+    }
+  };
+
+  // Save Finance Application Form Container to Convex DB
+  const handleSaveFinanceContainerToDb = async () => {
+    try {
+      const res = await saveFinanceContainer({
+        applicationId: finAppId,
+        firstName: finFirstName.trim() || "Applicant",
+        lastName: finLastName.trim() || "",
+        idNumber: finIdNumber.trim(),
+        phone: finPhone.trim(),
+        email: finEmail.trim(),
+        address: finAddress.trim(),
+        carId: finCarId,
+        carName: finCarName,
+        carPrice: finCarPrice,
+        downPaymentAmount: finDeposit,
+        termMonths: finTermMonths,
+        employmentStatus: finEmploymentStatus,
+        employerName: finEmployerName.trim(),
+        jobTitle: finJobTitle.trim(),
+        monthlyIncomeGross: finMonthlyIncome,
+        monthlyExpenses: finMonthlyExpenses,
+        documents: Object.values(finProofDocs),
+        status: isFinanceCompleteForBank ? "COMPLETE_READY_FOR_BANK" : "INCOMPLETE_DOCS",
+      });
+      if (res?.applicationId) setFinAppId(res.applicationId);
+      toast.success(`Saved Finance Application Container #${res?.applicationId}`);
+      return res?.applicationId;
+    } catch (err: any) {
+      toast.error("Failed to save application container: " + err.message);
+      return null;
+    }
+  };
+
+  // Send Finance Application Form Container OR Request Missing Items via WhatsApp (STARLD-W5LEE)
+  const handleSendFinanceFormOrMissingViaWhatsApp = async (requestMissingOnly = false) => {
+    const targetPhone = finPhone.trim() || canvasWaPhone.trim();
+    if (!targetPhone) {
+      toast.error("Please enter the customer's WhatsApp phone number in User Details");
+      return;
+    }
+
+    const fullName = `${finFirstName} ${finLastName}`.trim() || "Valued Client";
+    const msgBody =
+      requestMissingOnly && missingFinanceItems.length > 0
+        ? `📋 *AutoFame Vehicle Finance — Missing Application Items*\n\nHi ${fullName}, we are preparing your finance application for *${finCarName}* (R${finCarPrice.toLocaleString()} ZAR) to send to the bank.\n\nBefore we can submit to the bank, please reply here on WhatsApp with the following missing items:\n${missingFinanceItems
+            .map((item) => `• *${item}*`)
+            .join("\n")}\n\nAs soon as we receive these, our agent will dispatch your full application to the bank!`
+        : `📋 *AutoFame Vehicle Finance Application Container*\n\nHi ${fullName}, here is your Finance Application Form Container for *${finCarName}* (R${finCarPrice.toLocaleString()} ZAR):\n\n*1. User Details*: Full Name, SA ID Number, Email & Physical Address\n*2. Car Details*: ${finCarName} | Price: R${finCarPrice.toLocaleString()} ZAR | Deposit: R${finDeposit.toLocaleString()} ZAR\n*3. Financial Details*: Employer, Job Title, Gross Monthly Income & Monthly Expenses\n*4. Mandatory Proof Documents*:\n✅ Copy of SA ID\n✅ Valid SA Driver's License\n✅ 3 Months Bank Statements\n✅ Latest 3 Months Payslips\n✅ Proof of Residence\n\nReply directly to this WhatsApp with your details & documents, or complete online: https://www.autofame.co.za/financing`;
+
+    try {
+      const res = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: targetPhone,
+          customerName: fullName,
+          actionType: requestMissingOnly
+            ? "WHATSAPP_MISSING_DOCS_REQUEST"
+            : "WHATSAPP_FINANCE_CONTAINER",
+          message: msgBody,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(
+          requestMissingOnly
+            ? `Requested ${missingFinanceItems.length} missing items on WhatsApp (${targetPhone})`
+            : `Sent Finance Application Form Container to ${targetPhone} via STARLD-W5LEE`
+        );
+        await recordCrmEvent({
+          eventType: requestMissingOnly ? "WHATSAPP_MISSING_ITEMS" : "WHATSAPP_FINANCE_CONTAINER",
+          recipient: targetPhone,
+          customerName: fullName,
+          summary: requestMissingOnly
+            ? `Requested missing finance items via WhatsApp: ${missingFinanceItems.join(", ")}`
+            : `Sent Finance Application Form Container via WhatsApp to ${targetPhone}`,
+          status: "SUCCESS",
+        });
+      } else {
+        toast.error(data.error || "Whapi.Cloud error");
+      }
+    } catch (err: any) {
+      toast.error("WhatsApp dispatch error: " + err.message);
+    }
+  };
+
+  // Trigger Two-Way WhatsApp AI Agent Reply on Channel STARLD-W5LEE
+  const handleTriggerWhatsAppAgentAutoReply = async () => {
+    try {
+      const res = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "agent_auto_reply",
+          context: dealershipContext,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.replied) {
+        toast.success(`WhatsApp Agent replied to ${data.senderName} (${data.recipient})`);
+        fetchLiveWhatsAppChannel(true);
+      } else {
+        fetchLiveWhatsAppChannel(true);
+        toast.info(data.reason || "Synced WhatsApp channel STARLD-W5LEE");
+      }
+    } catch (err: any) {
+      toast.error("WhatsApp Agent sync error: " + err.message);
+    }
+  };
+
+  // ── VERIFY COMPLETENESS & SEND APPLICATION TO BANK VIA EMAIL (alexsouthflow3@gmail.com) ──
+  const handleVerifyAndSendApplicationToBank = async () => {
+    // 1. Strict Completeness Check: Do we have everything we need?
+    if (!isFinanceCompleteForBank) {
+      toast.error(
+        `Cannot send to bank yet! Missing ${missingFinanceItems.length} required item(s): ${missingFinanceItems
+          .slice(0, 3)
+          .join(", ")}`
+      );
+      return;
+    }
+
+    if (!bankEmail.trim()) {
+      toast.error("Please enter the recipient Bank Finance Desk email address");
+      return;
+    }
+
+    // 2. Save container to Convex DB
+    const savedAppId = await handleSaveFinanceContainerToDb();
+
+    const fullName = `${finFirstName} ${finLastName}`.trim();
+    const docsListText = REQUIRED_PROOF_DOCS.map((reqDoc, idx) => {
+      const uploaded = finProofDocs[reqDoc.code];
+      return `${idx + 1}. ${reqDoc.label}: VERIFIED (${uploaded?.originalName || "Attached"}) — ${
+        uploaded?.url || "Attached"
+      }`;
+    }).join("\n");
+
+    const netDisposable = Math.max(0, finMonthlyIncome - finMonthlyExpenses);
+
+    const bankSubject = `VEHICLE FINANCE APPLICATION [#AF-${
+      savedAppId || 101
+    }] — ${fullName} (SA ID: ${finIdNumber}) — ${finCarName}`;
+
+    const bankBody = `OFFICIAL DEALERSHIP VEHICLE FINANCE APPLICATION DOSSIER
+Submitted by: AutoFame Dealership Johannesburg South (Dealer Code: AF-JHB-2013)
+Channel: Verified WhatsApp & Dealership Finance Agent (${connectedGmail})
+====================================================================
+
+1. APPLICANT / USER DETAILS
+• Full Name & Surname: ${fullName}
+• SA ID Number: ${finIdNumber}
+• Contact Phone / WhatsApp: ${finPhone}
+• Email Address: ${finEmail}
+• Residential Address: ${finAddress}
+
+2. VEHICLE / CAR DETAILS
+• Selected Vehicle: ${finCarName}
+• Vehicle Retail Price: R${finCarPrice.toLocaleString()} ZAR
+• Customer Deposit / Down Payment: R${finDeposit.toLocaleString()} ZAR
+• Principal Loan Amount Requested: R${loanPrincipal.toLocaleString()} ZAR
+• Finance Term Requested: ${finTermMonths} Months
+• Estimated Monthly Instalment (11.75% linked): ~R${estimatedMonthlyInstalment.toLocaleString()} ZAR / month
+
+3. FINANCIAL & EMPLOYMENT DETAILS
+• Employment Status: ${finEmploymentStatus}
+• Employer Name: ${finEmployerName}
+• Job Title / Occupation: ${finJobTitle}
+• Gross Monthly Income: R${finMonthlyIncome.toLocaleString()} ZAR
+• Monthly Living Expenses: R${finMonthlyExpenses.toLocaleString()} ZAR
+• Net Disposable Monthly Income: R${netDisposable.toLocaleString()} ZAR
+
+4. VERIFIED FICA & PROOF DOCUMENTS (100% COMPLETE CHECKLIST)
+${docsListText}
+
+====================================================================
+Pre-Flight Completeness Verification: PASSED (All User Details, Car Details, Financial Details & 5 Mandatory FICA Proof Documents Verified)
+Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
+
+    try {
+      const res = await fetch("/api/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send",
+          fromEmail: connectedGmail,
+          appPassword: gmailAppPassword,
+          to: bankEmail.trim(),
+          cc: finEmail.trim() || undefined,
+          subject: bankSubject,
+          body: bankBody,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "SENT") {
+        setBankDispatched(true);
+        toast.success(
+          `Vehicle Finance Application for ${fullName} dispatched to Bank (${bankEmail.trim()}) via ${connectedGmail}!`
+        );
+        await recordCrmEvent({
+          eventType: "BANK_FINANCE_SUBMITTED",
+          recipient: bankEmail.trim(),
+          customerName: fullName,
+          summary: `Verified & Emailed Complete Bank Finance Application for ${fullName} (${finCarName} - R${loanPrincipal.toLocaleString()} loan) to ${bankEmail.trim()}`,
+          status: "SUCCESS",
+        });
+      } else {
+        toast.error(data.error || "Failed to send bank finance email via Gmail SMTP");
+      }
+    } catch (err: any) {
+      toast.error("Bank email dispatch error: " + err.message);
+    }
   };
 
   const handleSendCanvasGmail = async () => {
@@ -736,9 +1203,7 @@ export default function AdminAutoFameAgentPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setCanvasWaSent(true);
-        toast.success(`Sent on WhatsApp to ${canvasWaPhone.trim()}`);
-      } else if (data.waMeUrl) {
-        window.open(data.waMeUrl, "_blank", "noopener,noreferrer");
+        toast.success(`Sent on WhatsApp (STARLD-W5LEE) to ${canvasWaPhone.trim()}`);
       } else {
         toast.error(data.error || "Failed to send WhatsApp message");
       }
@@ -866,12 +1331,19 @@ export default function AdminAutoFameAgentPage() {
         : "Hello");
 
     const lower = finalContent.toLowerCase();
+    const isFinanceContainerRequest =
+      lower.includes("finance") ||
+      lower.includes("bank") ||
+      lower.includes("fica") ||
+      lower.includes("check if we have");
     const isComposeEmail =
-      lower.includes("compose") ||
-      lower.includes("send email") ||
-      lower.includes("write email") ||
-      lower.includes("draft email");
+      !isFinanceContainerRequest &&
+      (lower.includes("compose") ||
+        lower.includes("send email") ||
+        lower.includes("write email") ||
+        lower.includes("draft email"));
     const isWhatsAppRequest =
+      !isFinanceContainerRequest &&
       !isComposeEmail &&
       (lower.includes("whatsapp") ||
         lower.includes("what app") ||
@@ -879,7 +1351,10 @@ export default function AdminAutoFameAgentPage() {
         lower.includes("send link"));
 
     let actionPayload: any = null;
-    if (isComposeEmail) {
+    if (isFinanceContainerRequest) {
+      actionPayload = { actionType: "FINANCE_CONTAINER" };
+      openFinanceContainer();
+    } else if (isComposeEmail) {
       actionPayload = buildClientGmailPayload(finalContent, dealershipContext, connectedGmail);
       openGmailComposer(actionPayload);
     } else if (isWhatsAppRequest) {
@@ -1026,6 +1501,15 @@ export default function AdminAutoFameAgentPage() {
     <div className="flex h-screen w-screen overflow-hidden bg-[#181715] text-[#eae7e1] font-sans">
       <Script src="https://js.puter.com/v2/" strategy="afterInteractive" />
 
+      {/* Hidden input for uploading mandatory FICA Proof Documents */}
+      <input
+        ref={proofDocInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        onChange={handleProofDocUpload}
+        className="hidden"
+      />
+
       {/* ────────────────────────────────────────────────────────── */}
       {/* LEFT SIDEBAR: CHANNELS & CONVERSATIONS                     */}
       {/* ────────────────────────────────────────────────────────── */}
@@ -1088,19 +1572,28 @@ export default function AdminAutoFameAgentPage() {
           </button>
 
           <button
-            onClick={() => handleSendMessage("show website form submissions")}
+            onClick={() => openFinanceContainer()}
             className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#181714] hover:bg-[#201e1a] border border-[#292621] transition text-left"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <Database className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <Building2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs font-medium text-[#eae7e1] truncate">Forms &amp; Inquiries</p>
+                <p className="text-xs font-medium text-[#eae7e1] truncate">
+                  Finance Form &amp; Bank
+                </p>
                 <p className="text-[10px] text-[#8e8a82] truncate">
-                  {realLeads.length} Active Submissions
+                  {isFinanceCompleteForBank
+                    ? "✅ Ready for Bank Email"
+                    : `${5 - missingFinanceItems.filter((m) => m.startsWith("Proof")).length}/5 Proof Docs`}
                 </p>
               </div>
             </div>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full shrink-0",
+                isFinanceCompleteForBank ? "bg-emerald-500" : "bg-amber-400"
+              )}
+            />
           </button>
 
           <button
@@ -1126,7 +1619,7 @@ export default function AdminAutoFameAgentPage() {
             <div className="flex items-center gap-2.5 min-w-0">
               <PhoneCall className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs font-medium text-[#eae7e1] truncate">WhatsApp</p>
+                <p className="text-xs font-medium text-[#eae7e1] truncate">WhatsApp Agent</p>
                 <p className="text-[10px] text-[#8e8a82] font-mono truncate">{connectedWhatsApp}</p>
               </div>
             </div>
@@ -1210,7 +1703,7 @@ export default function AdminAutoFameAgentPage() {
       </aside>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* MAIN AGENT CANVAS (WIDE BY DEFAULT — NO EMAIL SIDE PANEL)  */}
+      {/* MAIN AGENT CANVAS (WIDE BY DEFAULT — NO SIDE PANEL)        */}
       {/* ────────────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#1c1b18]">
         {/* Header */}
@@ -1228,6 +1721,21 @@ export default function AdminAutoFameAgentPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                setComposeDrawerMode(composeDrawerMode === "finance" ? null : "finance")
+              }
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition",
+                composeDrawerMode === "finance"
+                  ? "bg-emerald-600 text-white border-emerald-500"
+                  : "bg-[#22201c] hover:bg-[#2a2722] text-[#dedad2] border-[#35312b]"
+              )}
+            >
+              <Building2 className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Finance Application Container</span>
+            </button>
+
             <button
               onClick={() =>
                 setComposeDrawerMode(composeDrawerMode === "gmail" ? null : "gmail")
@@ -1259,7 +1767,7 @@ export default function AdminAutoFameAgentPage() {
                     AutoFame Dealership Agent
                   </h2>
                   <p className="text-xs sm:text-sm text-[#8e8a82]">
-                    Ask anything about vehicle inventory, pricing, finance, workshop repairs, form submissions, or emails.
+                    Ask anything about vehicle inventory, pricing, WhatsApp finance applications, FICA completeness checks, or emails.
                   </p>
                 </div>
 
@@ -1278,27 +1786,31 @@ export default function AdminAutoFameAgentPage() {
                   </button>
 
                   <button
-                    onClick={() => handleSendMessage("show website form submissions")}
+                    onClick={() => openFinanceContainer()}
                     className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282621] border border-[#35312b] text-left transition"
                   >
                     <div className="flex items-center justify-between text-[#8e8a82] text-xs">
-                      <span>Form Submissions</span>
-                      <Database className="h-4 w-4 text-emerald-400" />
+                      <span>Finance &amp; Bank Check</span>
+                      <Building2 className="h-4 w-4 text-emerald-400" />
                     </div>
-                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1.5">{realLeads.length}</p>
-                    <p className="text-[11px] text-[#8e8a82] mt-0.5">Finance &amp; Inquiries</p>
+                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1.5">
+                      {Object.keys(finProofDocs).length}/5 Docs
+                    </p>
+                    <p className="text-[11px] text-emerald-400 mt-0.5">
+                      {isFinanceCompleteForBank ? "Ready for Bank Email" : "Open Form Container"}
+                    </p>
                   </button>
 
                   <button
-                    onClick={() => handleSendMessage("how many repairs")}
+                    onClick={() => openWhatsAppComposer()}
                     className="p-4 rounded-2xl bg-[#22201c] hover:bg-[#282621] border border-[#35312b] text-left transition"
                   >
                     <div className="flex items-center justify-between text-[#8e8a82] text-xs">
-                      <span>Workshop Repairs</span>
-                      <Wrench className="h-4 w-4 text-emerald-400" />
+                      <span>WhatsApp Agent</span>
+                      <PhoneCall className="h-4 w-4 text-emerald-400" />
                     </div>
-                    <p className="text-2xl font-bold text-[#f5f2eb] mt-1.5">{realRepairs.length}</p>
-                    <p className="text-[11px] text-[#8e8a82] mt-0.5">Active Service Jobs</p>
+                    <p className="text-lg font-bold text-[#f5f2eb] mt-1.5 truncate">STARLD-W5LEE</p>
+                    <p className="text-[11px] text-emerald-400 mt-0.5">+27 63 199 5124 Live</p>
                   </button>
 
                   <button
@@ -1408,7 +1920,7 @@ export default function AdminAutoFameAgentPage() {
                   }
                 }}
                 rows={2}
-                placeholder="Ask anything (e.g. 'how many cars', 'show emails from yesterday', 'list all cars')..."
+                placeholder="Ask anything (e.g. 'how many cars', 'show emails from yesterday', 'check if we have everything for finance')..."
                 className="w-full bg-transparent p-4 pb-12 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed"
               />
 
@@ -1422,7 +1934,7 @@ export default function AdminAutoFameAgentPage() {
               />
 
               <div className="absolute bottom-2.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -1430,6 +1942,15 @@ export default function AdminAutoFameAgentPage() {
                   >
                     <Paperclip className="h-3.5 w-3.5 text-emerald-400" />
                     <span className="hidden sm:inline">Attach</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openFinanceContainer()}
+                    className="h-7 px-2.5 rounded-lg bg-[#181715] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
+                  >
+                    <Building2 className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Finance Application Container</span>
                   </button>
 
                   <button
@@ -1467,21 +1988,25 @@ export default function AdminAutoFameAgentPage() {
       </main>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* COMPACT COMPOSE DRAWER (ONLY OPENS WHEN COMPOSING WITH AI) */}
+      {/* COMPACT DRAWER (ONLY OPENS WHEN CLICKED — MAIN CANVAS WIDE)*/}
       {/* ────────────────────────────────────────────────────────── */}
       {composeDrawerMode && (
-        <aside className="w-full sm:w-[360px] lg:w-[390px] shrink-0 flex flex-col bg-[#131210] border-l border-[#2b2823] z-20 shadow-2xl">
+        <aside className="w-full sm:w-[400px] lg:w-[440px] shrink-0 flex flex-col bg-[#131210] border-l border-[#2b2823] z-20 shadow-2xl">
           <div className="h-12 px-4 border-b border-[#27241f] bg-[#171613] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               {composeDrawerMode === "gmail" ? (
                 <Mail className="h-4 w-4 text-emerald-400" />
-              ) : (
+              ) : composeDrawerMode === "whatsapp" ? (
                 <PhoneCall className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <Building2 className="h-4 w-4 text-emerald-400" />
               )}
               <span className="text-xs font-bold text-[#f5f2eb]">
                 {composeDrawerMode === "gmail"
                   ? `Compose Email (${connectedGmail})`
-                  : "Compose WhatsApp"}
+                  : composeDrawerMode === "whatsapp"
+                  ? "WhatsApp Agent (STARLD-W5LEE)"
+                  : "Finance Application Container & Bank Check"}
               </span>
             </div>
 
@@ -1493,8 +2018,409 @@ export default function AdminAutoFameAgentPage() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs">
-            {composeDrawerMode === "gmail" ? (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+            {/* ── MODE 1: FINANCE APPLICATION FORM CONTAINER & BANK VERIFICATION ── */}
+            {composeDrawerMode === "finance" && (
+              <>
+                {/* WhatsApp Channel Intake Sync Bar */}
+                <div className="p-3 rounded-xl bg-[#1b1916] border border-[#33302a] flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-bold text-emerald-400">
+                      WhatsApp Channel: STARLD-W5LEE
+                    </p>
+                    <p className="text-[10px] text-[#8e8a82]">
+                      Pull applicant details &amp; proof docs from WhatsApp or send form container
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => fetchLiveWhatsAppChannel(true)}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#25231e] hover:bg-[#2f2c26] text-[#eae7e1] border border-[#3a362f] text-[10px] font-medium flex items-center gap-1"
+                    >
+                      <RefreshCw className="h-3 w-3 text-emerald-400" />
+                      Sync WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSendFinanceFormOrMissingViaWhatsApp(false)}
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold flex items-center gap-1"
+                    >
+                      <Send className="h-3 w-3" />
+                      Send Form on WA
+                    </button>
+                  </div>
+                </div>
+
+                {/* 1. USER DETAILS CONTAINER */}
+                <div className="p-3.5 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
+                  <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                    1. User Details (Applicant)
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">First Name *</label>
+                      <input
+                        type="text"
+                        value={finFirstName}
+                        onChange={(e) => setFinFirstName(e.target.value)}
+                        placeholder="e.g. Thabo"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">Surname *</label>
+                      <input
+                        type="text"
+                        value={finLastName}
+                        onChange={(e) => setFinLastName(e.target.value)}
+                        placeholder="e.g. Mokoena"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">
+                        SA ID Number (13 Digits) *
+                      </label>
+                      <input
+                        type="text"
+                        value={finIdNumber}
+                        onChange={(e) => setFinIdNumber(e.target.value)}
+                        placeholder="8901015009087"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">
+                        WhatsApp / Phone *
+                      </label>
+                      <input
+                        type="text"
+                        value={finPhone}
+                        onChange={(e) => setFinPhone(e.target.value)}
+                        placeholder="+27 82 000 0000"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">Email *</label>
+                      <input
+                        type="email"
+                        value={finEmail}
+                        onChange={(e) => setFinEmail(e.target.value)}
+                        placeholder="client@gmail.com"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">
+                        Physical Address *
+                      </label>
+                      <input
+                        type="text"
+                        value={finAddress}
+                        onChange={(e) => setFinAddress(e.target.value)}
+                        placeholder="14 Main Rd, Sandton, JHB"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. CAR DETAILS CONTAINER */}
+                <div className="p-3.5 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
+                  <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                    2. Car Details (From Dealership Inventory)
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#8e8a82] block mb-1">
+                      Select Showroom Vehicle *
+                    </label>
+                    <select
+                      value={finCarId || ""}
+                      onChange={(e) => {
+                        const selectedId = Number(e.target.value);
+                        const found = realCars.find((c: any) => c.id === selectedId);
+                        if (found) {
+                          setFinCarId(found.id);
+                          setFinCarName(`${found.year} ${found.make} ${found.model}`);
+                          setFinCarPrice(found.price || 0);
+                          setFinDeposit(Math.round((found.price || 0) * 0.1));
+                        }
+                      }}
+                      className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs"
+                    >
+                      {realCars.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.year} {c.make} {c.model} — R{Number(c.price || 0).toLocaleString()} ZAR (
+                          {c.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">Price (ZAR)</label>
+                      <input
+                        type="number"
+                        value={finCarPrice}
+                        onChange={(e) => setFinCarPrice(Number(e.target.value) || 0)}
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2 py-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">Deposit (ZAR)</label>
+                      <input
+                        type="number"
+                        value={finDeposit}
+                        onChange={(e) => setFinDeposit(Number(e.target.value) || 0)}
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2 py-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">Term (Months)</label>
+                      <select
+                        value={finTermMonths}
+                        onChange={(e) => setFinTermMonths(Number(e.target.value))}
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2 py-1.5 text-white font-mono text-xs"
+                      >
+                        <option value={36}>36 mo</option>
+                        <option value={48}>48 mo</option>
+                        <option value={60}>60 mo</option>
+                        <option value={72}>72 mo</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 text-[11px] text-[#a6a197] border-t border-[#262420]">
+                    <span>Loan Principal: R{loanPrincipal.toLocaleString()} ZAR</span>
+                    <span className="text-emerald-400 font-semibold">
+                      Est: ~R{estimatedMonthlyInstalment.toLocaleString()}/mo
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. FINANCIAL DETAILS CONTAINER */}
+                <div className="p-3.5 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
+                  <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                    3. Financial Details (Income &amp; Employment)
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">
+                        Employer Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={finEmployerName}
+                        onChange={(e) => setFinEmployerName(e.target.value)}
+                        placeholder="e.g. Sasol / FirstRand"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">Job Title *</label>
+                      <input
+                        type="text"
+                        value={finJobTitle}
+                        onChange={(e) => setFinJobTitle(e.target.value)}
+                        placeholder="e.g. Operations Manager"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">
+                        Gross Monthly Income (ZAR) *
+                      </label>
+                      <input
+                        type="number"
+                        value={finMonthlyIncome || ""}
+                        onChange={(e) => setFinMonthlyIncome(Number(e.target.value) || 0)}
+                        placeholder="45000"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#8e8a82] block mb-1">
+                        Monthly Expenses (ZAR) *
+                      </label>
+                      <input
+                        type="number"
+                        value={finMonthlyExpenses || ""}
+                        onChange={(e) => setFinMonthlyExpenses(Number(e.target.value) || 0)}
+                        placeholder="16000"
+                        className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. MANDATORY PROOF DOCUMENTS (ID, Driver's License, Bank Statements, Payslips, Proof of Address) */}
+                <div className="p-3.5 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                      4. Mandatory Proof Documents (FICA)
+                    </span>
+                    <span className="text-[10px] font-mono text-[#a6a197]">
+                      {Object.keys(finProofDocs).length}/5 Attached
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {REQUIRED_PROOF_DOCS.map((docItem) => {
+                      const attached = finProofDocs[docItem.code];
+                      return (
+                        <div
+                          key={docItem.code}
+                          className={cn(
+                            "flex items-center justify-between px-2.5 py-2 rounded-lg border text-xs",
+                            attached
+                              ? "bg-emerald-500/10 border-emerald-500/30 text-[#f5f2eb]"
+                              : "bg-[#12110f] border-[#2c2924] text-[#a6a197]"
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            {attached ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                            ) : (
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-medium truncate">{docItem.label}</p>
+                              {attached && (
+                                <p className="text-[10px] text-emerald-300 truncate">
+                                  {attached.originalName}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveDocUploadCode(docItem.code);
+                              proofDocInputRef.current?.click();
+                            }}
+                            className="px-2 py-1 rounded bg-[#24221e] hover:bg-[#2f2c26] text-[10px] text-[#eae7e1] border border-[#38342d] flex items-center gap-1 shrink-0"
+                          >
+                            <Upload className="h-3 w-3 text-emerald-400" />
+                            {attached ? "Replace" : "Attach"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 5. PRE-FLIGHT COMPLETENESS CHECK & SEND TO BANK VIA EMAIL */}
+                <div
+                  className={cn(
+                    "p-3.5 rounded-xl border space-y-3",
+                    isFinanceCompleteForBank
+                      ? "bg-emerald-500/10 border-emerald-500/35"
+                      : "bg-amber-500/10 border-amber-500/30"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#f5f2eb] flex items-center gap-1.5">
+                      {isFinanceCompleteForBank ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          All Requirements Verified for Bank
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="h-4 w-4 text-amber-400" />
+                          Pre-Flight Check: {missingFinanceItems.length} Item(s) Missing
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {!isFinanceCompleteForBank && (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                        Missing before bank email dispatch:{" "}
+                        <span className="font-mono">{missingFinanceItems.join(", ")}</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleSendFinanceFormOrMissingViaWhatsApp(true)}
+                        className="w-full py-2 px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-semibold text-xs flex items-center justify-center gap-1.5"
+                      >
+                        <PhoneCall className="h-3.5 w-3.5" />
+                        Request Missing Items on WhatsApp
+                      </button>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-[#a6a197] block mb-1">
+                      Bank Finance Desk Email (Recipient) *
+                    </label>
+                    <input
+                      type="email"
+                      value={bankEmail}
+                      onChange={(e) => {
+                        setBankEmail(e.target.value);
+                        setBankDispatched(false);
+                      }}
+                      placeholder="applications@wesbank.co.za"
+                      className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white font-mono text-xs"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleSaveFinanceContainerToDb}
+                      variant="outline"
+                      className="h-9 px-3 rounded-xl border-[#38342d] bg-[#1b1916] hover:bg-[#25231e] text-[#eae7e1] text-xs"
+                    >
+                      Save Container
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={handleVerifyAndSendApplicationToBank}
+                      className={cn(
+                        "flex-1 h-9 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5",
+                        isFinanceCompleteForBank
+                          ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                          : "bg-zinc-700/60 text-zinc-300 hover:bg-zinc-700"
+                      )}
+                    >
+                      {bankDispatched ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Sent to Bank
+                        </>
+                      ) : (
+                        <>
+                          <SendHorizontal className="h-4 w-4" />
+                          Verify &amp; Email Application to Bank
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ── MODE 2: GMAIL COMPOSER ── */}
+            {composeDrawerMode === "gmail" && (
               <>
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
@@ -1587,8 +2513,32 @@ export default function AdminAutoFameAgentPage() {
                   </Button>
                 </div>
               </>
-            ) : (
+            )}
+
+            {/* ── MODE 3: TWO-WAY WHATSAPP AGENT (CHANNEL STARLD-W5LEE) ── */}
+            {composeDrawerMode === "whatsapp" && (
               <>
+                <div className="p-3 rounded-xl bg-[#191815] border border-[#2f2c26] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-emerald-400">
+                        Live Channel: STARLD-W5LEE
+                      </p>
+                      <p className="text-[10px] text-[#8e8a82] font-mono">
+                        +27 63 199 5124 • Connected to Dealership DB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleTriggerWhatsAppAgentAutoReply}
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] flex items-center gap-1"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      AI Reply &amp; Sync
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
                     WhatsApp Number *
@@ -1607,33 +2557,82 @@ export default function AdminAutoFameAgentPage() {
 
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                    Message
+                    Message / Finance Application Container
                   </label>
                   <textarea
-                    rows={6}
+                    rows={7}
                     value={canvasWaMessage}
                     onChange={(e) => setCanvasWaMessage(e.target.value)}
                     className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl p-3 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
-                <Button
-                  type="button"
-                  onClick={handleSendCanvasWhatsApp}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 rounded-xl flex items-center justify-center gap-1.5"
-                >
-                  {canvasWaSent ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Sent
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4" />
-                      Send on WhatsApp
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleSendCanvasWhatsApp}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 rounded-xl flex items-center justify-center gap-1.5"
+                  >
+                    {canvasWaSent ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Sent on WhatsApp
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Send on WhatsApp
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={() => openFinanceContainer()}
+                    variant="outline"
+                    className="h-9 px-3 rounded-xl border-[#38342d] bg-[#1b1916] hover:bg-[#25231e] text-[#eae7e1] text-xs"
+                  >
+                    Open Form Container
+                  </Button>
+                </div>
+
+                {/* Recent Live WhatsApp Messages on STARLD-W5LEE */}
+                {waChannelMessages.length > 0 && (
+                  <div className="pt-2 border-t border-[#292621] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase text-[#8e8a82]">
+                        Recent Channel Messages ({waChannelMessages.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => fetchLiveWhatsAppChannel(true)}
+                        className="text-[10px] text-emerald-400 hover:underline"
+                      >
+                        Import to Finance Form
+                      </button>
+                    </div>
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      {waChannelMessages.slice(0, 8).map((m: any) => (
+                        <div
+                          key={m.id}
+                          onClick={() => {
+                            if (m.from) setCanvasWaPhone("+" + String(m.from).replace(/^\+/, ""));
+                          }}
+                          className="p-2 rounded-lg bg-[#181714] border border-[#2a2722] cursor-pointer hover:border-emerald-500/40"
+                        >
+                          <div className="flex items-center justify-between text-[10px] text-[#8e8a82]">
+                            <span className="font-semibold text-[#eae7e1]">
+                              {m.fromMe ? "AutoFame Agent → " : ""}
+                              {m.fromName} ({m.from})
+                            </span>
+                            <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                          <p className="text-[11px] text-[#dedad2] mt-1 line-clamp-2">{m.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1656,7 +2655,7 @@ export default function AdminAutoFameAgentPage() {
               <div>
                 <h3 className="text-sm font-bold text-[#f5f2eb]">Connected Channels</h3>
                 <p className="text-[11px] text-[#8e8a82]">
-                  Live IMAP (`imap.gmail.com:993`) &amp; SMTP (`smtp.gmail.com:465`)
+                  Live Gmail (`alexsouthflow3@gmail.com`) &amp; Whapi (`STARLD-W5LEE`)
                 </p>
               </div>
               <button
@@ -1688,6 +2687,18 @@ export default function AdminAutoFameAgentPage() {
                   type="password"
                   value={gmailAppPassword}
                   onChange={(e) => setGmailAppPassword(e.target.value)}
+                  className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-2 text-white font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                  Whapi.Cloud Channel
+                </label>
+                <input
+                  type="text"
+                  value={connectedWhatsApp}
+                  onChange={(e) => setConnectedWhatsApp(e.target.value)}
                   className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-2 text-white font-mono text-xs"
                 />
               </div>

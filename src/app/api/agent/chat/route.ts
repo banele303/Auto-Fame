@@ -40,11 +40,17 @@ function getRealFormSubmissions(context: any) {
       customerName: f.customerName || `Applicant #${f.id}`,
       email: f.email || "",
       phone: f.phone || "",
-      vehicle: f.loanAmount ? `Loan: R${Number(f.loanAmount).toLocaleString()} ZAR` : "Finance Application",
+      vehicle: f.carName
+        ? `${f.carName} (R${Number(f.carPrice || f.loanAmount || 0).toLocaleString()} ZAR)`
+        : f.loanAmount
+        ? `Loan: R${Number(f.loanAmount).toLocaleString()} ZAR`
+        : "Finance Application",
       details: f.monthlyIncomeGross
         ? `Gross Income: R${Number(f.monthlyIncomeGross).toLocaleString()} / mo`
         : `Credit Score: ${f.creditScore || "Pending"}`,
       status: f.status || "PENDING",
+      isCompleteForBank: Boolean(f.isCompleteForBank),
+      missingItems: Array.isArray(f.missingItems) ? f.missingItems : [],
       date: f.applicationDate || "",
     })),
     ...inquiries.map((inq: any) => ({
@@ -55,6 +61,8 @@ function getRealFormSubmissions(context: any) {
       vehicle: inq.carName || `Car #${inq.carId}`,
       details: inq.message || "Website Inquiry",
       status: inq.status || "NEW",
+      isCompleteForBank: false,
+      missingItems: [],
       date: inq.createdAt || "",
     })),
     ...testDrives.map((td: any) => ({
@@ -67,6 +75,8 @@ function getRealFormSubmissions(context: any) {
         ? `Scheduled: ${new Date(td.scheduledDate).toLocaleDateString()}`
         : "Test Drive",
       status: td.completed ? "COMPLETED" : "SCHEDULED",
+      isCompleteForBank: false,
+      missingItems: [],
       date: td.createdAt || "",
     })),
   ];
@@ -76,7 +86,11 @@ function inqName(td: any) {
   return td.customerName || "Showroom Client";
 }
 
-function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com") {
+function buildGmailDraftFromQuery(
+  query: string,
+  context: any,
+  connectedGmail = "alexsouthflow3@gmail.com"
+) {
   const lower = query.toLowerCase();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
   const realLeads = getRealFormSubmissions(context);
@@ -200,7 +214,7 @@ function buildWhatsAppDraftFromQuery(query: string, context: any) {
   }
 
   const priceText = carPrice > 0 ? ` (R${carPrice.toLocaleString()} ZAR)` : "";
-  const message = `Hi ${customerName}, this is AutoFame Dealership Johannesburg South regarding *${carName}*${priceText}. You can complete your finance application online at https://www.autofame.co.za/financing or reply here with your ID copy, 3 months bank statements, and payslips.`;
+  const message = `📋 *AutoFame Vehicle Finance Application Container*\n\nHi ${customerName}, here is your finance application container for *${carName}*${priceText}:\n\n*1. User Details*: Full Name, SA ID Number, Email & Physical Address\n*2. Car Details*: ${carName}${priceText}\n*3. Financial Details*: Employer, Job Title, Gross Monthly Income & Expenses\n*4. Proof Documents Required*: SA ID Copy, Driver's License, 3 Months Bank Statements, Latest Payslips & Proof of Residence.\n\nReply directly here on WhatsApp with your details & documents, or complete online: https://www.autofame.co.za/financing`;
 
   return {
     actionType: "WHATSAPP_COMPOSE",
@@ -224,6 +238,7 @@ function generateDirectDatabaseAnswer(
   const lower = query.toLowerCase().trim();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
   const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
+  const financings = Array.isArray(context?.financings) ? context.financings : [];
   const realLeads = getRealFormSubmissions(context);
 
   const totalCars = cars.length;
@@ -276,7 +291,36 @@ function generateDirectDatabaseAnswer(
     return `${totalCars}`;
   }
 
-  // 2. EMAIL INBOX QUERIES (Asking what emails we have / emails from yesterday / today)
+  // 2. FINANCE APPLICATION COMPLETENESS & BANK VERIFICATION QUERIES
+  if (
+    lower.includes("finance") ||
+    lower.includes("bank") ||
+    lower.includes("fica") ||
+    lower.includes("proof") ||
+    lower.includes("check if we have")
+  ) {
+    if (financings.length === 0) {
+      return "Finance Application Container opened. Fill in User Details, Car Details, Financial Details, and attach Proof Documents (ID, Driver's License, Bank Statements, Payslips, Proof of Residence) to verify and dispatch to the bank.";
+    }
+    const rows = financings
+      .map(
+        (f: any) =>
+          `| **${f.customerName}** | ${f.idNumber || "Missing ID"} | ${f.carName} (R${Number(
+            f.carPrice || f.loanAmount || 0
+          ).toLocaleString()}) | R${Number(f.monthlyIncomeGross || 0).toLocaleString()}/mo | ${
+            f.documents?.length || 0
+          }/5 Docs | **${
+            f.isCompleteForBank
+              ? "✅ READY FOR BANK"
+              : `⚠️ Missing: ${f.missingItems?.slice(0, 3).join(", ")}`
+          }** |`
+      )
+      .join("\n");
+
+    return `| Applicant | SA ID | Vehicle & Price | Gross Income | Proof Docs | Bank Verification |\n| :--- | :--- | :--- | :---: | :---: | :--- |\n${rows}`;
+  }
+
+  // 3. EMAIL INBOX QUERIES (Asking what emails we have / emails from yesterday / today)
   if (
     (lower.includes("email") ||
       lower.includes("imail") ||
@@ -318,7 +362,7 @@ function generateDirectDatabaseAnswer(
     return `| Sender | Email Address | Subject | Received |\n| :--- | :--- | :--- | :---: |\n${rows}`;
   }
 
-  // 3. COMPOSE EMAIL
+  // 4. COMPOSE EMAIL
   if (
     lower.includes("compose") ||
     lower.includes("send email") ||
@@ -329,7 +373,7 @@ function generateDirectDatabaseAnswer(
     return `Draft ready for ${draft.to || draft.customerName}.`;
   }
 
-  // 4. WHATSAPP
+  // 5. WHATSAPP
   if (
     lower.includes("whatsapp") ||
     lower.includes("what app") ||
@@ -340,7 +384,7 @@ function generateDirectDatabaseAnswer(
     return `WhatsApp draft ready${waDraft.to ? ` for ${waDraft.to}` : ""}.`;
   }
 
-  // 5. VALUE / PRICE QUESTIONS
+  // 6. VALUE / PRICE QUESTIONS
   if (lower.includes("total value") || lower.includes("showroom value") || lower.includes("inventory value")) {
     return `R${totalShowroomValue.toLocaleString()} ZAR`;
   }
@@ -355,7 +399,7 @@ function generateDirectDatabaseAnswer(
     return `${mostExp.year} ${mostExp.make} ${mostExp.model} — R${(mostExp.price || 0).toLocaleString()} ZAR`;
   }
 
-  // 6. FORMS / LEADS
+  // 7. FORMS / LEADS
   if (
     lower.includes("form") ||
     lower.includes("submission") ||
@@ -371,7 +415,7 @@ function generateDirectDatabaseAnswer(
       .join("\n");
   }
 
-  // 7. BRAND / MODEL MATCH
+  // 8. BRAND / MODEL MATCH
   const matchedCars = cars.filter(
     (c) =>
       lower.includes(c.make?.toLowerCase() || "") ||
@@ -383,7 +427,7 @@ function generateDirectDatabaseAnswer(
       .join("\n");
   }
 
-  // 8. LIST CARS
+  // 9. LIST CARS
   if (lower.includes("list") || lower.includes("inventory") || lower.includes("stock") || lower.includes("cars")) {
     if (cars.length === 0) return "0";
     return cars
@@ -415,6 +459,15 @@ export async function POST(req: NextRequest) {
 
     let actionPayload: any = null;
     if (
+      lowerQuery.includes("finance") ||
+      lowerQuery.includes("bank") ||
+      lowerQuery.includes("fica") ||
+      lowerQuery.includes("application container")
+    ) {
+      actionPayload = {
+        actionType: "FINANCE_CONTAINER",
+      };
+    } else if (
       lowerQuery.includes("compose") ||
       lowerQuery.includes("send email") ||
       lowerQuery.includes("draft email") ||

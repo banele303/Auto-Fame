@@ -51,20 +51,6 @@ export const createSession = mutation({
       updatedAt: now,
     });
 
-    // Seed default welcome message from AI Agent
-    await ctx.db.insert("chatMessages", {
-      sessionId,
-      role: "assistant",
-      content: `Hello! I am your AutoFame AI Copilot, fully synced with your South Africa dealership inventory, active vehicle financing, workshop repairs, and CRM WhatsApp engine. 
-
-How can I assist you right now? You can ask me to:
-• **"Send a vehicle finance application link to a client via WhatsApp"**
-• **"Check which cars are currently at the workshop for repairs"**
-• **"Auto-generate high-converting sales & social media descriptions for our 2018 BMW X2 or 2024 Toyota Hilux"**
-• **"Review customer inquiries, test drive bookings, or finance statuses"**`,
-      createdAt: now,
-    });
-
     return sessionId;
   },
 });
@@ -165,9 +151,10 @@ export const getDealershipContext = query({
 
     // 2. Active Repairs from Convex DB
     const repairs = await ctx.db.query("carRepairs").collect();
-    // 3. Financing Applications & Form Details from Convex DB
+    // 3. Financing Applications, Form Details & Proof Documents from Convex DB
     const financings = await ctx.db.query("financingApplications").order("desc").take(25);
     const financingDetails = await ctx.db.query("financingApplicationDetails").order("desc").take(25);
+    const financingDocs = await ctx.db.query("financingApplicationDocuments").order("desc").take(100);
     // 4. Inquiries & Test Drives & Customers from Website Forms
     const inquiries = await ctx.db.query("inquiries").order("desc").take(25);
     const testDrives = await ctx.db.query("testDrives").order("desc").take(20);
@@ -187,10 +174,62 @@ export const getDealershipContext = query({
     const cheapestCar = sortedByPrice[0] || null;
     const mostExpensiveCar = sortedByPrice[sortedByPrice.length - 1] || null;
 
-    // Enrich financing applications with form submission details
+    // Enrich financing applications with full User Details, Car Details, Financial Details & FICA Proof Documents Check
     const enrichedFinancings = financings.map((f) => {
       const detail = financingDetails.find((d) => d.financingApplicationId === f.id);
       const cust = customers.find((c) => c.cognitoId === f.customerId);
+      const appDocs = financingDocs.filter((doc) => doc.financingApplicationId === f.id);
+
+      const extra = (detail?.extraData as any) || {};
+      const selectedCarId = extra.carId || null;
+      const matchedCar = selectedCarId ? cars.find((c) => c.id === Number(selectedCarId)) : null;
+      const carName =
+        extra.carName ||
+        (matchedCar ? `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}` : "Selected Vehicle");
+      const carPrice = extra.carPrice || matchedCar?.price || f.loanAmount;
+
+      const customerName = detail
+        ? `${detail.firstName} ${detail.lastName}`.trim()
+        : cust?.name || "Applicant";
+      const idNumber = detail?.idNumber || extra.idNumber || "";
+      const email = detail?.email || cust?.email || "";
+      const phone = detail?.phone || cust?.phoneNumber || "";
+      const address = detail?.address || cust?.address || "";
+      const employerName = detail?.employerName || "";
+      const jobTitle = detail?.jobTitle || "";
+      const monthlyIncomeGross = detail?.monthlyIncomeGross || 0;
+      const monthlyExpenses = detail?.monthlyHousingPayment || extra.monthlyExpenses || 0;
+      const downPaymentAmount = detail?.downPaymentAmount || 0;
+
+      // Mandatory FICA & Bank Checklist Verification
+      const missingItems: string[] = [];
+      if (!customerName || customerName === "Applicant") missingItems.push("Full Name");
+      if (!idNumber) missingItems.push("SA ID Number");
+      if (!phone) missingItems.push("Phone / WhatsApp Number");
+      if (!email) missingItems.push("Email Address");
+      if (!address) missingItems.push("Residential Address");
+      if (!carName || carName === "Selected Vehicle") missingItems.push("Selected Vehicle Details");
+      if (!employerName) missingItems.push("Employer Name");
+      if (!monthlyIncomeGross || monthlyIncomeGross <= 0) missingItems.push("Gross Monthly Income");
+
+      const docTypesPresent = appDocs.map((d) => d.docType.toUpperCase());
+      const requiredDocs = [
+        { code: "ID_COPY", label: "SA ID Copy" },
+        { code: "DRIVERS_LICENSE", label: "Driver's License" },
+        { code: "BANK_STATEMENTS", label: "3 Months Bank Statements" },
+        { code: "PAYSLIPS", label: "Latest Payslips" },
+        { code: "PROOF_OF_ADDRESS", label: "Proof of Residence" },
+      ];
+
+      for (const reqDoc of requiredDocs) {
+        const hasDoc = docTypesPresent.some(
+          (t) => t.includes(reqDoc.code) || t.includes(reqDoc.label.toUpperCase())
+        );
+        if (!hasDoc) {
+          missingItems.push(`Proof Doc: ${reqDoc.label}`);
+        }
+      }
+
       return {
         id: f.id,
         loanAmount: f.loanAmount,
@@ -200,14 +239,41 @@ export const getDealershipContext = query({
         status: f.status,
         applicationDate: f.applicationDate,
         customerId: f.customerId,
-        customerName: detail ? `${detail.firstName} ${detail.lastName}` : cust?.name || "Applicant",
-        email: detail?.email || cust?.email || "",
-        phone: detail?.phone || cust?.phoneNumber || "",
-        monthlyIncomeGross: detail?.monthlyIncomeGross || null,
-        employerName: detail?.employerName || null,
-        creditScoreRange: detail?.creditScoreRange || null,
+        // User Details
+        customerName,
+        firstName: detail?.firstName || "",
+        lastName: detail?.lastName || "",
+        idNumber,
+        email,
+        phone,
+        address,
+        city: detail?.city || "",
+        postalCode: detail?.postalCode || "",
+        // Car Details
+        carId: selectedCarId,
+        carName,
+        carPrice,
+        downPaymentAmount,
         hasTradeIn: detail?.hasTradeIn || false,
         tradeInDetails: detail?.tradeInDetails || null,
+        // Financial Details
+        employmentStatus: detail?.employmentStatus || "EMPLOYED",
+        employerName,
+        jobTitle,
+        monthlyIncomeGross,
+        monthlyExpenses,
+        creditScoreRange: detail?.creditScoreRange || null,
+        // Proof Documents & Bank Readiness
+        documents: appDocs.map((d) => ({
+          id: d.id,
+          docType: d.docType,
+          name: d.originalName,
+          url: d.url,
+          mime: d.mime,
+          size: d.size,
+        })),
+        isCompleteForBank: missingItems.length === 0,
+        missingItems,
       };
     });
 
@@ -248,9 +314,9 @@ export const getDealershipContext = query({
       dealership: {
         name: "AutoFame Dealership Johannesburg South",
         country: "South Africa (ZAR)",
-        whatsappProvider: "Whapi.Cloud South Africa Channel",
-        emailProvider: "Gmail Connected Channel (autofame.dealers@gmail.com)",
-        dealershipPhone: "+27 11 942 1200",
+        whatsappProvider: "Whapi.Cloud Channel STARLD-W5LEE (+27 63 199 5124)",
+        emailProvider: "Gmail Connected Channel (alexsouthflow3@gmail.com)",
+        dealershipPhone: "+27 63 199 5124",
         address: "1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa",
       },
       stats: {
@@ -472,5 +538,228 @@ export const listCrmEvents = query({
       .withIndex("by_createdAt")
       .order("desc")
       .take(args.limit || 30);
+  },
+});
+
+// ──────────────────────────────────────────────
+// Finance Application Form Container (User Details + Car Details + Financial Details + Proof Documents)
+// ──────────────────────────────────────────────
+
+export const saveFinanceApplicationContainer = mutation({
+  args: {
+    applicationId: v.optional(v.number()),
+    // 1. User Details
+    firstName: v.string(),
+    lastName: v.string(),
+    idNumber: v.string(),
+    phone: v.string(),
+    email: v.string(),
+    address: v.string(),
+    city: v.optional(v.string()),
+    postalCode: v.optional(v.string()),
+    // 2. Car Details
+    carId: v.optional(v.number()),
+    carName: v.string(),
+    carPrice: v.number(),
+    downPaymentAmount: v.number(),
+    termMonths: v.number(),
+    interestRate: v.optional(v.number()),
+    hasTradeIn: v.optional(v.boolean()),
+    tradeInDetails: v.optional(v.string()),
+    // 3. Financial Details
+    employmentStatus: v.string(),
+    employerName: v.string(),
+    jobTitle: v.string(),
+    monthlyIncomeGross: v.number(),
+    monthlyExpenses: v.number(),
+    creditScoreRange: v.optional(v.string()),
+    // 4. Proof Documents (ID, Driver's License, Bank Statements, Payslips, Proof of Address)
+    documents: v.optional(
+      v.array(
+        v.object({
+          docType: v.string(),
+          originalName: v.string(),
+          mime: v.string(),
+          size: v.number(),
+          url: v.string(),
+        })
+      )
+    ),
+    status: v.optional(v.string()),
+    sourceChannel: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    const allApps = await ctx.db.query("financingApplications").collect();
+    const allDetails = await ctx.db.query("financingApplicationDetails").collect();
+    const allDocs = await ctx.db.query("financingApplicationDocuments").collect();
+
+    const loanAmount = Math.max(0, args.carPrice - args.downPaymentAmount);
+    const rate = args.interestRate || 11.75;
+    const monthlyRate = rate / 100 / 12;
+    const months = args.termMonths || 72;
+    const monthlyPayment =
+      loanAmount > 0
+        ? Math.round(
+            (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+              (Math.pow(1 + monthlyRate, months) - 1)
+          )
+        : 0;
+
+    let numericAppId = args.applicationId;
+    let existingApp = numericAppId
+      ? allApps.find((a) => a.id === numericAppId)
+      : undefined;
+
+    if (existingApp) {
+      await ctx.db.patch(existingApp._id, {
+        loanAmount,
+        interestRate: rate,
+        termMonths: months,
+        monthlyPayment,
+        status: args.status || existingApp.status,
+        annualIncome: args.monthlyIncomeGross * 12,
+      });
+    } else {
+      const maxAppId = allApps.reduce((max, a) => Math.max(max, a.id || 0), 100);
+      numericAppId = maxAppId + 1;
+      await ctx.db.insert("financingApplications", {
+        id: numericAppId,
+        loanAmount,
+        interestRate: rate,
+        termMonths: months,
+        monthlyPayment,
+        status: args.status || "PENDING",
+        applicationDate: now,
+        approvalDate: null,
+        customerId: args.phone || args.email || `WA-${numericAppId}`,
+        creditScore: 700,
+        annualIncome: args.monthlyIncomeGross * 12,
+      });
+    }
+
+    const existingDetail = allDetails.find(
+      (d) => d.financingApplicationId === numericAppId
+    );
+
+    const extraData = {
+      carId: args.carId || null,
+      carName: args.carName,
+      carPrice: args.carPrice,
+      idNumber: args.idNumber,
+      monthlyExpenses: args.monthlyExpenses,
+      sourceChannel: args.sourceChannel || "WHATSAPP_STARLD_W5LEE",
+      updatedAt: now,
+    };
+
+    if (existingDetail) {
+      await ctx.db.patch(existingDetail._id, {
+        firstName: args.firstName,
+        lastName: args.lastName,
+        email: args.email,
+        phone: args.phone,
+        idNumber: args.idNumber,
+        address: args.address,
+        city: args.city || "Johannesburg",
+        postalCode: args.postalCode || "2013",
+        monthlyHousingPayment: args.monthlyExpenses,
+        employmentStatus: args.employmentStatus,
+        employerName: args.employerName,
+        jobTitle: args.jobTitle,
+        monthlyIncomeGross: args.monthlyIncomeGross,
+        creditScoreRange: args.creditScoreRange || "GOOD",
+        downPaymentAmount: args.downPaymentAmount,
+        hasTradeIn: args.hasTradeIn || false,
+        tradeInDetails: args.tradeInDetails || null,
+        extraData,
+      });
+    } else {
+      const maxDetailId = allDetails.reduce((max, d) => Math.max(max, d.id || 0), 100);
+      await ctx.db.insert("financingApplicationDetails", {
+        id: maxDetailId + 1,
+        financingApplicationId: numericAppId!,
+        firstName: args.firstName,
+        lastName: args.lastName,
+        email: args.email,
+        phone: args.phone,
+        idNumber: args.idNumber,
+        address: args.address,
+        city: args.city || "Johannesburg",
+        state: "Gauteng",
+        postalCode: args.postalCode || "2013",
+        housingStatus: "OWN",
+        monthlyHousingPayment: args.monthlyExpenses,
+        employmentStatus: args.employmentStatus,
+        employerName: args.employerName,
+        jobTitle: args.jobTitle,
+        employmentYears: 3,
+        monthlyIncomeGross: args.monthlyIncomeGross,
+        otherIncome: 0,
+        otherIncomeSource: null,
+        creditScoreRange: args.creditScoreRange || "GOOD",
+        downPaymentAmount: args.downPaymentAmount,
+        preferredContactMethod: "WHATSAPP",
+        hasTradeIn: args.hasTradeIn || false,
+        tradeInDetails: args.tradeInDetails || null,
+        coApplicantName: null,
+        coApplicantIncome: null,
+        coApplicantRelationship: null,
+        consentCreditCheck: true,
+        agreeTerms: true,
+        extraData,
+        createdAt: now,
+      });
+    }
+
+    // Save or replace uploaded Proof Documents
+    if (args.documents && args.documents.length > 0) {
+      let maxDocId = allDocs.reduce((max, d) => Math.max(max, d.id || 0), 500);
+      for (const doc of args.documents) {
+        // Check if same docType already exists for this application
+        const existingDoc = allDocs.find(
+          (d) =>
+            d.financingApplicationId === numericAppId &&
+            d.docType.toUpperCase() === doc.docType.toUpperCase()
+        );
+        if (existingDoc) {
+          await ctx.db.patch(existingDoc._id, {
+            originalName: doc.originalName,
+            storedName: doc.originalName,
+            mime: doc.mime,
+            size: doc.size,
+            url: doc.url,
+            uploadedAt: now,
+          });
+        } else {
+          maxDocId += 1;
+          await ctx.db.insert("financingApplicationDocuments", {
+            id: maxDocId,
+            financingApplicationId: numericAppId!,
+            docType: doc.docType.toUpperCase(),
+            originalName: doc.originalName,
+            storedName: doc.originalName,
+            mime: doc.mime,
+            size: doc.size,
+            url: doc.url,
+            uploadedAt: now,
+          });
+        }
+      }
+    }
+
+    await ctx.db.insert("crmEvents", {
+      eventType: "FINANCE_CONTAINER_SAVED",
+      recipient: args.phone || args.email,
+      customerName: `${args.firstName} ${args.lastName}`.trim(),
+      summary: `Finance Application #${numericAppId} saved for ${args.firstName} ${args.lastName} (${args.carName} - R${args.carPrice.toLocaleString()} ZAR)`,
+      status: "SUCCESS",
+      createdAt: now,
+    });
+
+    return {
+      applicationId: numericAppId,
+      loanAmount,
+      monthlyPayment,
+    };
   },
 });
