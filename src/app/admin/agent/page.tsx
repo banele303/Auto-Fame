@@ -644,8 +644,11 @@ export default function AdminAutoFameAgentPage() {
   // Live Gmail Inbox (Today, Yesterday, All)
   const [inboxEmails, setInboxEmails] = useState<any[]>([]);
 
-  // Live Whapi.Cloud WhatsApp Messages (Channel STARLD-W5LEE)
+  // Live Whapi.Cloud WhatsApp Messages & Contacts (Channel STARLD-W5LEE)
   const [waChannelMessages, setWaChannelMessages] = useState<any[]>([]);
+  const [waContacts, setWaContacts] = useState<any[]>([]);
+  const [waSearchQuery, setWaSearchQuery] = useState("");
+  const [selectedWaContact, setSelectedWaContact] = useState<any>(null);
 
   // ── COMPACT COMPOSE DRAWER (Closed by default so Main Canvas is 100% wide!) ──
   const [composeDrawerMode, setComposeDrawerMode] = useState<
@@ -757,8 +760,17 @@ export default function AdminAutoFameAgentPage() {
     try {
       const res = await fetch("/api/whatsapp?action=messages");
       const data = await res.json();
-      if (res.ok && Array.isArray(data.messages)) {
-        setWaChannelMessages(data.messages);
+      if (res.ok) {
+        if (Array.isArray(data.contacts)) {
+          setWaContacts(data.contacts);
+          if (!selectedWaContact && data.contacts.length > 0) {
+            setSelectedWaContact(data.contacts[1] || data.contacts[0]);
+            setCanvasWaPhone(data.contacts[1]?.phone || data.contacts[0]?.phone || "");
+          }
+        }
+        if (Array.isArray(data.messages)) {
+          setWaChannelMessages(data.messages);
+        }
         if (autoFillFinance && data.intakePreview) {
           const intake = data.intakePreview;
           if (intake.firstName) setFinFirstName(intake.firstName);
@@ -1257,7 +1269,26 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
       const data = await res.json();
       if (res.ok && data.success) {
         setCanvasWaSent(true);
-        toast.success(`Sent on WhatsApp (STARLD-W5LEE) to ${canvasWaPhone.trim()}`);
+        // Append sent message into local channel history so user sees their reply immediately
+        setWaChannelMessages((prev) => [
+          {
+            id: `local-${Date.now()}`,
+            fromMe: true,
+            from: canvasWaPhone.trim(),
+            fromName: selectedWaContact?.name || canvasWaPhone.trim(),
+            chatId: selectedWaContact?.chatId || canvasWaPhone.trim(),
+            type: "text",
+            text: canvasWaMessage.trim(),
+            timestamp: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+        if (data.trialQuotaExceeded && data.waMeUrl) {
+          window.open(data.waMeUrl, "_blank", "noopener,noreferrer");
+          toast.success(`Opened WhatsApp reply to ${selectedWaContact?.name || canvasWaPhone.trim()}`);
+        } else {
+          toast.success(`Sent on WhatsApp (STARLD-W5LEE) to ${selectedWaContact?.name || canvasWaPhone.trim()}`);
+        }
       } else {
         toast.error(data.error || "Failed to send WhatsApp message");
       }
@@ -2181,34 +2212,53 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
             {/* ── MODE 1: FINANCE APPLICATION FORM CONTAINER & BANK VERIFICATION ── */}
             {composeDrawerMode === "finance" && (
               <>
-                {/* WhatsApp Channel Intake Sync Bar */}
-                <div className="p-3 rounded-xl bg-[#1b1916] border border-[#33302a] flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-[11px] font-bold text-emerald-400">
-                      WhatsApp Channel: STARLD-W5LEE
-                    </p>
-                    <p className="text-[10px] text-[#8e8a82]">
-                      Pull applicant details &amp; proof docs from WhatsApp or send form container
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => fetchLiveWhatsAppChannel(true)}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#25231e] hover:bg-[#2f2c26] text-[#eae7e1] border border-[#3a362f] text-[10px] font-medium flex items-center gap-1"
-                    >
-                      <RefreshCw className="h-3 w-3 text-emerald-400" />
-                      Sync WhatsApp
-                    </button>
+                {/* WhatsApp Contact Picker & Channel Intake Sync Bar */}
+                <div className="p-3 rounded-xl bg-[#1b1916] border border-[#33302a] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-bold text-emerald-400">
+                        Choose WhatsApp Contact to Fill Form
+                      </p>
+                      <p className="text-[10px] text-[#8e8a82]">
+                        Select any WhatsApp contact to auto-extract their info &amp; docs
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleSendFinanceFormOrMissingViaWhatsApp(false)}
-                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold flex items-center gap-1"
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold flex items-center gap-1 shrink-0"
                     >
                       <Send className="h-3 w-3" />
                       Send Form on WA
                     </button>
                   </div>
+
+                  <select
+                    value={selectedWaContact?.id || ""}
+                    onChange={async (e) => {
+                      const chosen = waContacts.find((c) => c.id === e.target.value);
+                      if (!chosen) return;
+                      setSelectedWaContact(chosen);
+                      setFinPhone(chosen.phone);
+                      setCanvasWaPhone(chosen.phone);
+                      const cleanName = chosen.name.replace(/\(.*?\)/g, "").trim();
+                      const parts = cleanName.split(/\s+/);
+                      setFinFirstName(parts[0] || "Client");
+                      setFinLastName(parts.slice(1).join(" ") || "");
+                      if (chosen.lastMessage?.includes("Bank:")) {
+                        setFinEmployerName("West Bulk Bags (Capitec: 2558165883)");
+                      }
+                      toast.success(`Loaded ${chosen.name} (${chosen.phone}) into Finance Form`);
+                    }}
+                    className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-2.5 py-1.5 text-white text-xs"
+                  >
+                    <option value="">-- Select WhatsApp Contact ({waContacts.length} Contacts) --</option>
+                    {waContacts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.phone})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* 1. USER DETAILS CONTAINER */}
@@ -2674,33 +2724,173 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               </>
             )}
 
-            {/* ── MODE 3: TWO-WAY WHATSAPP AGENT (CHANNEL STARLD-W5LEE) ── */}
+            {/* ── MODE 3: TWO-WAY WHATSAPP AGENT — CONTACT SEARCH, SELECTOR & REPLY ── */}
             {composeDrawerMode === "whatsapp" && (
               <>
-                <div className="p-3 rounded-xl bg-[#191815] border border-[#2f2c26] space-y-2">
+                {/* 1. Search & Choose Contact to Talk To */}
+                <div className="p-3 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-emerald-400">
-                        Live Channel: STARLD-W5LEE
-                      </p>
-                      <p className="text-[10px] text-[#8e8a82] font-mono">
-                        +27 63 199 5124 • Connected to Dealership DB
-                      </p>
-                    </div>
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                      1. Choose or Search Contact ({waContacts.length})
+                    </span>
                     <button
                       type="button"
-                      onClick={handleTriggerWhatsAppAgentAutoReply}
-                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] flex items-center gap-1"
+                      onClick={() => fetchLiveWhatsAppChannel(false)}
+                      className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1"
                     >
                       <RefreshCw className="h-3 w-3" />
-                      AI Reply &amp; Sync
+                      Refresh
                     </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={waSearchQuery}
+                    onChange={(e) => setWaSearchQuery(e.target.value)}
+                    placeholder="Search contact name or number (e.g. Martha, Blesz, Advance Auto, 074...)"
+                    className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
+                  />
+
+                  <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
+                    {waContacts
+                      .filter((c) => {
+                        if (!waSearchQuery.trim()) return true;
+                        const q = waSearchQuery.toLowerCase();
+                        return (
+                          c.name?.toLowerCase().includes(q) ||
+                          c.phone?.toLowerCase().includes(q) ||
+                          c.lastMessage?.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((c) => {
+                        const isSelected = selectedWaContact?.id === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedWaContact(c);
+                              setCanvasWaPhone(c.id === "120363413508068515@g.us" ? c.id : c.phone);
+                              setCanvasWaSent(false);
+                              const firstName = c.name.replace(/\(.*?\)/g, "").trim().split(" ")[0];
+                              setCanvasWaMessage(
+                                `Hi ${firstName}, this is AutoFame Dealership Johannesburg South. How can we assist you with vehicle stock, quotes, or finance today?`
+                              );
+                            }}
+                            className={cn(
+                              "w-full text-left px-2.5 py-2 rounded-lg border transition flex items-center justify-between gap-2",
+                              isSelected
+                                ? "bg-emerald-500/15 border-emerald-500/50 text-[#f5f2eb]"
+                                : "bg-[#131210] hover:bg-[#1f1d19] border-[#262420] text-[#dedad2]"
+                            )}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold truncate">{c.name}</p>
+                              <p className="text-[10px] text-[#8e8a82] truncate">
+                                {c.lastMessage || c.phone}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-mono text-emerald-400 shrink-0">
+                              {c.phone}
+                            </span>
+                          </button>
+                        );
+                      })}
                   </div>
                 </div>
 
+                {/* 2. Active Contact Header & Quick AI Reply Actions */}
+                {selectedWaContact && (
+                  <div className="p-3 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-bold text-[#f5f2eb]">
+                          Talking to: <span className="text-emerald-400">{selectedWaContact.name}</span>
+                        </p>
+                        <p className="text-[10px] font-mono text-[#8e8a82]">
+                          {selectedWaContact.phone}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFinPhone(selectedWaContact.phone);
+                          const cleanName = selectedWaContact.name.replace(/\(.*?\)/g, "").trim();
+                          const parts = cleanName.split(/\s+/);
+                          setFinFirstName(parts[0] || "Client");
+                          setFinLastName(parts.slice(1).join(" ") || "");
+                          if (selectedWaContact.lastMessage?.includes("Bank:")) {
+                            setFinEmployerName("West Bulk Bags (Capitec: 2558165883)");
+                          }
+                          openFinanceContainer();
+                          toast.success(`Imported ${selectedWaContact.name} to Finance Form Container`);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold"
+                      >
+                        Fill Finance Form →
+                      </button>
+                    </div>
+
+                    {selectedWaContact.lastMessage && (
+                      <div className="p-2 rounded-lg bg-[#12110f] border border-[#262420] text-[11px] text-[#dedad2]">
+                        <span className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-0.5">
+                          Last Message in Chat:
+                        </span>
+                        &ldquo;{selectedWaContact.lastMessage}&rdquo;
+                      </div>
+                    )}
+
+                    {/* Quick Draft Templates for Selected Contact */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const name = selectedWaContact.name.replace(/\(.*?\)/g, "").trim().split(" ")[0];
+                          setCanvasWaMessage(
+                            `Hi ${name}, thank you for your message! I have checked your request at AutoFame Dealership Johannesburg South. Would you like me to send the official vehicle quote or the finance application container?`
+                          );
+                        }}
+                        className="px-2 py-1 rounded-md bg-[#24221e] hover:bg-[#2e2b26] border border-[#38342d] text-[10px] text-[#eae7e1]"
+                      >
+                        ✨ AI Smart Reply
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const name = selectedWaContact.name.replace(/\(.*?\)/g, "").trim().split(" ")[0];
+                          const car = realCars[0];
+                          const price = Number(car?.price || 249900);
+                          const est = Math.round(price * 0.9 * 0.0218);
+                          setCanvasWaMessage(
+                            `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\nHi ${name}, here is the quotation for:\n\n🚘 *${car ? `${car.year} ${car.make} ${car.model}` : "Selected Vehicle"}*\n💰 *Price:* R${price.toLocaleString()} ZAR (~R${est.toLocaleString()}/mo)\n⚙️ *Specs:* ${Number(car?.mileage || 35000).toLocaleString()} km • ${car?.transmission || "Auto"}\n\nReply *FINANCE* or send your SA ID, 3 months bank statements & payslips here to apply!`
+                          );
+                        }}
+                        className="px-2 py-1 rounded-md bg-[#24221e] hover:bg-[#2e2b26] border border-[#38342d] text-[10px] text-[#eae7e1]"
+                      >
+                        📄 Vehicle Quote
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const name = selectedWaContact.name.replace(/\(.*?\)/g, "").trim().split(" ")[0];
+                          setCanvasWaMessage(
+                            `📋 *AutoFame Vehicle Finance Application Container*\n\nHi ${name}, to complete your vehicle finance application, please reply here with:\n\n*1. User Details:* Full Name, SA ID Number, Email & Physical Address\n*2. Car Details:* ${finCarName || "Selected Vehicle"} (R${Number(finCarPrice || 0).toLocaleString()} ZAR)\n*3. Financial Details:* Employer, Job Title, Gross Monthly Income & Expenses\n*4. Proof Documents:*\n✅ Copy of SA ID\n✅ Valid SA Driver's License\n✅ 3 Months Bank Statements\n✅ Latest 3 Months Payslips\n✅ Proof of Residence`
+                          );
+                        }}
+                        className="px-2 py-1 rounded-md bg-[#24221e] hover:bg-[#2e2b26] border border-[#38342d] text-[10px] text-[#eae7e1]"
+                      >
+                        📋 Finance Container
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Recipient Phone & Message Composer */}
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                    WhatsApp Number *
+                    Recipient Phone / Chat ID *
                   </label>
                   <input
                     type="text"
@@ -2716,10 +2906,10 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
 
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                    Message / Finance Application Container
+                    Reply Message
                   </label>
                   <textarea
-                    rows={7}
+                    rows={6}
                     value={canvasWaMessage}
                     onChange={(e) => setCanvasWaMessage(e.target.value)}
                     className="w-full bg-[#1b1a17] border border-[#33302a] rounded-xl p-3 text-[#eae7e1] text-xs leading-relaxed focus:outline-none focus:border-emerald-500"
@@ -2735,63 +2925,16 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                     {canvasWaSent ? (
                       <>
                         <Check className="h-4 w-4" />
-                        Sent on WhatsApp
+                        Sent to {selectedWaContact?.name?.split(" ")[0] || "Contact"}
                       </>
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        Send on WhatsApp
+                        Send Reply on WhatsApp
                       </>
                     )}
                   </Button>
-
-                  <Button
-                    type="button"
-                    onClick={() => openFinanceContainer()}
-                    variant="outline"
-                    className="h-9 px-3 rounded-xl border-[#38342d] bg-[#1b1916] hover:bg-[#25231e] text-[#eae7e1] text-xs"
-                  >
-                    Open Form Container
-                  </Button>
                 </div>
-
-                {/* Recent Live WhatsApp Messages on STARLD-W5LEE */}
-                {waChannelMessages.length > 0 && (
-                  <div className="pt-2 border-t border-[#292621] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono uppercase text-[#8e8a82]">
-                        Recent Channel Messages ({waChannelMessages.length})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => fetchLiveWhatsAppChannel(true)}
-                        className="text-[10px] text-emerald-400 hover:underline"
-                      >
-                        Import to Finance Form
-                      </button>
-                    </div>
-                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                      {waChannelMessages.slice(0, 8).map((m: any) => (
-                        <div
-                          key={m.id}
-                          onClick={() => {
-                            if (m.from) setCanvasWaPhone("+" + String(m.from).replace(/^\+/, ""));
-                          }}
-                          className="p-2 rounded-lg bg-[#181714] border border-[#2a2722] cursor-pointer hover:border-emerald-500/40"
-                        >
-                          <div className="flex items-center justify-between text-[10px] text-[#8e8a82]">
-                            <span className="font-semibold text-[#eae7e1]">
-                              {m.fromMe ? "AutoFame Agent → " : ""}
-                              {m.fromName} ({m.from})
-                            </span>
-                            <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                          </div>
-                          <p className="text-[11px] text-[#dedad2] mt-1 line-clamp-2">{m.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>
