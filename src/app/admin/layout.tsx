@@ -182,34 +182,37 @@ const AdminDashboardContent = ({ children }: { children: React.ReactNode }) => {
   }, [open, setOpen]);
   
   const pathname = usePathname();
-  const isAgentPage = pathname === "/admin/agent";
+  const isAgentPage = pathname?.startsWith("/admin/agent");
+
+  if (isAgentPage) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#1f1e1b] text-[#eae7e1] selection:bg-emerald-500 selection:text-white">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-black text-[#ededed] selection:bg-white selection:text-black">
       <AdminNavbar />
       <div style={{ paddingTop: `${NAVBAR_HEIGHT}px` }}>
         <div className="flex">
-          {!isAgentPage && isMobile && open && (
+          {isMobile && open && (
             <div 
               className="fixed inset-0 bg-black/70 z-30 backdrop-blur-sm" 
               onClick={() => setOpen(false)}
             />
           )}
           
-          {!isAgentPage && (
-            <div className="top-0 h-[calc(100vh-var(--navbar-height))] bg-black border-r border-[#222]">
-              <AppSidebar userType="admin" />
-            </div>
-          )}
+          <div className="top-0 h-[calc(100vh-var(--navbar-height))] bg-black border-r border-[#222]">
+            <AppSidebar userType="admin" />
+          </div>
           
           <div 
-            className={cn(
-              "flex-grow min-w-0 max-w-full bg-black min-h-[calc(100vh-var(--navbar-height))] overflow-x-hidden",
-              isAgentPage ? "p-0" : "p-4 sm:p-6 md:p-8"
-            )}
+            className="flex-grow min-w-0 max-w-full bg-black min-h-[calc(100vh-var(--navbar-height))] overflow-x-hidden p-4 sm:p-6 md:p-8"
             style={{
               '--navbar-height': `${NAVBAR_HEIGHT}px`,
-              marginLeft: isAgentPage ? 0 : (isMobile ? 0 : (open ? 'var(--sidebar-width)' : 'var(--sidebar-width-icon)')),
+              marginLeft: isMobile ? 0 : (open ? 'var(--sidebar-width)' : 'var(--sidebar-width-icon)'),
             } as React.CSSProperties}
           >
             {children}

@@ -27,8 +27,10 @@ import {
   SendHorizontal,
   Database,
   SlidersHorizontal,
-  FileCheck,
   MessageSquare,
+  KeyRound,
+  AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -97,115 +99,172 @@ const markdownComponents = {
 };
 
 // ──────────────────────────────────────────────
-// Helper: Build Gmail Draft Payload from Prompt + DB Context
+// Extract Real Leads from Convex Database Context (Zero Demo Data)
+// ──────────────────────────────────────────────
+function extractRealLeads(context: any) {
+  const financings = Array.isArray(context?.financings) ? context.financings : [];
+  const inquiries = Array.isArray(context?.inquiries) ? context.inquiries : [];
+  const testDrives = Array.isArray(context?.testDrives) ? context.testDrives : [];
+
+  return [
+    ...financings.map((f: any) => ({
+      type: "Finance Application",
+      customerName: f.customerName || `Applicant #${f.id}`,
+      email: f.email || "",
+      phone: f.phone || "",
+      vehicle: f.loanAmount ? `Loan: R${Number(f.loanAmount).toLocaleString()} ZAR` : "Vehicle Finance",
+    })),
+    ...inquiries.map((inq: any) => ({
+      type: "Vehicle Inquiry",
+      customerName: inq.customerName || "Website Lead",
+      email: inq.customerEmail || "",
+      phone: inq.customerPhone || "",
+      vehicle: inq.carName || `Car #${inq.carId}`,
+    })),
+    ...testDrives.map((td: any) => ({
+      type: "Test Drive Booking",
+      customerName: td.customerName || "Showroom Client",
+      email: td.customerEmail || "",
+      phone: td.customerPhone || "",
+      vehicle: td.carName || `Car #${td.carId}`,
+    })),
+  ];
+}
+
+// ──────────────────────────────────────────────
+// Helper: Build Gmail Draft Payload from Prompt + Real DB Context
 // ──────────────────────────────────────────────
 function buildClientGmailPayload(query: string, context: any, connectedGmail: string) {
   const lower = query.toLowerCase();
-  const cars = context?.cars || [];
+  const cars = Array.isArray(context?.cars) ? context.cars : [];
+  const realLeads = extractRealLeads(context);
 
-  let customerName = "Thabo Mokoena";
-  let to = "thabo.mokoena@gmail.com";
-  let carName = "2018 BMW X2 sDrive20i M Sport";
-  let carPrice = 299900;
+  let customerName = "Valued Client";
+  let to = "";
+  let carName = cars[0] ? `${cars[0].year} ${cars[0].make} ${cars[0].model}` : "Selected Vehicle";
+  let carPrice = cars[0]?.price || 0;
 
-  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
-    customerName = "Dr. Anelisa Sithole";
-    to = "anelisa.sithole@mediclinic.co.za";
-    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
-    carPrice = 649900;
-  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf") || lower.includes("gti")) {
-    customerName = "Johan Botha";
-    to = "johan.botha@outlook.com";
-    carName = "2021 Volkswagen Golf 8 GTI 2.0 TSI DSG";
-    carPrice = 489000;
-  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes") || lower.includes("c200")) {
-    customerName = "Kagiso Ndlovu";
-    to = "kagiso.ndlovu@vodamail.co.za";
-    carName = "2020 Mercedes-Benz C200 AMG Line";
-    carPrice = 419000;
-  } else {
-    const emailMatch = query.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
-    if (emailMatch) {
-      to = emailMatch[1];
-      const namePart = to.split("@")[0].replace(/[._-]/g, " ");
-      customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
-    }
-    const matchedCar = cars.find(
-      (c: any) => lower.includes(c.make?.toLowerCase()) || lower.includes(c.model?.toLowerCase().split(" ")[0])
-    );
-    if (matchedCar) {
-      carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
-      carPrice = matchedCar.price;
-    }
+  // 1. Check if an email address was typed in prompt
+  const emailMatch = query.match(/([a-zA-Z0-9._+-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+  if (emailMatch) {
+    to = emailMatch[1];
+    const namePart = to.split("@")[0].replace(/[._-]/g, " ");
+    customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
-  const monthlyEst = Math.round(carPrice * 0.9 * 0.0218);
-  const subject = `AutoFame Official Quotation & Finance Pre-Approval — ${carName}`;
+  // 2. Match against real database leads
+  const matchedLead = realLeads.find(
+    (lead) =>
+      (lead.customerName && lower.includes(lead.customerName.toLowerCase())) ||
+      (lead.email && lower.includes(lead.email.toLowerCase()))
+  );
+  if (matchedLead) {
+    customerName = matchedLead.customerName;
+    if (matchedLead.email) to = matchedLead.email;
+  } else if (!to && realLeads.length > 0 && realLeads[0].email) {
+    customerName = realLeads[0].customerName;
+    to = realLeads[0].email;
+  }
+
+  // 3. Match against real cars in database
+  const matchedCar = cars.find(
+    (c: any) =>
+      lower.includes(c.make?.toLowerCase() || "") ||
+      lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
+  );
+  if (matchedCar) {
+    carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
+    carPrice = matchedCar.price || 0;
+  }
+
+  const priceLine = carPrice > 0 ? `R${carPrice.toLocaleString()} ZAR` : "Available on request";
+  const monthlyEst = carPrice > 0 ? Math.round(carPrice * 0.9 * 0.0218) : 0;
+
+  const subject =
+    carPrice > 0
+      ? `AutoFame Official Quotation & Finance Details — ${carName}`
+      : `AutoFame Dealership — Vehicle & Finance Information`;
+
   const body = `Dear ${customerName},
 
-Thank you for your inquiry with AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
+Thank you for contacting AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
 
-We are pleased to share the official details and finance breakdown for your selected vehicle:
-
+Here are the details regarding your inquiry:
 • Vehicle: ${carName}
-• Retail Price: R${carPrice.toLocaleString()} ZAR
-• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit via WesBank / Standard Bank / Absa MFC)
-• Inspection Status: Certified Dekra 101-Point Roadworthy Inspection
+• Retail Price: ${priceLine}${
+    monthlyEst > 0
+      ? `\n• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit)`
+      : ""
+  }
 
-To finalize your bank pre-approval, please reply to this email with your FICA documents:
-1. Copy of SA Smart ID or Green Barcoded ID
+To proceed with vehicle finance pre-approval, please reply to this email with your FICA documents:
+1. Copy of SA ID (Smart Card or Green Barcoded Book)
 2. Valid South African Driver's License
 3. Latest 3 Months Stamped Bank Statements & Payslips
 4. Proof of Residence (not older than 3 months)
 
-Or complete your application online at: https://www.autofame.co.za/financing
+Or apply online at: https://www.autofame.co.za/financing
 
 Warm regards,
-AutoFame Sales & Finance Desk
-Tel: +27 11 942 1200 | ${connectedGmail}`;
+AutoFame Dealership
+Email: ${connectedGmail}`;
 
   return {
     actionType: "GMAIL_COMPOSE",
     from: connectedGmail,
     to,
-    cc: "finance@autofame.co.za",
+    cc: "",
     customerName,
     carName,
     carPrice,
     subject,
     body,
-    attachmentName: `AutoFame_Quote_${carName.replace(/\s+/g, "_")}.pdf`,
   };
 }
 
 // ──────────────────────────────────────────────
-// Helper: Build WhatsApp Draft Payload from Prompt
+// Helper: Build WhatsApp Draft Payload from Prompt + Real DB Context
 // ──────────────────────────────────────────────
-function buildClientWhatsAppPayload(query: string) {
+function buildClientWhatsAppPayload(query: string, context: any) {
   const lower = query.toLowerCase();
-  let customerName = "Thabo Mokoena";
-  let to = "+27 83 492 1109";
-  let carName = "2018 BMW X2 sDrive20i M Sport";
-  let carPrice = 299900;
+  const cars = Array.isArray(context?.cars) ? context.cars : [];
+  const realLeads = extractRealLeads(context);
 
-  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
-    customerName = "Dr. Anelisa Sithole";
-    to = "+27 82 555 8921";
-    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
-    carPrice = 649900;
-  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf")) {
-    customerName = "Johan Botha";
-    to = "+27 71 884 9022";
-    carName = "2021 Volkswagen Golf 8 GTI";
-    carPrice = 489000;
-  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes")) {
-    customerName = "Kagiso Ndlovu";
-    to = "+27 79 312 8844";
-    carName = "2020 Mercedes-Benz C200 AMG Line";
-    carPrice = 419000;
+  let customerName = "Client";
+  let to = "";
+  let carName = cars[0] ? `${cars[0].year} ${cars[0].make} ${cars[0].model}` : "your selected vehicle";
+  let carPrice = cars[0]?.price || 0;
+
+  const phoneMatch = query.match(/(\+?27|0)\s*\d{2}\s*\d{3}\s*\d{4}/);
+  if (phoneMatch) {
+    to = phoneMatch[0];
   }
 
-  const message = `Hi ${customerName} 👋, this is AutoFame Dealership Johannesburg South. Here are the details for the *${carName}* (R${carPrice.toLocaleString()} ZAR). You can complete your fast-track WesBank / Standard Bank finance pre-approval right here: https://www.autofame.co.za/financing — or reply to this WhatsApp with your 3 months bank statements, payslips & ID copy!`;
+  const matchedLead = realLeads.find(
+    (lead) =>
+      (lead.customerName && lower.includes(lead.customerName.toLowerCase())) ||
+      (lead.phone && lower.includes(lead.phone))
+  );
+  if (matchedLead) {
+    customerName = matchedLead.customerName;
+    if (matchedLead.phone) to = matchedLead.phone;
+  } else if (!to && realLeads.length > 0 && realLeads[0].phone) {
+    customerName = realLeads[0].customerName;
+    to = realLeads[0].phone;
+  }
+
+  const matchedCar = cars.find(
+    (c: any) =>
+      lower.includes(c.make?.toLowerCase() || "") ||
+      lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
+  );
+  if (matchedCar) {
+    carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
+    carPrice = matchedCar.price || 0;
+  }
+
+  const priceText = carPrice > 0 ? ` (R${carPrice.toLocaleString()} ZAR)` : "";
+  const message = `Hi ${customerName}, this is AutoFame Dealership Johannesburg South regarding *${carName}*${priceText}. You can complete your finance application online at https://www.autofame.co.za/financing or reply here with your ID copy, 3 months bank statements, and payslips.`;
 
   return {
     actionType: "WHATSAPP_COMPOSE",
@@ -218,77 +277,105 @@ function buildClientWhatsAppPayload(query: string) {
 }
 
 // ──────────────────────────────────────────────
-// Inline Gmail Composer Card (Claude-style Tool Artifact in Chat)
+// Inline Real Gmail Composer Card
 // ──────────────────────────────────────────────
 function InlineGmailComposer({
   initialPayload,
   connectedGmail,
+  gmailAppPassword,
+  gmailVerified,
+  onOpenConnectModal,
   onRecordEvent,
 }: {
   initialPayload: any;
   connectedGmail: string;
+  gmailAppPassword: string;
+  gmailVerified: boolean;
+  onOpenConnectModal: () => void;
   onRecordEvent: (evt: any) => Promise<any>;
 }) {
-  const [to, setTo] = useState(initialPayload?.to || "thabo.mokoena@gmail.com");
-  const [cc, setCc] = useState(initialPayload?.cc || "finance@autofame.co.za");
+  const [to, setTo] = useState(initialPayload?.to || "");
+  const [cc, setCc] = useState(initialPayload?.cc || "");
   const [subject, setSubject] = useState(
-    initialPayload?.subject || "AutoFame Official Quotation & Finance Pre-Approval"
+    initialPayload?.subject || "AutoFame Dealership — Vehicle Quotation & Finance"
   );
   const [body, setBody] = useState(initialPayload?.body || "");
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
-  const handleSendGmail = async () => {
-    if (!to.trim() || !subject.trim()) {
-      toast.error("Please provide a recipient email and subject");
+  const handleSendRealGmail = async () => {
+    setSendError(null);
+    if (!to.trim()) {
+      toast.error("Please enter the recipient email address ('To')");
       return;
     }
+    if (!subject.trim()) {
+      toast.error("Please enter an email subject");
+      return;
+    }
+
     setIsSending(true);
     try {
       const res = await fetch("/api/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "send",
+          fromEmail: connectedGmail,
+          appPassword: gmailAppPassword,
           to: to.trim(),
-          customerName: initialPayload?.customerName || "Valued Client",
+          cc: cc.trim() || undefined,
+          customerName: initialPayload?.customerName || to.trim(),
           subject: subject.trim(),
           body,
           carName: initialPayload?.carName,
           carPrice: initialPayload?.carPrice,
-          gateway: "agentmail",
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (res.ok && data.status === "SENT") {
         setIsSent(true);
-        toast.success(`Email sent via Gmail Channel to ${to}`);
+        toast.success(`Email sent from ${connectedGmail} to ${to.trim()}`);
         await onRecordEvent({
           eventType: "EMAIL_SENT",
           recipient: to.trim(),
           customerName: initialPayload?.customerName || to.trim(),
-          summary: `Gmail sent to ${to.trim()}: "${subject.trim()}"`,
+          summary: `Real Gmail sent from ${connectedGmail} to ${to.trim()}: "${subject.trim()}"`,
           status: "SUCCESS",
         });
       } else {
-        toast.error("Failed to send email");
+        const errMsg =
+          data.error ||
+          `Could not send via smtp.gmail.com. Please configure the Google App Password for ${connectedGmail}.`;
+        setSendError(errMsg);
+        toast.error(errMsg);
+        if (data.requiresAppPassword) {
+          onOpenConnectModal();
+        }
       }
     } catch (err: any) {
-      toast.error("Gmail channel error: " + err.message);
+      setSendError(err.message);
+      toast.error("Gmail SMTP error: " + err.message);
     } finally {
       setIsSending(false);
     }
   };
 
   const handleOpenInGmailWeb = () => {
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
-      to
-    )}&cc=${encodeURIComponent(cc)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const gmailUrl = `https://mail.google.com/mail/?authuser=${encodeURIComponent(
+      connectedGmail
+    )}&view=cm&fs=1&to=${encodeURIComponent(to)}&cc=${encodeURIComponent(
+      cc
+    )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(gmailUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
     <div className="mt-5 rounded-2xl border border-[#3a362f] bg-[#181714] overflow-hidden shadow-xl">
-      {/* Gmail Connector Header */}
+      {/* Gmail Header */}
       <div className="px-4 py-3 bg-[#201e1a] border-b border-[#33302a] flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -297,40 +384,79 @@ function InlineGmailComposer({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#f5f2eb]">Gmail Composer</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                Connected Channel
-              </span>
+              {gmailVerified ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  SMTP Verified
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpenConnectModal}
+                  className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition"
+                >
+                  Connect App Password
+                </button>
+              )}
             </div>
-            <span className="text-[11px] text-[#8e8a82] font-mono">From: {connectedGmail}</span>
+            <span className="text-[11px] text-[#8e8a82] font-mono">
+              From: {connectedGmail} (smtp.gmail.com:465)
+            </span>
           </div>
         </div>
 
         {isSent && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            Sent via Gmail
+            Delivered via Gmail SMTP
           </span>
         )}
       </div>
 
-      {/* Editable Gmail Fields */}
+      {/* Editable Fields */}
       <div className="p-4 space-y-3 text-xs">
+        {sendError && (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-xs">Real Gmail Authentication Needed</p>
+                <p className="text-[11px] text-amber-200/90 leading-relaxed">{sendError}</p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={onOpenConnectModal}
+              className="h-7 px-2.5 text-[11px] bg-amber-500 hover:bg-amber-400 text-black font-semibold shrink-0 rounded-lg"
+            >
+              Enter App Password
+            </Button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">To (Recipient)</label>
+            <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">
+              To (Recipient Email) *
+            </label>
             <input
               type="email"
               value={to}
+              placeholder="client@example.com"
               disabled={isSent}
               onChange={(e) => setTo(e.target.value)}
               className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-60"
             />
           </div>
           <div>
-            <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">Cc (Dealership Desk)</label>
+            <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">
+              Cc (Optional)
+            </label>
             <input
               type="email"
               value={cc}
+              placeholder="Optional CC email"
               disabled={isSent}
               onChange={(e) => setCc(e.target.value)}
               className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-60"
@@ -339,7 +465,9 @@ function InlineGmailComposer({
         </div>
 
         <div>
-          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">Subject</label>
+          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">
+            Subject *
+          </label>
           <input
             type="text"
             value={subject}
@@ -350,7 +478,9 @@ function InlineGmailComposer({
         </div>
 
         <div>
-          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">Message Body</label>
+          <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">
+            Message Body
+          </label>
           <textarea
             rows={8}
             value={body}
@@ -360,20 +490,7 @@ function InlineGmailComposer({
           />
         </div>
 
-        {/* Attached PDF Badge */}
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#22201c] border border-[#33302a]">
-          <div className="flex items-center gap-2 text-xs text-[#dedad2]">
-            <FileCheck className="h-4 w-4 text-emerald-400 shrink-0" />
-            <span className="font-mono text-[11px] truncate">
-              {initialPayload?.attachmentName || "AutoFame_Vehicle_Quote_&_FICA.pdf"}
-            </span>
-          </div>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-            Attached
-          </span>
-        </div>
-
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#2d2a24]">
           <button
             type="button"
@@ -381,12 +498,12 @@ function InlineGmailComposer({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#25231f] hover:bg-[#2f2c27] text-[#dedad2] border border-[#38342d] transition"
           >
             <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
-            Open in Gmail Web
+            Open in Gmail ({connectedGmail})
           </button>
 
           <Button
             type="button"
-            onClick={handleSendGmail}
+            onClick={handleSendRealGmail}
             disabled={isSending || isSent}
             size="sm"
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 px-4 rounded-xl flex items-center gap-1.5 shadow-md"
@@ -394,12 +511,12 @@ function InlineGmailComposer({
             {isSending ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Sending via Gmail...
+                Sending via smtp.gmail.com...
               </>
             ) : isSent ? (
               <>
                 <Check className="h-3.5 w-3.5" />
-                Delivered
+                Sent from {connectedGmail}
               </>
             ) : (
               <>
@@ -415,7 +532,7 @@ function InlineGmailComposer({
 }
 
 // ──────────────────────────────────────────────
-// Inline WhatsApp Composer Card (In-Chat Channel Card)
+// Inline Real WhatsApp Composer Card
 // ──────────────────────────────────────────────
 function InlineWhatsAppComposer({
   initialPayload,
@@ -424,12 +541,36 @@ function InlineWhatsAppComposer({
   initialPayload: any;
   onRecordEvent: (evt: any) => Promise<any>;
 }) {
-  const [to, setTo] = useState(initialPayload?.to || "+27 83 492 1109");
+  const [to, setTo] = useState(initialPayload?.to || "");
   const [message, setMessage] = useState(initialPayload?.message || "");
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
 
-  const handleSendWhatsApp = async () => {
+  const getCleanPhone = (raw: string) => {
+    let cleaned = String(raw).replace(/\s+/g, "").replace(/[-()]/g, "");
+    if (cleaned.startsWith("0")) cleaned = "27" + cleaned.slice(1);
+    else if (cleaned.startsWith("+")) cleaned = cleaned.slice(1);
+    return cleaned;
+  };
+
+  const handleOpenWhatsAppDirect = async () => {
+    if (!to.trim()) {
+      toast.error("Please enter a phone number");
+      return;
+    }
+    const cleanPhone = getCleanPhone(to);
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    await onRecordEvent({
+      eventType: "WHATSAPP_SENT",
+      recipient: to.trim(),
+      customerName: initialPayload?.customerName || to.trim(),
+      summary: `Opened WhatsApp chat for ${to.trim()}`,
+      status: "SUCCESS",
+    });
+  };
+
+  const handleSendWhatsAppApi = async () => {
     if (!to.trim() || !message.trim()) {
       toast.error("Phone number and message are required");
       return;
@@ -447,21 +588,26 @@ function InlineWhatsAppComposer({
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (res.ok && data.success) {
         setIsSent(true);
         toast.success(`Sent on WhatsApp to ${to}`);
         await onRecordEvent({
           eventType: "WHATSAPP_SENT",
           recipient: to.trim(),
           customerName: initialPayload?.customerName || to.trim(),
-          summary: `WhatsApp message sent to ${initialPayload?.customerName || to.trim()} (${to.trim()})`,
+          summary: `WhatsApp message sent to ${to.trim()}`,
           status: "SUCCESS",
         });
+      } else if (data.waMeUrl) {
+        toast.info("Opening WhatsApp directly (WHAPI_API_TOKEN not set in .env.local)");
+        window.open(data.waMeUrl, "_blank", "noopener,noreferrer");
       } else {
-        toast.error("Failed to dispatch WhatsApp message");
+        toast.error(data.error || "Failed to send WhatsApp message");
       }
     } catch (err: any) {
-      toast.error("WhatsApp channel error: " + err.message);
+      toast.error("WhatsApp error: " + err.message);
     } finally {
       setIsSending(false);
     }
@@ -476,12 +622,12 @@ function InlineWhatsAppComposer({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#f5f2eb]">WhatsApp Business Channel</span>
+              <span className="text-xs font-bold text-[#f5f2eb]">WhatsApp Channel</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 Connected
               </span>
             </div>
-            <span className="text-[11px] text-[#8e8a82]">Direct Customer WhatsApp Dispatch</span>
+            <span className="text-[11px] text-[#8e8a82]">Direct WhatsApp Dispatch</span>
           </div>
         </div>
 
@@ -496,11 +642,12 @@ function InlineWhatsAppComposer({
       <div className="p-4 space-y-3 text-xs">
         <div>
           <label className="text-[11px] font-mono uppercase text-[#8e8a82] block mb-1">
-            WhatsApp Number (SA Format)
+            Recipient WhatsApp Number *
           </label>
           <input
             type="text"
             value={to}
+            placeholder="+27 82 000 0000"
             disabled={isSent}
             onChange={(e) => setTo(e.target.value)}
             className="w-full bg-[#12110f] border border-[#33302a] rounded-xl px-3 py-2 text-[#f5f2eb] font-mono text-xs focus:outline-none focus:border-emerald-500 disabled:opacity-60"
@@ -520,10 +667,19 @@ function InlineWhatsAppComposer({
           />
         </div>
 
-        <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#2d2a24]">
+        <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#2d2a24]">
+          <button
+            type="button"
+            onClick={handleOpenWhatsAppDirect}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#25231f] hover:bg-[#2f2c27] text-[#dedad2] border border-[#38342d] transition"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
+            Open in WhatsApp Web / App
+          </button>
+
           <Button
             type="button"
-            onClick={handleSendWhatsApp}
+            onClick={handleSendWhatsAppApi}
             disabled={isSending || isSent}
             size="sm"
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 px-4 rounded-xl flex items-center gap-1.5 shadow-md"
@@ -552,12 +708,12 @@ function InlineWhatsAppComposer({
 }
 
 // ──────────────────────────────────────────────
-// Dealership System Prompt Builder with Full Live Database Context
+// System Prompt Builder (100% Real Convex Database Context, Zero Demo Data)
 // ──────────────────────────────────────────────
 function buildCopilotSystemPrompt(context: any, connectedGmail: string) {
-  const cars = context?.cars || [];
-  const repairs = context?.repairs || [];
-  const stats = context?.stats || {};
+  const cars = Array.isArray(context?.cars) ? context.cars : [];
+  const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
+  const realLeads = extractRealLeads(context);
 
   const inventorySummary =
     cars.length > 0
@@ -567,16 +723,7 @@ function buildCopilotSystemPrompt(context: any, connectedGmail: string) {
               `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`
           )
           .join("\n")
-      : `- 2018 BMW X2 sDrive20i M Sport: R299,900 ZAR, 106,908 km, Alpine White (Status: MAINTENANCE)
-- 2024 Toyota Hilux 2.8 GD-6 Legend 4x4: R649,900 ZAR, 14,200 km, Glacier White (Status: AVAILABLE)
-- 2021 Volkswagen Golf 8 GTI: R489,000 ZAR, 48,000 km, Moonstone Grey (Status: AVAILABLE)
-- 2020 Mercedes-Benz C200 AMG Line: R419,000 ZAR, 62,000 km, Obsidian Black (Status: AVAILABLE)
-- 2019 Ford Everest 3.2 TDCi XLT 4WD: R410,000 ZAR, 89,000 km, Moondust Silver (Status: AVAILABLE)
-- 2023 Hyundai Tucson 2.0 Elite: R429,900 ZAR, 31,500 km, Phantom Black (Status: AVAILABLE)
-- 2022 Isuzu D-Max 3.0 Ddi V-Cross 4x4: R589,000 ZAR, 38,000 km, Biarritz Blue (Status: AVAILABLE)
-- 2020 Audi A4 35 TFSI S Line: R379,900 ZAR, 71,400 km, Ibis White (Status: AVAILABLE)
-- 2021 Ford Ranger 2.0 Wildtrak 4x4: R549,000 ZAR, 52,000 km (Status: SOLD)
-- 2017 Volkswagen Polo GTI 1.8 TSI: R249,900 ZAR, 114,000 km (Status: SOLD)`;
+      : "0 cars currently in database.";
 
   const repairSummary =
     repairs.length > 0
@@ -586,38 +733,37 @@ function buildCopilotSystemPrompt(context: any, connectedGmail: string) {
               `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`
           )
           .join("\n")
-      : `- Job #WO-2026-001: 2018 BMW X2 M Sport at BMW Panel & Mechanical Sandton (Status: IN PROGRESS, Est: R8,500 ZAR)
-- Job #WO-2026-002: 2024 Toyota Hilux D/Cab at Bosch Car Service (Status: AWAITING PARTS, Est: R4,200 ZAR)`;
+      : "0 workshop repair records in database.";
 
-  return `You are AutoFame Agent, the autonomous AI Agent for AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South, South Africa).
-You have 3 Live Connected Channels:
-1. Gmail (${connectedGmail}) — When asked to email or compose an email, an interactive Gmail composer card appears directly inside your chat response.
-2. WhatsApp Business (+27 11 942 1200) — When asked to send a WhatsApp, an interactive WhatsApp card appears directly inside your chat response.
-3. Website Forms & Convex Database — Synced with all cars, financing form applications, customer inquiries, test drives, and workshop repairs.
+  const leadsSummary =
+    realLeads.length > 0
+      ? realLeads
+          .map(
+            (l) =>
+              `- [${l.type}] ${l.customerName} (Email: ${l.email || "N/A"}, Phone: ${l.phone || "N/A"}) — ${l.vehicle}`
+          )
+          .join("\n")
+      : "0 website form submissions currently in database.";
 
-LIVE DEALERSHIP DATABASE KNOWLEDGE BASE:
-- Total Vehicles in System: ${stats.totalInventory || cars.length || 10}
-- Available for Sale on Showroom Floor: ${stats.availableCount || 7}
-- In Workshop / Maintenance: ${stats.maintenanceCount || stats.inRepairCount || 1}
-- Sold Vehicles: ${stats.soldCount || 2}
-- Total Showroom Value: R${(stats.totalShowroomValue || 3366700).toLocaleString()} ZAR
+  return `You are AutoFame Agent, connected to AutoFame Dealership's real Convex database and channels:
+1. Gmail Channel: ${connectedGmail} (Real SMTP via smtp.gmail.com:465)
+2. WhatsApp Channel: Direct WhatsApp connection
+3. Live Convex Database (100% real data, zero fake/demo records):
 
-COMPLETE REAL-TIME VEHICLE INVENTORY:
+REAL VEHICLE INVENTORY (${cars.length} Total Cars):
 ${inventorySummary}
 
-ACTIVE WEBSITE FORM LEADS & FINANCING APPLICANTS:
-- Thabo Mokoena (thabo.mokoena@gmail.com, +27 83 492 1109) — Applied for 2018 BMW X2 M Sport (R299,900 ZAR), Income: R42,500/pm, Status: Pre-Approval Pending
-- Dr. Anelisa Sithole (anelisa.sithole@mediclinic.co.za, +27 82 555 8921) — Applied for 2024 Toyota Hilux Legend (R649,900 ZAR), Income: R95,000/pm, Status: Approved by WesBank
-- Johan Botha (johan.botha@outlook.com, +27 71 884 9022) — Test Drive Form for 2021 VW Golf 8 GTI (R489,000 ZAR), Status: Booked Thursday 14:00
-- Kagiso Ndlovu (kagiso.ndlovu@vodamail.co.za, +27 79 312 8844) — Website Inquiry Form for 2020 Mercedes-Benz C200 AMG (R419,000 ZAR)
+REAL WEBSITE FORM LEADS & FINANCING APPLICANTS (${realLeads.length} Total):
+${leadsSummary}
 
-ACTIVE WORKSHOP REPAIRS:
+REAL WORKSHOP REPAIRS (${repairs.length} Total):
 ${repairSummary}
 
 INSTRUCTIONS:
-- Answer every question using the exact database facts above.
+- Answer every question using ONLY the exact database records above. Never invent fake cars or fake people.
+- If a table has 0 records, state honestly that there are currently 0 records in the database.
 - Format tables cleanly in Markdown and format currency as R... ZAR.
-- When asked to compose an email or Gmail, write a short confirmation because the interactive Gmail Composer widget will render right below your text.`;
+- When asked to compose an email or Gmail, confirm briefly because the interactive Gmail Composer widget will render right below your response.`;
 }
 
 export default function AdminAutoFameAgentPage() {
@@ -629,7 +775,7 @@ export default function AdminAutoFameAgentPage() {
   const deleteSession = useMutation(api.agent.deleteSession);
   const updateSessionTitle = useMutation(api.agent.updateSessionTitle);
   const addMessage = useMutation(api.agent.addMessage);
-  const seedInitialData = useMutation(api.seedAgent.seedInitialData);
+  const purgeLegacyDemo = useMutation(api.seedAgent.seedInitialData);
   const recordCrmEvent = useMutation(api.agent.recordCrmEvent);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const resolveStorageUrl = useMutation(api.files.resolveStorageUrl);
@@ -641,8 +787,13 @@ export default function AdminAutoFameAgentPage() {
     selectedSessionId ? { sessionId: selectedSessionId } : "skip"
   );
 
-  // Connected Channels Configuration State
-  const [connectedGmail, setConnectedGmail] = useState("autofame.dealers@gmail.com");
+  // Connected Channels Configuration State (Defaulting to elexsouthflow@gmail.com)
+  const [connectedGmail, setConnectedGmail] = useState("elexsouthflow@gmail.com");
+  const [gmailAppPassword, setGmailAppPassword] = useState("");
+  const [gmailVerified, setGmailVerified] = useState(false);
+  const [isVerifyingGmail, setIsVerifyingGmail] = useState(false);
+  const [gmailVerifyError, setGmailVerifyError] = useState<string | null>(null);
+
   const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 11 942 1200");
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
 
@@ -670,12 +821,49 @@ export default function AdminAutoFameAgentPage() {
   // Puter.js Status
   const [puterReady, setPuterReady] = useState(false);
 
+  // Verify Gmail SMTP Status on Mount
+  const checkGmailConnection = async (emailToVerify: string, passToVerify: string) => {
+    try {
+      if (passToVerify) {
+        const res = await fetch("/api/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "verify",
+            fromEmail: emailToVerify,
+            appPassword: passToVerify,
+          }),
+        });
+        const data = await res.json();
+        setGmailVerified(Boolean(res.ok && data.connected));
+      } else {
+        const res = await fetch("/api/email");
+        const data = await res.json();
+        setGmailVerified(Boolean(data.connected));
+      }
+    } catch {
+      setGmailVerified(false);
+    }
+  };
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedGmail = localStorage.getItem("autofame_connected_gmail");
+      const savedPass = localStorage.getItem("autofame_gmail_app_password") || "";
       const savedWa = localStorage.getItem("autofame_connected_whatsapp");
-      if (savedGmail) setConnectedGmail(savedGmail);
+
+      const targetEmail =
+        savedGmail && savedGmail !== "autofame.dealers@gmail.com"
+          ? savedGmail
+          : "elexsouthflow@gmail.com";
+
+      setConnectedGmail(targetEmail);
+      localStorage.setItem("autofame_connected_gmail", targetEmail);
+
+      if (savedPass) setGmailAppPassword(savedPass);
       if (savedWa) setConnectedWhatsApp(savedWa);
+
+      checkGmailConnection(targetEmail, savedPass);
 
       const checkPuter = () => {
         if ((window as any).puter?.ai) {
@@ -687,6 +875,11 @@ export default function AdminAutoFameAgentPage() {
       return () => clearInterval(interval);
     }
   }, []);
+
+  // Purge any previously seeded demo records on mount
+  useEffect(() => {
+    purgeLegacyDemo().catch(() => {});
+  }, [purgeLegacyDemo]);
 
   // Cleanup object URLs on unmount
   useEffect(() => {
@@ -700,11 +893,6 @@ export default function AdminAutoFameAgentPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Seed default workshop data on initial load
-  useEffect(() => {
-    seedInitialData().catch(() => {});
-  }, [seedInitialData]);
 
   // Select first session when available
   useEffect(() => {
@@ -816,7 +1004,6 @@ export default function AdminAutoFameAgentPage() {
 
     let uploadedAttachments: { name: string; url: string; type: string; size?: number }[] = [];
 
-    // Upload files to Convex Storage
     if (filesToProcess.length > 0) {
       setIsUploadingFiles(true);
       for (const item of filesToProcess) {
@@ -880,7 +1067,7 @@ export default function AdminAutoFameAgentPage() {
     const precomputedActionPayload = isGmailRequest
       ? buildClientGmailPayload(finalContent, dealershipContext, connectedGmail)
       : isWhatsAppRequest
-      ? buildClientWhatsAppPayload(finalContent)
+      ? buildClientWhatsAppPayload(finalContent, dealershipContext)
       : null;
 
     if (precomputedActionPayload) {
@@ -888,7 +1075,6 @@ export default function AdminAutoFameAgentPage() {
     }
 
     try {
-      // 1. Save User Message
       await addMessage({
         sessionId: targetSessionId,
         role: "user",
@@ -896,7 +1082,6 @@ export default function AdminAutoFameAgentPage() {
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
-      // 2. Try Puter.js Live Streaming
       let streamedViaPuter = false;
       if (typeof window !== "undefined" && (window as any).puter?.ai?.chat) {
         try {
@@ -939,7 +1124,6 @@ export default function AdminAutoFameAgentPage() {
         }
       }
 
-      // 3. Fallback: Stream from AutoFame Database & Channels Engine
       if (!streamedViaPuter) {
         const response = await fetch("/api/agent/chat", {
           method: "POST",
@@ -953,6 +1137,7 @@ export default function AdminAutoFameAgentPage() {
               { role: "user", content: finalContent },
             ],
             context: dealershipContext,
+            connectedGmail,
             attachments: uploadedAttachments,
           }),
         });
@@ -987,9 +1172,7 @@ export default function AdminAutoFameAgentPage() {
                   actionPayloadHolder = parsed.actionPayload;
                   setStreamingActionPayload(parsed.actionPayload);
                 }
-              } catch {
-                // Ignore partial chunks
-              }
+              } catch {}
             }
           }
         }
@@ -1013,17 +1196,60 @@ export default function AdminAutoFameAgentPage() {
     }
   };
 
-  const handleSaveChannelSettings = () => {
+  // Verify & Save Real Gmail Connection
+  const handleVerifyAndSaveChannels = async () => {
+    setGmailVerifyError(null);
+    const trimmedEmail = connectedGmail.trim() || "elexsouthflow@gmail.com";
+    const cleanedPass = gmailAppPassword.replace(/\s+/g, "");
+
     if (typeof window !== "undefined") {
-      localStorage.setItem("autofame_connected_gmail", connectedGmail.trim());
+      localStorage.setItem("autofame_connected_gmail", trimmedEmail);
+      localStorage.setItem("autofame_gmail_app_password", cleanedPass);
       localStorage.setItem("autofame_connected_whatsapp", connectedWhatsApp.trim());
     }
-    setChannelsModalOpen(false);
-    toast.success("Connected channels updated");
+
+    if (!cleanedPass) {
+      setGmailVerified(false);
+      setGmailVerifyError(
+        `Please paste your 16-character Google App Password for ${trimmedEmail} so the agent can authenticate with smtp.gmail.com:465.`
+      );
+      return;
+    }
+
+    setIsVerifyingGmail(true);
+    try {
+      const res = await fetch("/api/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify",
+          fromEmail: trimmedEmail,
+          appPassword: cleanedPass,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.connected) {
+        setGmailVerified(true);
+        toast.success(`Successfully authenticated ${trimmedEmail} with Google SMTP!`);
+        setChannelsModalOpen(false);
+      } else {
+        setGmailVerified(false);
+        setGmailVerifyError(data.error || "Google SMTP rejected the App Password.");
+        toast.error(data.error || "Gmail authentication failed");
+      }
+    } catch (err: any) {
+      setGmailVerified(false);
+      setGmailVerifyError(err.message);
+    } finally {
+      setIsVerifyingGmail(false);
+    }
   };
 
+  const realCarCount = dealershipContext?.cars?.length ?? 0;
+  const realLeadsCount = extractRealLeads(dealershipContext).length;
+
   return (
-    <div className="flex h-[calc(100vh-var(--navbar-height))] w-full overflow-hidden bg-[#1f1e1b] text-[#eae7e1] font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#1f1e1b] text-[#eae7e1] font-sans">
       <Script
         src="https://js.puter.com/v2/"
         strategy="afterInteractive"
@@ -1031,7 +1257,7 @@ export default function AdminAutoFameAgentPage() {
       />
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* CLEAN CLAUDE-STYLE AGENT SIDEBAR                           */}
+      {/* FULL-SCREEN AGENT SIDEBAR (NO TOP WEBSITE NAVBAR)          */}
       {/* ────────────────────────────────────────────────────────── */}
       <aside
         className={cn(
@@ -1062,7 +1288,7 @@ export default function AdminAutoFameAgentPage() {
           </Button>
         </div>
 
-        {/* Connected Channels (Claude-style Integrations Status) */}
+        {/* Connected Channels (Real Connections) */}
         <div className="p-3 border-b border-[#2b2823] space-y-1.5">
           <div className="flex items-center justify-between px-1.5">
             <span className="text-[10px] uppercase font-mono tracking-wider text-[#7d7971] font-semibold">
@@ -1076,12 +1302,9 @@ export default function AdminAutoFameAgentPage() {
             </button>
           </div>
 
+          {/* Gmail Channel */}
           <button
-            onClick={() =>
-              handleSendMessage(
-                "Compose a Gmail to Thabo Mokoena (thabo.mokoena@gmail.com) with his 2018 BMW X2 finance quote and FICA checklist"
-              )
-            }
+            onClick={() => handleSendMessage(`Compose an email from ${connectedGmail}`)}
             className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1f1e1b] hover:bg-[#272521] border border-[#2f2c27] transition text-left group"
           >
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1091,15 +1314,18 @@ export default function AdminAutoFameAgentPage() {
                 <p className="text-[10px] text-[#8e8a82] font-mono truncate">{connectedGmail}</p>
               </div>
             </div>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Connected" />
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full shrink-0",
+                gmailVerified ? "bg-emerald-500" : "bg-amber-400"
+              )}
+              title={gmailVerified ? "SMTP Verified" : "Click Configure to enter Google App Password"}
+            />
           </button>
 
+          {/* WhatsApp Channel */}
           <button
-            onClick={() =>
-              handleSendMessage(
-                "Send a WhatsApp message to Thabo Mokoena (+27 83 492 1109) with the vehicle finance pre-approval link"
-              )
-            }
+            onClick={() => handleSendMessage("Compose a WhatsApp message")}
             className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1f1e1b] hover:bg-[#272521] border border-[#2f2c27] transition text-left group"
           >
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1112,10 +1338,11 @@ export default function AdminAutoFameAgentPage() {
             <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Connected" />
           </button>
 
+          {/* Live Forms & Database Channel */}
           <button
             onClick={() =>
               handleSendMessage(
-                "Show me all website form submissions, finance applications, and customer inquiries from our database"
+                "Show all live cars and website form submissions from our database"
               )
             }
             className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1f1e1b] hover:bg-[#272521] border border-[#2f2c27] transition text-left group"
@@ -1125,11 +1352,11 @@ export default function AdminAutoFameAgentPage() {
               <div className="min-w-0">
                 <p className="text-xs font-medium text-[#eae7e1] truncate">Forms &amp; Database</p>
                 <p className="text-[10px] text-[#8e8a82] truncate">
-                  {dealershipContext?.stats?.totalInventory || 10} Cars • Live Forms Sync
+                  {realCarCount} Cars • {realLeadsCount} Form Leads
                 </p>
               </div>
             </div>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Live Synced" />
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Live Database Synced" />
           </button>
         </div>
 
@@ -1237,17 +1464,29 @@ export default function AdminAutoFameAgentPage() {
             </span>
           </div>
 
-          {/* Connected Channels Pill in Header */}
+          {/* Real Gmail & Channel Connection Status Pill */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setChannelsModalOpen(true)}
               className="px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 bg-[#22201c] hover:bg-[#2a2722] text-[#dedad2] border border-[#35312b] transition"
             >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span
+                  className={cn(
+                    "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                    gmailVerified ? "bg-emerald-400" : "bg-amber-400"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "relative inline-flex rounded-full h-2 w-2",
+                    gmailVerified ? "bg-emerald-500" : "bg-amber-400"
+                  )}
+                />
               </span>
-              <span className="hidden sm:inline">Gmail • WhatsApp • Forms Connected</span>
+              <span className="hidden sm:inline font-mono text-[11px]">
+                {connectedGmail} {gmailVerified ? "(SMTP Connected)" : "(Setup App Password)"}
+              </span>
               <span className="sm:hidden">Channels</span>
             </button>
           </div>
@@ -1256,10 +1495,10 @@ export default function AdminAutoFameAgentPage() {
         {/* Scrollable Conversation Stream */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-12 py-8">
           <div className="max-w-5xl w-full mx-auto space-y-8">
-            {/* Clean Minimalist Welcome Screen when chat is empty */}
+            {/* Clean Welcome Screen when chat is empty */}
             {(!activeSessionData?.messages || activeSessionData.messages.length === 0) &&
               !isStreaming && (
-                <div className="py-16 sm:py-24 text-center max-w-2xl mx-auto space-y-6 animate-in fade-in duration-300">
+                <div className="py-12 sm:py-20 text-center max-w-2xl mx-auto space-y-6 animate-in fade-in duration-300">
                   <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-lg">
                     <Sparkles className="h-7 w-7" />
                   </div>
@@ -1269,11 +1508,32 @@ export default function AdminAutoFameAgentPage() {
                       How can I help with AutoFame today?
                     </h2>
                     <p className="text-xs sm:text-sm text-[#8e8a82] leading-relaxed">
-                      Connected to your live vehicle inventory ({dealershipContext?.stats?.totalInventory || 10} cars), website forms &amp; finance applications,{" "}
-                      <span className="text-[#dedad2] font-medium">Gmail ({connectedGmail})</span>, and{" "}
-                      <span className="text-[#dedad2] font-medium">WhatsApp Business</span>.
+                      Connected to your live Convex database ({realCarCount} cars, {realLeadsCount} form leads),{" "}
+                      <span className="text-[#dedad2] font-mono">{connectedGmail}</span>, and{" "}
+                      <span className="text-[#dedad2] font-medium">WhatsApp</span>.
                     </p>
                   </div>
+
+                  {!gmailVerified && (
+                    <div className="max-w-xl mx-auto p-4 rounded-2xl bg-[#181714] border border-amber-500/30 text-left space-y-2.5 shadow-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-300 flex items-center gap-2">
+                          <KeyRound className="h-4 w-4 text-amber-400" />
+                          Complete Real Gmail Connection ({connectedGmail})
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={() => setChannelsModalOpen(true)}
+                          className="h-7 px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg"
+                        >
+                          Connect Now
+                        </Button>
+                      </div>
+                      <p className="text-xs text-[#a6a197] leading-relaxed">
+                        To send real emails directly from <code className="text-emerald-300">{connectedGmail}</code> without any demo mode, Google requires a <strong>16-character Google App Password</strong> (generated under Google Account &rarr; Security &rarr; 2-Step Verification &rarr; App Passwords).
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1361,18 +1621,21 @@ export default function AdminAutoFameAgentPage() {
                       </div>
                     )}
 
-                    {/* Inline Gmail Composer right inside the Chat Message (Claude-style) */}
+                    {/* Inline Real Gmail Composer */}
                     {isAssistant &&
                       (msg.actionType === "GMAIL_COMPOSE" ||
                         msg.actionType === "SEND_EMAIL_GATEWAY") && (
                         <InlineGmailComposer
                           initialPayload={msg.actionPayload}
                           connectedGmail={connectedGmail}
+                          gmailAppPassword={gmailAppPassword}
+                          gmailVerified={gmailVerified}
+                          onOpenConnectModal={() => setChannelsModalOpen(true)}
                           onRecordEvent={recordCrmEvent}
                         />
                       )}
 
-                    {/* Inline WhatsApp Composer right inside the Chat Message */}
+                    {/* Inline Real WhatsApp Composer */}
                     {isAssistant &&
                       (msg.actionType === "WHATSAPP_COMPOSE" ||
                         msg.actionType === "SEND_FINANCE_LINK") && (
@@ -1431,7 +1694,7 @@ export default function AdminAutoFameAgentPage() {
         </div>
 
         {/* ────────────────────────────────────────────────────────── */}
-        {/* CLAUDE-STYLE COMPOSER WITH CONNECTED CHANNEL TRIGGERS      */}
+        {/* COMPOSER WITH CONNECTED CHANNEL TRIGGERS                   */}
         {/* ────────────────────────────────────────────────────────── */}
         <div className="p-4 sm:p-6 bg-[#181715]/95 backdrop-blur border-t border-[#2b2823] shrink-0">
           <div className="max-w-5xl w-full mx-auto">
@@ -1483,7 +1746,7 @@ export default function AdminAutoFameAgentPage() {
                   }
                 }}
                 rows={3}
-                placeholder="Ask anything about our database cars & form leads, or say 'Compose a Gmail to...' or 'Send a WhatsApp to...'..."
+                placeholder={`Ask anything about our database (${realCarCount} cars, ${realLeadsCount} form leads), or say 'Compose an email to...'...`}
                 className="w-full bg-transparent p-4 sm:p-5 pb-14 text-xs sm:text-sm text-[#f5f2eb] placeholder:text-[#837e75] focus:outline-none resize-none leading-relaxed min-h-[92px]"
               />
 
@@ -1496,7 +1759,7 @@ export default function AdminAutoFameAgentPage() {
                 className="hidden"
               />
 
-              {/* Composer Bottom Toolbar: Attach + Connected Channel Pills */}
+              {/* Composer Bottom Toolbar */}
               <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <Button
@@ -1515,15 +1778,20 @@ export default function AdminAutoFameAgentPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setInputValue("Compose a Gmail to ");
+                      setInputValue("Compose an email to ");
                       textareaRef.current?.focus();
                     }}
                     className="h-8 px-2.5 rounded-xl bg-[#181715] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
-                    title={`Connected: ${connectedGmail} — Click to compose an email in chat`}
+                    title={`Compose email from ${connectedGmail}`}
                   >
                     <Mail className="h-3.5 w-3.5 text-emerald-400" />
-                    <span>Gmail</span>
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span className="font-mono text-[11px]">{connectedGmail}</span>
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        gmailVerified ? "bg-emerald-500" : "bg-amber-400"
+                      )}
+                    />
                   </button>
 
                   {/* WhatsApp Channel Quick-Compose Pill */}
@@ -1534,7 +1802,7 @@ export default function AdminAutoFameAgentPage() {
                       textareaRef.current?.focus();
                     }}
                     className="h-8 px-2.5 rounded-xl bg-[#181715] hover:bg-[#2c2924] text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
-                    title={`Connected: ${connectedWhatsApp} — Click to compose a WhatsApp in chat`}
+                    title="Compose WhatsApp in chat"
                   >
                     <PhoneCall className="h-3.5 w-3.5 text-emerald-400" />
                     <span>WhatsApp</span>
@@ -1546,7 +1814,7 @@ export default function AdminAutoFameAgentPage() {
                     type="button"
                     onClick={() => setChannelsModalOpen(true)}
                     className="h-8 px-2.5 rounded-xl bg-[#181715] hover:bg-[#2c2924] text-[#8e8a82] hover:text-[#dedad2] border border-[#35312b] flex items-center gap-1.5 text-xs transition"
-                    title="Configure connected Gmail, WhatsApp & Form Channels"
+                    title="Configure real Gmail SMTP & WhatsApp connection"
                   >
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                   </button>
@@ -1576,7 +1844,7 @@ export default function AdminAutoFameAgentPage() {
       </main>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* CLAUDE-STYLE CONNECTED CHANNELS & INTEGRATIONS MODAL       */}
+      {/* REAL GMAIL (elexsouthflow@gmail.com) & CHANNELS MODAL      */}
       {/* ────────────────────────────────────────────────────────── */}
       {channelsModalOpen && (
         <div
@@ -1585,15 +1853,15 @@ export default function AdminAutoFameAgentPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-w-md w-full bg-[#1a1916] rounded-2xl border border-[#38342d] shadow-2xl p-6 space-y-5"
+            className="max-w-lg w-full bg-[#1a1916] rounded-2xl border border-[#38342d] shadow-2xl p-6 space-y-5"
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#2e2b26]">
               <div>
                 <h3 className="text-sm font-bold text-[#f5f2eb]">
-                  Connected Agent Channels
+                  Connect Real Gmail &amp; Agent Channels
                 </h3>
                 <p className="text-[11px] text-[#8e8a82]">
-                  Link Gmail, WhatsApp &amp; Website Forms directly to your chat agent
+                  Direct SSL/TLS SMTP connection to <code className="text-emerald-400">smtp.gmail.com:465</code> (Zero Demo Mode)
                 </p>
               </div>
               <button
@@ -1605,45 +1873,104 @@ export default function AdminAutoFameAgentPage() {
             </div>
 
             <div className="space-y-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2.5">
+              {/* Real Gmail Connection Block */}
+              <div className="p-4 rounded-xl bg-[#22201c] border border-[#35312b] space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-white flex items-center gap-2">
                     <Mail className="h-4 w-4 text-emerald-400" />
-                    Gmail Integration
+                    Gmail SMTP Integration
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    Connected
-                  </span>
+                  {gmailVerified ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Verified &amp; Connected
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      App Password Required
+                    </span>
+                  )}
                 </div>
-                <p className="text-[11px] text-[#8e8a82]">
-                  Allows the chat agent to compose and send emails directly inside your conversation stream.
-                </p>
+
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                    Linked Gmail Address
+                    Gmail Address
                   </label>
                   <input
                     type="email"
                     value={connectedGmail}
                     onChange={(e) => setConnectedGmail(e.target.value)}
-                    className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-mono uppercase text-[#8e8a82]">
+                      Google 16-Character App Password *
+                    </label>
+                    <a
+                      href="https://myaccount.google.com/apppasswords"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1"
+                    >
+                      Get App Password <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  </div>
+                  <input
+                    type="password"
+                    value={gmailAppPassword}
+                    placeholder="xxxx xxxx xxxx xxxx"
+                    onChange={(e) => setGmailAppPassword(e.target.value)}
+                    className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* Clear What's Needed Instructions */}
+                <div className="p-3 rounded-lg bg-[#161512] border border-[#2e2b26] space-y-1.5 text-[11px] text-[#a6a197]">
+                  <p className="font-semibold text-[#eae7e1]">
+                    What is needed to connect <code className="text-emerald-400">elexsouthflow@gmail.com</code>:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>
+                      Sign in to <code className="text-[#dedad2]">elexsouthflow@gmail.com</code> at{" "}
+                      <a
+                        href="https://myaccount.google.com/apppasswords"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 underline"
+                      >
+                        myaccount.google.com/apppasswords
+                      </a>
+                    </li>
+                    <li>
+                      Enable <strong>2-Step Verification</strong> if not already enabled, then create an App Password named <strong>AutoFame Agent</strong>.
+                    </li>
+                    <li>
+                      Paste the 16-letter password above (or add <code className="text-emerald-300">GMAIL_APP_PASSWORD=your16charpass</code> in <code className="text-emerald-300">.env.local</code>) and click <strong>Verify &amp; Connect</strong>.
+                    </li>
+                  </ol>
+                </div>
+
+                {gmailVerifyError && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px]">
+                    {gmailVerifyError}
+                  </div>
+                )}
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2.5">
+              {/* WhatsApp Channel */}
+              <div className="p-3.5 rounded-xl bg-[#22201c] border border-[#35312b] space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-white flex items-center gap-2">
                     <PhoneCall className="h-4 w-4 text-emerald-400" />
-                    WhatsApp Business Channel
+                    WhatsApp Channel
                   </span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                     Connected
                   </span>
                 </div>
-                <p className="text-[11px] text-[#8e8a82]">
-                  Dispatches finance pre-approval links and vehicle details directly to customer WhatsApp numbers.
-                </p>
                 <div>
                   <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
                     Dealership WhatsApp Number
@@ -1657,18 +1984,19 @@ export default function AdminAutoFameAgentPage() {
                 </div>
               </div>
 
+              {/* Live Convex DB Status */}
               <div className="p-3.5 rounded-xl bg-[#22201c] border border-[#35312b] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <Database className="h-4 w-4 text-emerald-400 shrink-0" />
                   <div>
-                    <p className="font-semibold text-white">Website Forms &amp; Convex DB</p>
+                    <p className="font-semibold text-white">Convex Database &amp; Website Forms</p>
                     <p className="text-[11px] text-[#8e8a82]">
-                      Synced with /financing forms, inquiries, test drives &amp; cars
+                      {realCarCount} real cars • {realLeadsCount} real form submissions (0 demo data)
                     </p>
                   </div>
                 </div>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
-                  Live Sync
+                  100% Real Data
                 </span>
               </div>
             </div>
@@ -1680,14 +2008,25 @@ export default function AdminAutoFameAgentPage() {
                 onClick={() => setChannelsModalOpen(false)}
                 className="text-xs text-[#8e8a82] hover:text-white"
               >
-                Cancel
+                Close
               </Button>
               <Button
-                onClick={handleSaveChannelSettings}
+                onClick={handleVerifyAndSaveChannels}
+                disabled={isVerifyingGmail}
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5"
               >
-                Save Channels
+                {isVerifyingGmail ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Verifying with smtp.gmail.com...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Verify &amp; Connect
+                  </>
+                )}
               </Button>
             </div>
           </div>

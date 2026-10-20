@@ -29,341 +29,189 @@ interface RepairRecord {
   technicianContact?: string;
 }
 
-const DEFAULT_FLEET: CarRecord[] = [
-  {
-    id: 5,
-    make: "BMW",
-    model: "X2 sDrive20i M Sport",
-    year: 2018,
-    price: 299900,
-    mileage: 106908,
-    status: "MAINTENANCE",
-    fuelType: "Petrol",
-    transmission: "7-Speed Dual-Clutch",
-    color: "Alpine White",
-    carType: "SUV / Crossover",
-    vin: "WBAJH5209JEF49021",
-  },
-  {
-    id: 4,
-    make: "Toyota",
-    model: "Hilux 2.8 GD-6 Legend 4x4",
-    year: 2024,
-    price: 649900,
-    mileage: 14200,
-    status: "AVAILABLE",
-    fuelType: "Diesel",
-    transmission: "Automatic",
-    color: "Glacier White",
-    carType: "Bakkie / Double Cab",
-    vin: "AHTBA3CD409012384",
-  },
-  {
-    id: 3,
-    make: "Volkswagen",
-    model: "Golf 8 GTI 2.0 TSI DSG",
-    year: 2021,
-    price: 489000,
-    mileage: 48000,
-    status: "AVAILABLE",
-    fuelType: "Petrol",
-    transmission: "7-Speed DSG Dual-Clutch",
-    color: "Moonstone Grey",
-    carType: "Hatchback",
-    vin: "WVWZZZCDZMW089234",
-  },
-  {
-    id: 2,
-    make: "Mercedes-Benz",
-    model: "C200 AMG Line (W205)",
-    year: 2020,
-    price: 419000,
-    mileage: 62000,
-    status: "AVAILABLE",
-    fuelType: "Petrol",
-    transmission: "9G-Tronic Automatic",
-    color: "Obsidian Black",
-    carType: "Sedan",
-    vin: "WDD2050422R901284",
-  },
-  {
-    id: 1,
-    make: "Ford",
-    model: "Everest 3.2 TDCi XLT 4WD",
-    year: 2019,
-    price: 410000,
-    mileage: 89000,
-    status: "AVAILABLE",
-    fuelType: "Diesel",
-    transmission: "6-Speed Automatic",
-    color: "Moondust Silver",
-    carType: "SUV / 7-Seater",
-    vin: "MAJAXXMRWAJC09231",
-  },
-  {
-    id: 6,
-    make: "Hyundai",
-    model: "Tucson 2.0 Elite Executive",
-    year: 2023,
-    price: 429900,
-    mileage: 31500,
-    status: "AVAILABLE",
-    fuelType: "Petrol",
-    transmission: "6-Speed Automatic",
-    color: "Phantom Black",
-    carType: "SUV",
-    vin: "KMHJ381BBNU890123",
-  },
-  {
-    id: 7,
-    make: "Isuzu",
-    model: "D-Max 3.0 Ddi V-Cross 4x4",
-    year: 2022,
-    price: 589000,
-    mileage: 38000,
-    status: "AVAILABLE",
-    fuelType: "Diesel",
-    transmission: "6-Speed Automatic",
-    color: "Biarritz Blue",
-    carType: "Bakkie / Double Cab",
-    vin: "AAVB2109849201928",
-  },
-  {
-    id: 8,
-    make: "Audi",
-    model: "A4 35 TFSI S Line",
-    year: 2020,
-    price: 379900,
-    mileage: 71400,
-    status: "AVAILABLE",
-    fuelType: "Petrol",
-    transmission: "7-Speed S Tronic",
-    color: "Ibis White",
-    carType: "Sedan",
-    vin: "WAUZZZF48LA092834",
-  },
-  {
-    id: 9,
-    make: "Ford",
-    model: "Ranger 2.0 Bi-Turbo Wildtrak 4x4",
-    year: 2021,
-    price: 549000,
-    mileage: 52000,
-    status: "SOLD",
-    fuelType: "Diesel",
-    transmission: "10-Speed Automatic",
-    color: "Saber Orange",
-    carType: "Bakkie / Double Cab",
-    vin: "AFABXXMJ2AK902183",
-  },
-  {
-    id: 10,
-    make: "Volkswagen",
-    model: "Polo GTI 1.8 TSI DSG",
-    year: 2017,
-    price: 249900,
-    mileage: 114000,
-    status: "SOLD",
-    fuelType: "Petrol",
-    transmission: "6-Speed DSG",
-    color: "Flash Red",
-    carType: "Hatchback",
-    vin: "WVWZZZ6RZHW092834",
-  },
-];
+/**
+ * Extract real form submissions & leads from Convex context (zero demo data)
+ */
+function getRealFormSubmissions(context: any) {
+  const financings = Array.isArray(context?.financings) ? context.financings : [];
+  const inquiries = Array.isArray(context?.inquiries) ? context.inquiries : [];
+  const testDrives = Array.isArray(context?.testDrives) ? context.testDrives : [];
 
-const DEFAULT_REPAIRS: RepairRecord[] = [
-  {
-    repairNumber: "WO-2026-001",
-    carName: "2018 BMW X2 sDrive20i M Sport",
-    workshopName: "BMW Approved Panel & Mechanical Sandton",
-    status: "IN_PROGRESS",
-    costEstimated: 8500,
-    issueDescription: "Scheduled 100k major service inspection, front brake pad replacement and multi-point roadworthy certification.",
-    estimatedCompletionDate: "Tomorrow (14:00)",
-    technicianContact: "+27 11 883 4900 (Sipho Dlamini)",
-  },
-  {
-    repairNumber: "WO-2026-002",
-    carName: "2024 Toyota Hilux 2.8 GD-6 Legend",
-    workshopName: "Bosch Car Service Johannesburg Central",
-    status: "AWAITING_PARTS",
-    costEstimated: 4200,
-    issueDescription: "Air conditioning compressor clutch rebuild and rear wheel alignment.",
-    estimatedCompletionDate: "Thursday",
-    technicianContact: "+27 11 334 2200 (Mark Van Der Merwe)",
-  },
-  {
-    repairNumber: "WO-2026-003",
-    carName: "2021 Volkswagen Golf 8 GTI",
-    workshopName: "AutoFame Internal Service Bay",
-    status: "COMPLETED",
-    costEstimated: 1850,
-    issueDescription: "Routine oil & filter service, Dekra 101-point pre-delivery inspection.",
-    estimatedCompletionDate: "Ready for Delivery",
-    technicianContact: "David Mokoena",
-  },
-];
-
-const DEFAULT_FORM_SUBMISSIONS = [
-  {
-    type: "Finance Application Form",
-    customerName: "Thabo Mokoena",
-    email: "thabo.mokoena@gmail.com",
-    phone: "+27 83 492 1109",
-    vehicle: "2018 BMW X2 sDrive20i M Sport (R299,900)",
-    income: "R42,500 / month",
-    deposit: "R30,000 (10%)",
-    status: "PRE-APPROVAL PENDING",
-    submittedAt: "Today, 09:15",
-  },
-  {
-    type: "Finance & Trade-In Form",
-    customerName: "Dr. Anelisa Sithole",
-    email: "anelisa.sithole@mediclinic.co.za",
-    phone: "+27 82 555 8921",
-    vehicle: "2024 Toyota Hilux 2.8 GD-6 Legend 4x4 (R649,900)",
-    income: "R95,000 / month",
-    deposit: "Trade-In: 2019 VW Tiguan (Est. R260,000)",
-    status: "APPROVED BY WESBANK",
-    submittedAt: "Yesterday, 16:40",
-  },
-  {
-    type: "Test Drive Booking Form",
-    customerName: "Johan Botha",
-    email: "johan.botha@outlook.com",
-    phone: "+27 71 884 9022",
-    vehicle: "2021 Volkswagen Golf 8 GTI (R489,000)",
-    income: "Cash / Private Finance",
-    deposit: "N/A",
-    status: "BOOKED FOR THURSDAY 14:00",
-    submittedAt: "Yesterday, 11:20",
-  },
-  {
-    type: "Website Vehicle Inquiry Form",
-    customerName: "Kagiso Ndlovu",
-    email: "kagiso.ndlovu@vodamail.co.za",
-    phone: "+27 79 312 8844",
-    vehicle: "2020 Mercedes-Benz C200 AMG Line (R419,000)",
-    income: "R54,000 / month",
-    deposit: "R40,000",
-    status: "NEW FORM LEAD",
-    submittedAt: "Today, 08:05",
-  },
-];
+  return [
+    ...financings.map((f: any) => ({
+      type: "Finance Application",
+      customerName: f.customerName || `Applicant #${f.id}`,
+      email: f.email || "",
+      phone: f.phone || "",
+      vehicle: f.loanAmount ? `Loan: R${Number(f.loanAmount).toLocaleString()} ZAR` : "Finance Application",
+      details: f.monthlyIncomeGross
+        ? `Gross Income: R${Number(f.monthlyIncomeGross).toLocaleString()} / mo`
+        : `Credit Score: ${f.creditScore || "Pending"}`,
+      status: f.status || "PENDING",
+      date: f.applicationDate || "",
+    })),
+    ...inquiries.map((inq: any) => ({
+      type: "Vehicle Inquiry",
+      customerName: inq.customerName || "Website Visitor",
+      email: inq.customerEmail || "",
+      phone: inq.customerPhone || "",
+      vehicle: inq.carName || `Car #${inq.carId}`,
+      details: inq.message || "Website Inquiry",
+      status: inq.status || "NEW",
+      date: inq.createdAt || "",
+    })),
+    ...testDrives.map((td: any) => ({
+      type: "Test Drive Booking",
+      customerName: td.customerName || "Showroom Client",
+      email: td.customerEmail || "",
+      phone: td.customerPhone || "",
+      vehicle: td.carName || `Car #${td.carId}`,
+      details: td.scheduledDate
+        ? `Scheduled: ${new Date(td.scheduledDate).toLocaleDateString()}`
+        : "Test Drive",
+      status: td.completed ? "COMPLETED" : "SCHEDULED",
+      date: td.createdAt || "",
+    })),
+  ];
+}
 
 /**
- * Helper to extract email composer details from query + database context
+ * Build Gmail Draft Payload using real database records or user prompt
  */
-function buildGmailDraftFromQuery(query: string, context: any) {
+function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = "elexsouthflow@gmail.com") {
   const lower = query.toLowerCase();
-  const cars: CarRecord[] = (context?.cars && context.cars.length > 0) ? context.cars : DEFAULT_FLEET;
+  const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
+  const realLeads = getRealFormSubmissions(context);
 
-  let customerName = "Thabo Mokoena";
-  let to = "thabo.mokoena@gmail.com";
-  let carName = "2018 BMW X2 sDrive20i M Sport";
-  let carPrice = 299900;
+  let to = "";
+  let customerName = "Valued Client";
+  let carName = cars[0] ? `${cars[0].year} ${cars[0].make} ${cars[0].model}` : "Selected Vehicle";
+  let carPrice = cars[0]?.price || 0;
 
-  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
-    customerName = "Dr. Anelisa Sithole";
-    to = "anelisa.sithole@mediclinic.co.za";
-    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
-    carPrice = 649900;
-  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf") || lower.includes("gti")) {
-    customerName = "Johan Botha";
-    to = "johan.botha@outlook.com";
-    carName = "2021 Volkswagen Golf 8 GTI 2.0 TSI DSG";
-    carPrice = 489000;
-  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes") || lower.includes("c200")) {
-    customerName = "Kagiso Ndlovu";
-    to = "kagiso.ndlovu@vodamail.co.za";
-    carName = "2020 Mercedes-Benz C200 AMG Line";
-    carPrice = 419000;
-  } else {
-    // Check if an explicit email address was typed in the prompt
-    const emailMatch = query.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
-    if (emailMatch) {
-      to = emailMatch[1];
-      const namePart = to.split("@")[0].replace(/[._-]/g, " ");
-      customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
-    }
-    // Check if any car in DB matches
-    const matchedCar = cars.find(
-      (c) => lower.includes(c.make.toLowerCase()) || lower.includes(c.model.toLowerCase().split(" ")[0])
-    );
-    if (matchedCar) {
-      carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
-      carPrice = matchedCar.price;
-    }
+  // 1. Check if user typed an email address in prompt
+  const emailMatch = query.match(/([a-zA-Z0-9._+-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+  if (emailMatch) {
+    to = emailMatch[1];
+    const namePart = to.split("@")[0].replace(/[._-]/g, " ");
+    customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
-  const monthlyEst = Math.round((carPrice * 0.9 * 0.0218));
-  const subject = `AutoFame Official Quotation & Finance Pre-Approval — ${carName}`;
+  // 2. Match against real leads from database forms
+  const matchedLead = realLeads.find(
+    (lead) =>
+      (lead.customerName && lower.includes(lead.customerName.toLowerCase())) ||
+      (lead.email && lower.includes(lead.email.toLowerCase()))
+  );
+  if (matchedLead) {
+    customerName = matchedLead.customerName;
+    if (matchedLead.email) to = matchedLead.email;
+  } else if (!to && realLeads.length > 0 && realLeads[0].email) {
+    customerName = realLeads[0].customerName;
+    to = realLeads[0].email;
+  }
+
+  // 3. Match against real cars in database
+  const matchedCar = cars.find(
+    (c) =>
+      lower.includes(c.make?.toLowerCase() || "") ||
+      lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
+  );
+  if (matchedCar) {
+    carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
+    carPrice = matchedCar.price || 0;
+  }
+
+  const priceLine = carPrice > 0 ? `R${carPrice.toLocaleString()} ZAR` : "Available on request";
+  const monthlyEst = carPrice > 0 ? Math.round(carPrice * 0.9 * 0.0218) : 0;
+
+  const subject =
+    carPrice > 0
+      ? `AutoFame Official Quotation & Finance Details — ${carName}`
+      : `AutoFame Dealership — Vehicle Inquiry & Finance Information`;
+
   const body = `Dear ${customerName},
 
-Thank you for your inquiry with AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
+Thank you for contacting AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
 
-We are pleased to share the official details and finance breakdown for your selected vehicle:
-
+Here are the details regarding your inquiry:
 • Vehicle: ${carName}
-• Retail Price: R${carPrice.toLocaleString()} ZAR
-• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit via WesBank / Standard Bank / Absa MFC)
-• Inspection Status: Certified Dekra 101-Point Roadworthy Inspection
+• Retail Price: ${priceLine}${
+    monthlyEst > 0
+      ? `\n• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit)`
+      : ""
+  }
 
-To finalize your bank pre-approval, please reply to this email with your FICA documents:
-1. Copy of SA Smart ID or Green Barcoded ID
+To proceed with vehicle financing, please reply to this email with your FICA documents:
+1. Copy of SA ID (Smart Card or Green Book)
 2. Valid South African Driver's License
 3. Latest 3 Months Stamped Bank Statements & Payslips
 4. Proof of Residence (not older than 3 months)
 
-Or complete your application online at: https://www.autofame.co.za/financing
+Or apply online at: https://www.autofame.co.za/financing
 
 Warm regards,
-AutoFame Sales & Finance Desk
-Tel: +27 11 942 1200 | autofame.dealers@gmail.com`;
+AutoFame Dealership
+Email: ${connectedGmail}`;
 
   return {
     actionType: "GMAIL_COMPOSE",
-    from: "autofame.dealers@gmail.com",
+    from: connectedGmail,
     to,
-    cc: "finance@autofame.co.za",
+    cc: "",
     customerName,
     carName,
     carPrice,
     subject,
     body,
-    attachmentName: `AutoFame_Quote_${carName.replace(/\s+/g, "_")}.pdf`,
   };
 }
 
 /**
- * Helper to extract WhatsApp composer details from query + database context
+ * Build WhatsApp Draft Payload using real database records or user prompt
  */
 function buildWhatsAppDraftFromQuery(query: string, context: any) {
   const lower = query.toLowerCase();
-  let customerName = "Thabo Mokoena";
-  let to = "+27 83 492 1109";
-  let carName = "2018 BMW X2 sDrive20i M Sport";
-  let carPrice = 299900;
+  const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
+  const realLeads = getRealFormSubmissions(context);
 
-  if (lower.includes("anelisa") || lower.includes("sithole") || lower.includes("hilux")) {
-    customerName = "Dr. Anelisa Sithole";
-    to = "+27 82 555 8921";
-    carName = "2024 Toyota Hilux 2.8 GD-6 Legend 4x4";
-    carPrice = 649900;
-  } else if (lower.includes("johan") || lower.includes("botha") || lower.includes("golf")) {
-    customerName = "Johan Botha";
-    to = "+27 71 884 9022";
-    carName = "2021 Volkswagen Golf 8 GTI";
-    carPrice = 489000;
-  } else if (lower.includes("kagiso") || lower.includes("ndlovu") || lower.includes("mercedes")) {
-    customerName = "Kagiso Ndlovu";
-    to = "+27 79 312 8844";
-    carName = "2020 Mercedes-Benz C200 AMG Line";
-    carPrice = 419000;
+  let to = "";
+  let customerName = "Client";
+  let carName = cars[0] ? `${cars[0].year} ${cars[0].make} ${cars[0].model}` : "your selected vehicle";
+  let carPrice = cars[0]?.price || 0;
+
+  // Match phone number in query
+  const phoneMatch = query.match(/(\+?27|0)\s*\d{2}\s*\d{3}\s*\d{4}/);
+  if (phoneMatch) {
+    to = phoneMatch[0];
   }
 
-  const message = `Hi ${customerName} 👋, this is AutoFame Dealership Johannesburg South. Here are the details for the *${carName}* (R${carPrice.toLocaleString()} ZAR). You can complete your fast-track WesBank / Standard Bank finance pre-approval right here: https://www.autofame.co.za/financing — or reply to this WhatsApp with your 3 months bank statements, payslips & ID copy!`;
+  // Match real lead
+  const matchedLead = realLeads.find(
+    (lead) =>
+      (lead.customerName && lower.includes(lead.customerName.toLowerCase())) ||
+      (lead.phone && lower.includes(lead.phone))
+  );
+  if (matchedLead) {
+    customerName = matchedLead.customerName;
+    if (matchedLead.phone) to = matchedLead.phone;
+  } else if (!to && realLeads.length > 0 && realLeads[0].phone) {
+    customerName = realLeads[0].customerName;
+    to = realLeads[0].phone;
+  }
+
+  // Match real car
+  const matchedCar = cars.find(
+    (c) =>
+      lower.includes(c.make?.toLowerCase() || "") ||
+      lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
+  );
+  if (matchedCar) {
+    carName = `${matchedCar.year} ${matchedCar.make} ${matchedCar.model}`;
+    carPrice = matchedCar.price || 0;
+  }
+
+  const priceText = carPrice > 0 ? ` (R${carPrice.toLocaleString()} ZAR)` : "";
+  const message = `Hi ${customerName}, this is AutoFame Dealership Johannesburg South regarding *${carName}*${priceText}. You can complete your finance application online at https://www.autofame.co.za/financing or reply here with your ID copy, 3 months bank statements, and payslips.`;
 
   return {
     actionType: "WHATSAPP_COMPOSE",
@@ -376,68 +224,76 @@ function buildWhatsAppDraftFromQuery(query: string, context: any) {
 }
 
 /**
- * Build rich South African dealership context for AutoFame Copilot AI System Prompt
+ * Build System Prompt from 100% Real Convex Database Context
  */
-function buildSystemPrompt(context: any, attachments: any[]) {
-  const cars: CarRecord[] = (context?.cars && context.cars.length > 0) ? context.cars : DEFAULT_FLEET;
-  const repairs: RepairRecord[] = (context?.repairs && context.repairs.length > 0) ? context.repairs : DEFAULT_REPAIRS;
-  const stats = context?.stats || {};
+function buildSystemPrompt(context: any, connectedGmail: string) {
+  const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
+  const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
+  const realLeads = getRealFormSubmissions(context);
 
-  const inventorySummary = cars
-    .map(
-      (c) =>
-        `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`
-    )
-    .join("\n");
+  const inventorySummary =
+    cars.length > 0
+      ? cars
+          .map(
+            (c) =>
+              `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`
+          )
+          .join("\n")
+      : "No vehicles currently recorded in the cars database table.";
 
-  const repairSummary = repairs
-    .map(
-      (r) =>
-        `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`
-    )
-    .join("\n");
+  const repairSummary =
+    repairs.length > 0
+      ? repairs
+          .map(
+            (r) =>
+              `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`
+          )
+          .join("\n")
+      : "No active workshop repair records in the carRepairs database table.";
 
-  const formsSummary = DEFAULT_FORM_SUBMISSIONS.map(
-    (f) => `- [${f.type}] ${f.customerName} (${f.email}, ${f.phone}) interested in ${f.vehicle} | Income: ${f.income} | Status: ${f.status}`
-  ).join("\n");
+  const formsSummary =
+    realLeads.length > 0
+      ? realLeads
+          .map(
+            (f) =>
+              `- [${f.type}] ${f.customerName} (Email: ${f.email || "N/A"}, Phone: ${f.phone || "N/A"}) | ${f.vehicle} | ${f.details} | Status: ${f.status}`
+          )
+          .join("\n")
+      : "No form submissions recorded yet in financingApplications, inquiries, or testDrives tables.";
 
-  return `You are AutoFame Agent, an autonomous AI Agent for AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South, South Africa).
-You have 3 Live Connected Channels (just like Claude Integrations):
-1. Gmail Channel (Connected to autofame.dealers@gmail.com) — You can compose and send emails directly inside the chat.
-2. WhatsApp Channel (Connected via Whapi.Cloud Business) — You can compose and send WhatsApp messages & finance links directly inside the chat.
-3. Website Forms & Convex Database (Live Synced) — You have real-time access to all cars, website financing form submissions, contact inquiries, test drive bookings, and workshop repairs.
+  return `You are AutoFame Agent, connected to AutoFame Dealership's real Convex database and channels:
+1. Gmail Channel: ${connectedGmail} (Real SMTP via smtp.gmail.com:465)
+2. WhatsApp Channel: Real Whapi.Cloud / WhatsApp dispatch
+3. Live Convex Database (100% real data, zero fake/demo records):
 
-LIVE DATABASE INVENTORY (${stats.totalInventory || cars.length} Total Cars):
+REAL DATABASE INVENTORY (${cars.length} Cars):
 ${inventorySummary}
 
-WEBSITE FORM SUBMISSIONS & LEADS:
+REAL WEBSITE FORM SUBMISSIONS (${realLeads.length} Submissions):
 ${formsSummary}
 
-WORKSHOP REPAIRS:
+REAL WORKSHOP REPAIRS (${repairs.length} Repairs):
 ${repairSummary}
 
 RULES:
-- Always answer using exact data from the database above.
-- Format tables cleanly in Markdown.
-- When asked to compose/send an email or Gmail, confirm that the interactive Gmail Composer card is ready below so the user can review, edit, and click Send.`;
+- Report ONLY the exact records present in the database above. Never invent demo cars or demo customer names.
+- If a table is empty, state clearly that there are 0 records in that table right now.
+- Format currency in South African Rand (R... ZAR).`;
 }
 
 /**
- * Intelligent Real-Time Database Query Engine
+ * Real-Time Database Query Responder (Zero Demo Data)
  */
-function generateDatabaseAnswer(query: string, context: any): string {
+function generateDatabaseAnswer(query: string, context: any, connectedGmail = "elexsouthflow@gmail.com"): string {
   const lower = query.toLowerCase().trim();
-  const cars: CarRecord[] = (context?.cars && context.cars.length > 0) ? context.cars : DEFAULT_FLEET;
-  const repairs: RepairRecord[] = (context?.repairs && context.repairs.length > 0) ? context.repairs : DEFAULT_REPAIRS;
-  const financings = context?.financings || [];
-  const inquiries = context?.inquiries || [];
-  const testDrives = context?.testDrives || [];
+  const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
+  const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
+  const realLeads = getRealFormSubmissions(context);
 
   const totalCars = cars.length;
   const availableCars = cars.filter((c) => c.status === "AVAILABLE");
   const soldCars = cars.filter((c) => c.status === "SOLD");
   const workshopCars = cars.filter((c) => c.status === "MAINTENANCE" || c.status === "REPAIR");
-
   const totalShowroomValue = availableCars.reduce((s, c) => s + (c.price || 0), 0);
   const averagePrice = availableCars.length > 0 ? Math.round(totalShowroomValue / availableCars.length) : 0;
 
@@ -449,22 +305,31 @@ function generateDatabaseAnswer(query: string, context: any): string {
     lower.includes("compose") ||
     lower.includes("imael")
   ) {
-    const draft = buildGmailDraftFromQuery(query, context);
-    return `### ✉️ Gmail Integration — Draft Composed
+    const draft = buildGmailDraftFromQuery(query, context, connectedGmail);
+    return `### ✉️ Gmail Channel (\`${connectedGmail}\`) — Compose Email
 
-I have connected to your linked **Gmail channel** (\`${draft.from}\`) and composed the email for **${draft.customerName}** (\`${draft.to}\`) regarding the **${draft.carName}**.
+I have opened the **Gmail Composer** below connected to **\`${connectedGmail}\`**${
+      draft.to ? ` addressed to **\`${draft.to}\`**` : ""
+    }.
 
-You can review or edit the recipient, subject, and message body directly in the **Gmail Composer** below and click **Send with Gmail** (or **Open in Gmail**).`;
+Review the fields below and click **Send with Gmail** to dispatch directly through Google's SMTP server (\`smtp.gmail.com:465\`).`;
   }
 
-  // 2. WHATSAPP CHANNEL COMPOSE IN CHAT
-  if (lower.includes("whatsapp") || lower.includes("what app") || lower.includes("whapi") || lower.includes("send link")) {
+  // 2. WHATSAPP COMPOSE IN CHAT
+  if (
+    lower.includes("whatsapp") ||
+    lower.includes("what app") ||
+    lower.includes("whapi") ||
+    lower.includes("send link")
+  ) {
     const waDraft = buildWhatsAppDraftFromQuery(query, context);
-    return `### 💬 WhatsApp Channel — Message Ready
+    return `### 💬 WhatsApp Channel — Compose Message
 
-I have prepared the WhatsApp message for **${waDraft.customerName}** (\`${waDraft.to}\`) on your connected **WhatsApp Business Channel** regarding the **${waDraft.carName}**.
+I have opened the **WhatsApp Composer** below${
+      waDraft.to ? ` for **${waDraft.customerName}** (\`${waDraft.to}\`)` : ""
+    }.
 
-You can customize the message directly in the **WhatsApp Composer** below and click **Send on WhatsApp**.`;
+Enter or verify the phone number and message below, then click **Send on WhatsApp**.`;
   }
 
   // 3. WEBSITE FORMS, FINANCING SUBMISSIONS, INQUIRIES & LEADS
@@ -475,218 +340,93 @@ You can customize the message directly in the **WhatsApp Composer** below and cl
     lower.includes("lead") ||
     lower.includes("applicant") ||
     lower.includes("who applied") ||
-    lower.includes("follow up") ||
     lower.includes("test drive") ||
     lower.includes("customer")
   ) {
-    const dbForms = [
-      ...financings.map((f: any) => ({
-        type: "Finance Application Form",
-        customerName: f.customerName || `Applicant #${f.id}`,
-        email: f.email || "applicant@autofame.co.za",
-        phone: f.phone || "+27 82 000 0000",
-        vehicle: `Loan Amount: R${(f.loanAmount || 0).toLocaleString()} ZAR`,
-        income: f.monthlyIncomeGross ? `R${f.monthlyIncomeGross.toLocaleString()} / mo` : "Verified",
-        status: f.status,
-      })),
-      ...inquiries.map((inq: any) => ({
-        type: "Website Inquiry Form",
-        customerName: inq.customerName || "Website Lead",
-        email: inq.customerEmail || "lead@autofame.co.za",
-        phone: inq.customerPhone || "+27 83 000 0000",
-        vehicle: inq.carName || `Car #${inq.carId}`,
-        income: inq.message?.slice(0, 35) || "Vehicle Inquiry",
-        status: inq.status,
-      })),
-      ...testDrives.map((td: any) => ({
-        type: "Test Drive Form",
-        customerName: td.customerName || "Showroom Visitor",
-        email: td.customerEmail || "visitor@autofame.co.za",
-        phone: td.customerPhone || "+27 71 000 0000",
-        vehicle: td.carName,
-        income: `Scheduled: ${new Date(td.scheduledDate).toLocaleDateString()}`,
-        status: td.completed ? "COMPLETED" : "SCHEDULED",
-      })),
-    ];
+    if (realLeads.length === 0) {
+      return `### 📋 Website Forms & Customer Submissions (Live Database)
 
-    const allForms = dbForms.length > 0 ? [...dbForms, ...DEFAULT_FORM_SUBMISSIONS] : DEFAULT_FORM_SUBMISSIONS;
+There are currently **0 form submissions** recorded in your Convex database (\`financingApplications\`, \`inquiries\`, and \`testDrives\` tables are empty).
 
-    const formRows = allForms
+As soon as a customer submits a finance application on \`/financing\`, books a test drive, or sends a vehicle inquiry on the website, their real details will appear here automatically.`;
+    }
+
+    const formRows = realLeads
       .map(
         (f) =>
-          `| **${f.type}** | **${f.customerName}** | \`${f.email}\` | \`${f.phone}\` | **${f.vehicle}** | ${f.income} | **${f.status}** |`
+          `| **${f.type}** | **${f.customerName}** | \`${f.email || "—"}\` | \`${f.phone || "—"}\` | **${f.vehicle}** | ${f.details} | **${f.status}** |`
       )
       .join("\n");
 
-    return `### 📋 Connected Website Forms, Finance Applications & Customer Leads
+    return `### 📋 Live Website Form Submissions (${realLeads.length} Records)
 
-We have **${allForms.length} active submissions** synced from your website forms (\`/financing\`, vehicle inquiries, and test drive bookings):
-
-| Source Form | Customer Name | Email Address | WhatsApp / Phone | Vehicle / Details | Income / Note | Status |
+| Form Type | Customer Name | Email | Phone | Vehicle / Loan | Details | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :---: |
-${formRows}
-
-> 💡 **Tip:** Just type *"Compose an email to Thabo Mokoena"* or *"Send a WhatsApp to Dr. Anelisa"* and I will open the inline composer right here in the chat!`;
+${formRows}`;
   }
 
-  // 4. CAR COUNT / INVENTORY QUERY
+  // 4. WORKSHOP / REPAIRS QUERY
   if (
-    lower.includes("how many car") ||
-    lower.includes("how many vehicle") ||
-    lower.includes("total car") ||
-    lower.includes("car count") ||
-    lower.includes("stock count") ||
-    lower.includes("number of cars") ||
-    lower.includes("how much cars") ||
-    lower.includes("how many do we have") ||
-    lower.includes("what cars do we have") ||
-    lower.includes("list all car") ||
-    lower.includes("show all car") ||
-    lower.includes("inventory") ||
-    lower.includes("stock") ||
-    lower.includes("showroom")
+    lower.includes("repair") ||
+    lower.includes("workshop") ||
+    lower.includes("service") ||
+    lower.includes("job card")
   ) {
-    const tableRows = cars
-      .map(
-        (c) =>
-          `| **${c.year} ${c.make} ${c.model}** | \`R${(c.price || 0).toLocaleString()} ZAR\` | ${(c.mileage || 0).toLocaleString()} km | ${c.transmission || "Auto"} | ${c.color || "Standard"} | ${
-            c.status === "AVAILABLE"
-              ? "🟢 **AVAILABLE**"
-              : c.status === "SOLD"
-              ? "⚪ **SOLD**"
-              : "🟡 **WORKSHOP / PREP**"
-          } |`
-      )
-      .join("\n");
+    if (repairs.length === 0) {
+      return `### 🔧 Workshop & Repair Status (Live Database)
 
-    return `### 🚗 AutoFame Showroom & Inventory Database
-
-We currently have **${totalCars} total vehicles** recorded in our live dealership database:
-
-| Inventory Metric | Count / Valuation | Status Description |
-| :--- | :---: | :--- |
-| **Available for Sale** | 🟢 **${availableCars.length} Cars** | Live on showroom floor & ready for customer delivery |
-| **At Workshop / Maintenance** | 🟡 **${workshopCars.length || repairs.length} Cars** | Undergoing mechanical inspection, major service, or parts fitment |
-| **Sold Vehicles** | ⚪ **${soldCars.length} Cars** | Completed sales and customer deliveries |
-| **Total Inventory Fleet** | 📊 **${totalCars} Cars** | Complete dealership database registry |
-| **Total Showroom Value** | 💰 **R${totalShowroomValue.toLocaleString()} ZAR** | Aggregate asset value of currently available stock |
-| **Average Vehicle Price** | 🏷️ **R${averagePrice.toLocaleString()} ZAR** | Typical pre-owned vehicle listing price |
-
----
-
-#### 📋 Complete AutoFame Fleet Roster:
-
-| Vehicle Model & Trim | Retail Price | Mileage | Transmission | Color | Current Status |
-| :--- | :---: | :---: | :--- | :--- | :---: |
-${tableRows}`;
-  }
-
-  // 5. SPECIFIC BRAND / MODEL SEARCH
-  const brands = ["bmw", "toyota", "hilux", "volkswagen", "golf", "gti", "mercedes", "c200", "ford", "everest", "ranger", "hyundai", "tucson", "isuzu", "d-max", "audi", "polo"];
-  const matchedBrand = brands.find((b) => lower.includes(b));
-
-  if (matchedBrand) {
-    const matchedCars = cars.filter(
-      (c) =>
-        c.make.toLowerCase().includes(matchedBrand) ||
-        c.model.toLowerCase().includes(matchedBrand)
-    );
-
-    if (matchedCars.length > 0) {
-      const matchRows = matchedCars
-        .map(
-          (c) =>
-            `| **${c.year} ${c.make} ${c.model}** | \`R${(c.price || 0).toLocaleString()} ZAR\` | ${(c.mileage || 0).toLocaleString()} km | ${c.fuelType} | ${c.transmission} | ${
-              c.status === "AVAILABLE"
-                ? "🟢 **AVAILABLE**"
-                : c.status === "SOLD"
-                ? "⚪ **SOLD**"
-                : "🟡 **AT WORKSHOP**"
-            } |`
-        )
-        .join("\n");
-
-      return `### 🔍 Database Match for "${matchedBrand.toUpperCase()}"
-
-We found **${matchedCars.length} vehicle${matchedCars.length > 1 ? "s" : ""}** in our database matching your inquiry:
-
-| Vehicle | Price (ZAR) | Mileage | Fuel | Gearbox | Status |
-| :--- | :---: | :---: | :--- | :--- | :---: |
-${matchRows}
-
-- **Estimated Monthly Finance:** ~R${Math.round(((matchedCars[0].price || 300000) * 0.9 * 0.022)).toLocaleString()} ZAR / month (72 mos, 10% deposit).
-- Ask me to *"Compose a Gmail to client about this ${matchedCars[0].make}"* or *"Send on WhatsApp"* to dispatch immediately.`;
+There are currently **0 active repair records** in the \`carRepairs\` database table (${workshopCars.length} vehicles marked as \`MAINTENANCE\` in inventory).`;
     }
-  }
 
-  // 6. WORKSHOP / REPAIRS QUERY
-  if (lower.includes("repair") || lower.includes("workshop") || lower.includes("service") || lower.includes("fixed") || lower.includes("job card")) {
     const repairRows = repairs
       .map(
         (r) =>
-          `| **${r.repairNumber}** | **${r.carName}** | ${r.workshopName} | ${
-            r.status === "COMPLETED"
-              ? "🟢 **COMPLETED**"
-              : r.status === "AWAITING_PARTS"
-              ? "🟠 **AWAITING PARTS**"
-              : "🟡 **IN PROGRESS**"
-          } | \`R${(r.costEstimated || 0).toLocaleString()}\` | ${r.estimatedCompletionDate || "TBD"} |`
+          `| **${r.repairNumber}** | **${r.carName}** | ${r.workshopName} | **${r.status}** | \`R${(r.costEstimated || 0).toLocaleString()} ZAR\` | ${r.estimatedCompletionDate || "TBD"} |`
       )
       .join("\n");
 
-    const totalEstimated = repairs.reduce((sum, r) => sum + (r.costEstimated || 0), 0);
+    return `### 🔧 Live Workshop & Vehicle Repairs (${repairs.length} Records)
 
-    return `### 🔧 Workshop & Vehicle Repair Operational Status
-
-We currently have **${repairs.length} active service records** in the database with total estimated repairs of **R${totalEstimated.toLocaleString()} ZAR**:
-
-| Job Card | Vehicle | Service Facility | Current Status | Est. Cost (ZAR) | Est. Completion |
+| Job Card | Vehicle | Workshop | Status | Est. Cost | Est. Completion |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 ${repairRows}`;
   }
 
-  // 7. PRICE / BUDGET QUERY
-  if (lower.includes("cheapest") || lower.includes("lowest price") || lower.includes("expensive") || lower.includes("highest price") || lower.includes("under") || lower.includes("budget") || lower.includes("price")) {
-    const sorted = [...availableCars].sort((a, b) => (a.price || 0) - (b.price || 0));
-    const cheapest = sorted[0];
-    const mostExp = sorted[sorted.length - 1];
+  // 5. CAR COUNT / INVENTORY QUERY
+  if (totalCars === 0) {
+    return `### 🚗 AutoFame Inventory Database (Live Sync)
 
-    return `### 💰 AutoFame Vehicle Pricing Breakdown
-
-- 🏷️ **Most Affordable Available Car:** **${cheapest.year} ${cheapest.make} ${cheapest.model}** at \`R${(cheapest.price || 0).toLocaleString()} ZAR\` (${(cheapest.mileage || 0).toLocaleString()} km).
-- 💎 **Most Expensive Available Car:** **${mostExp.year} ${mostExp.make} ${mostExp.model}** at \`R${(mostExp.price || 0).toLocaleString()} ZAR\` (${(mostExp.mileage || 0).toLocaleString()} km).
-- 📊 **Average Showroom Price:** \`R${averagePrice.toLocaleString()} ZAR\` across ${availableCars.length} available units (Total Value: \`R${totalShowroomValue.toLocaleString()} ZAR\`).`;
+There are currently **0 vehicles** in your Convex \`cars\` table. Add vehicles in the Inventory section and they will immediately sync here.`;
   }
 
-  // 8. VEHICLE FINANCING / PRE-APPROVAL
-  if (lower.includes("finance") || lower.includes("wesbank") || lower.includes("pre-approval") || lower.includes("fica") || lower.includes("interest")) {
-    return `### 📋 Multi-Lender South African Vehicle Finance Structure
+  const tableRows = cars
+    .map(
+      (c) =>
+        `| **#${c.id}** | **${c.year} ${c.make} ${c.model}** | \`R${(c.price || 0).toLocaleString()} ZAR\` | ${(c.mileage || 0).toLocaleString()} km | ${c.transmission || "Auto"} | ${c.color || "Standard"} | **${c.status}** |`
+    )
+    .join("\n");
 
-| Lending Institution | Est. Monthly (on R299,900) | Interest Rate | Term | Deposit | Status |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **WesBank Auto** | **~R5,890 / mo** | Prime + 1.25% *(12.50%)* | 72 Mos | 10% (R29,990) | 🟢 Active |
-| **Standard Bank Auto** | **~R5,940 / mo** | Prime + 1.40% *(12.65%)* | 72 Mos | 10% (R29,990) | 🟢 Active |
-| **Absa MFC** | **~R5,860 / mo** | Prime + 1.15% *(12.40%)* | 72 Mos | 10% (R29,990) | 🟢 Active |
-| **Nedbank MFC** | **~R6,020 / mo** | Prime + 1.75% *(13.00%)* | 60 Mos | 10% (R29,990) | 🟢 Active |`;
-  }
+  return `### 🚗 AutoFame Live Database Inventory (${totalCars} Vehicles)
 
-  // 9. DEFAULT DATABASE SUMMARY
-  return `### ⚡ AutoFame Agent — Live Database & Channels Summary
+| Metric | Live Database Value |
+| :--- | :--- |
+| **Total Cars in Database** | **${totalCars} Cars** |
+| **Available for Sale** | **${availableCars.length} Cars** |
+| **In Workshop / Maintenance** | **${workshopCars.length} Cars** |
+| **Sold Cars** | **${soldCars.length} Cars** |
+| **Total Available Showroom Value** | **R${totalShowroomValue.toLocaleString()} ZAR** (Avg: \`R${averagePrice.toLocaleString()} ZAR\`) |
+| **Website Form Submissions** | **${realLeads.length} Submissions** |
+| **Connected Gmail Account** | \`${connectedGmail}\` |
 
-Here is the real-time state across your connected database and channels:
+---
 
-| Connected Channel / Source | Live Status | Summary |
-| :--- | :---: | :--- |
-| **Inventory Database** | 🟢 Synced | **${totalCars} Total Cars** (${availableCars.length} Available, ${workshopCars.length} in Workshop, ${soldCars.length} Sold — Total Value: \`R${totalShowroomValue.toLocaleString()} ZAR\`) |
-| **Website Forms & Leads** | 🟢 Synced | **4 Active Submissions** (Thabo Mokoena, Dr. Anelisa Sithole, Johan Botha, Kagiso Ndlovu) |
-| **Gmail Integration** | 🟢 Connected | \`autofame.dealers@gmail.com\` — Type *"Compose an email to..."* to draft & send in chat |
-| **WhatsApp Business** | 🟢 Connected | \`+27 11 942 1200\` — Type *"Send a WhatsApp to..."* to message clients in chat |
-| **Workshop Repairs** | 🟢 Synced | **${repairs.length} Active Job Cards** (Sandton BMW & Bosch Service) |`;
+#### 📋 Live Vehicles in \`cars\` Table:
+
+| ID | Vehicle | Price (ZAR) | Mileage | Transmission | Color | Status |
+| :---: | :--- | :---: | :---: | :--- | :--- | :---: |
+${tableRows}`;
 }
 
-/**
- * Stream real tokens from OpenAI API (if configured in environment)
- */
 async function streamOpenAI(
   apiKey: string,
   messages: any[],
@@ -709,7 +449,7 @@ async function streamOpenAI(
       model: "gpt-4o-mini",
       messages: openAiMessages,
       stream: true,
-      temperature: 0.7,
+      temperature: 0.3,
     }),
   });
 
@@ -750,12 +490,9 @@ async function streamOpenAI(
   }
 }
 
-/**
- * Primary AI Chat Completion Handler
- */
 export async function POST(req: NextRequest) {
   try {
-    const { messages, context, attachments } = await req.json();
+    const { messages, context, connectedGmail = "elexsouthflow@gmail.com" } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Messages array required" }), {
@@ -769,11 +506,10 @@ export async function POST(req: NextRequest) {
       process.env.OPENAI_API_KEY ||
       "";
 
-    const systemPrompt = buildSystemPrompt(context, attachments || []);
+    const systemPrompt = buildSystemPrompt(context, connectedGmail);
     const lastUserMessage = messages[messages.length - 1]?.content || "";
     const lowerQuery = lastUserMessage.toLowerCase();
 
-    // Determine inline channel composer payload
     let actionPayload: any = null;
     if (
       lowerQuery.includes("email") ||
@@ -782,7 +518,7 @@ export async function POST(req: NextRequest) {
       lowerQuery.includes("compose") ||
       lowerQuery.includes("imael")
     ) {
-      actionPayload = buildGmailDraftFromQuery(lastUserMessage, context);
+      actionPayload = buildGmailDraftFromQuery(lastUserMessage, context, connectedGmail);
     } else if (
       lowerQuery.includes("whatsapp") ||
       lowerQuery.includes("what app") ||
@@ -795,14 +531,12 @@ export async function POST(req: NextRequest) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        // 1. Emit inline channel composer metadata if applicable
         if (actionPayload) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "meta", actionPayload })}\n\n`)
           );
         }
 
-        // 2. Stream from OpenAI if key is configured
         let aiSuccess = false;
         if (openaiKey) {
           try {
@@ -813,10 +547,8 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // 3. High-Accuracy Database & Channel Responder
         if (!aiSuccess) {
-          const databaseAnswer = generateDatabaseAnswer(lastUserMessage, context);
-
+          const databaseAnswer = generateDatabaseAnswer(lastUserMessage, context, connectedGmail);
           const words = databaseAnswer.split(/(\s+)/);
           for (let i = 0; i < words.length; i++) {
             controller.enqueue(

@@ -1,158 +1,343 @@
 import { NextRequest, NextResponse } from "next/server";
+import tls from "tls";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 /**
- * AutoFame AI Email Agent Gateway
- * Supports AI-Native Gateways:
- * 1. AgentMail (agentmail.to) - Dedicated AI agent inboxes with inbound webhooks and outbound dispatch
- * 2. Resend (resend.com) - Enterprise AI agent transactional email gateway with attachments & React templates
- * 3. Puter.email - Zero-config browser/server email dispatch
+ * Real Gmail SMTP Client (smtp.gmail.com:465 SSL/TLS)
+ * Connects directly to Google's production SMTP server for elexsouthflow@gmail.com
+ * No demo/fake fallbacks. Requires a valid 16-character Google App Password.
  */
 
 interface SendEmailPayload {
-  to: string;
+  action?: "send" | "verify";
+  fromEmail?: string;
+  appPassword?: string;
+  to?: string;
+  cc?: string;
   customerName?: string;
-  subject: string;
+  subject?: string;
   body?: string;
-  template?: "finance_approval" | "vehicle_quote" | "trade_in_appraisal" | "workshop_report";
   carName?: string;
   carPrice?: number;
-  monthlyEstimate?: string;
-  gateway?: "agentmail" | "resend" | "puter";
-  attachments?: { name: string; url: string; type?: string }[];
 }
 
-function generateDealershipEmailHtml(payload: SendEmailPayload): string {
-  const customer = payload.customerName || "Valued Client";
-  const car = payload.carName || "2018 BMW X2 sDrive20i M Sport";
-  const price = payload.carPrice ? `R${payload.carPrice.toLocaleString()} ZAR` : "R299,900 ZAR";
-  const monthly = payload.monthlyEstimate || "R5,890 / month";
+function buildHtmlEmail(payload: SendEmailPayload, senderEmail: string): string {
+  const bodyHtml = (payload.body || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br/>");
 
-  let specificContent = "";
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${payload.subject || "AutoFame Dealership"}</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#11100e;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#eae7e1;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#11100e;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table width="100%" style="max-width:600px;background-color:#1a1916;border:1px solid #2e2b26;border-radius:16px;overflow:hidden;padding:32px;">
+            <tr>
+              <td style="padding-bottom:18px;border-bottom:1px solid #2e2b26;">
+                <h1 style="color:#34d399;font-size:22px;margin:0;font-weight:800;">AutoFame Dealership</h1>
+                <p style="color:#8e8a82;font-size:11px;margin:4px 0 0 0;text-transform:uppercase;letter-spacing:1px;">
+                  1 Rifle Range Rd, Baragwanath, Johannesburg South &bull; ${senderEmail}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 0;color:#dedad2;font-size:14px;line-height:1.65;">
+                ${bodyHtml}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-top:16px;border-top:1px solid #2e2b26;">
+                <p style="color:#8e8a82;font-size:12px;margin:0;">
+                  Sent from <strong style="color:#34d399;">${senderEmail}</strong> &bull; AutoFame (Pty) Ltd.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
 
-  if (payload.template === "finance_approval") {
-    specificContent = `
-      <div style="background-color: #172a1e; border: 1px solid #10b981; border-radius: 12px; padding: 20px; margin: 24px 0;">
-        <h3 style="color: #34d399; margin-top: 0; font-size: 18px;">🚗 Vehicle Finance Pre-Approval Packet</h3>
-        <p style="color: #d1fae5; margin-bottom: 8px;">Vehicle: <strong>${car}</strong></p>
-        <p style="color: #d1fae5; margin-bottom: 8px;">Purchase Price: <strong>${price}</strong></p>
-        <p style="color: #d1fae5; margin-bottom: 16px;">Estimated Repayment: <strong>${monthly}</strong> (WesBank / Standard Bank / Absa MFC)</p>
-        <div style="margin-top: 16px;">
-          <a href="https://www.autofame.co.za/financing" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; display: inline-block;">
-            Complete Digital Application &rarr;
-          </a>
-        </div>
-      </div>
-      <div style="background-color: #181715; border: 1px solid #33302a; border-radius: 12px; padding: 16px; margin-top: 20px;">
-        <h4 style="color: #f5f2eb; margin-top: 0; font-size: 14px;">Mandatory FICA Documentation Checklist:</h4>
-        <ul style="color: #a6a197; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-          <li>Valid South African ID (Smart Card or Green Barcoded Book)</li>
-          <li>Valid Code B/EB Driver's License</li>
-          <li>Latest 3 Months Stamped Bank Statements</li>
-          <li>Latest 3 Months Payslips (or 6 months for commission earners)</li>
-          <li>Proof of Residential Address (Utility bill less than 3 months old)</li>
-        </ul>
-      </div>
-    `;
-  } else if (payload.template === "vehicle_quote") {
-    specificContent = `
-      <div style="background-color: #172a1e; border: 1px solid #10b981; border-radius: 12px; padding: 20px; margin: 24px 0;">
-        <h3 style="color: #34d399; margin-top: 0; font-size: 18px;">📄 Official Dealership Quotation</h3>
-        <p style="color: #d1fae5; margin-bottom: 8px;">Selected Vehicle: <strong>${car}</strong></p>
-        <p style="color: #d1fae5; margin-bottom: 8px;">Total Cash Price: <strong>${price}</strong></p>
-        <p style="color: #d1fae5; margin-bottom: 8px;">Dekra 101-Point Inspection: <strong>Certified &amp; Roadworthy</strong></p>
-        <p style="color: #d1fae5; margin-bottom: 0;">Delivery: <strong>Available Nationwide across South Africa</strong></p>
-      </div>
-    `;
-  } else {
-    specificContent = `
-      <div style="background-color: #181715; border: 1px solid #33302a; border-radius: 12px; padding: 20px; margin: 24px 0; color: #dedad2; line-height: 1.6;">
-        ${payload.body ? payload.body.replace(/\n/g, "<br/>") : "Thank you for contacting AutoFame Dealership. Please review the attached automotive information."}
-      </div>
-    `;
+/**
+ * Low-level TLS SMTP transaction against smtp.gmail.com:465
+ */
+function executeGmailSmtp(options: {
+  user: string;
+  pass: string;
+  verifyOnly?: boolean;
+  to?: string;
+  cc?: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+}): Promise<{ ok: boolean; response?: string; messageId?: string }> {
+  return new Promise((resolve, reject) => {
+    const cleanPass = options.pass.replace(/\s+/g, "");
+    const socket = tls.connect(
+      {
+        host: "smtp.gmail.com",
+        port: 465,
+        servername: "smtp.gmail.com",
+        rejectUnauthorized: true,
+      },
+      () => {
+        // Connected over TLS, waiting for 220 greeting
+      }
+    );
+
+    socket.setTimeout(15000);
+    socket.on("timeout", () => {
+      socket.destroy();
+      reject(new Error("Connection to smtp.gmail.com:465 timed out"));
+    });
+
+    socket.on("error", (err) => {
+      reject(err);
+    });
+
+    let buffer = "";
+    let step = 0;
+    const recipients: string[] = [];
+    if (options.to) {
+      options.to
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean)
+        .forEach((e) => recipients.push(e));
+    }
+    if (options.cc) {
+      options.cc
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean)
+        .forEach((e) => {
+          if (!recipients.includes(e)) recipients.push(e);
+        });
+    }
+    let rcptIndex = 0;
+    const messageId = `<af_${Date.now()}_${Math.random().toString(36).slice(2, 9)}@gmail.com>`;
+
+    const sendLine = (cmd: string) => {
+      socket.write(cmd + "\r\n");
+    };
+
+    socket.on("data", (chunk) => {
+      buffer += chunk.toString("utf8");
+      const lines = buffer.split("\r\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line) continue;
+        // Wait until final line of multi-line SMTP reply (4th char is space, e.g. "250 OK")
+        if (line.length >= 4 && line[3] === "-") {
+          continue;
+        }
+
+        const code = parseInt(line.slice(0, 3), 10);
+
+        if (step === 0) {
+          // 220 smtp.gmail.com ESMTP
+          if (code !== 220) {
+            socket.end();
+            return reject(new Error(`SMTP Greeting failed: ${line}`));
+          }
+          step = 1;
+          sendLine("EHLO autofame.co.za");
+        } else if (step === 1) {
+          if (code !== 250) {
+            socket.end();
+            return reject(new Error(`EHLO failed: ${line}`));
+          }
+          step = 2;
+          sendLine("AUTH LOGIN");
+        } else if (step === 2) {
+          if (code !== 334) {
+            socket.end();
+            return reject(new Error(`AUTH LOGIN failed: ${line}`));
+          }
+          step = 3;
+          sendLine(Buffer.from(options.user, "utf8").toString("base64"));
+        } else if (step === 3) {
+          if (code !== 334) {
+            socket.end();
+            return reject(new Error(`Username rejected: ${line}`));
+          }
+          step = 4;
+          sendLine(Buffer.from(cleanPass, "utf8").toString("base64"));
+        } else if (step === 4) {
+          if (code !== 235) {
+            socket.end();
+            return reject(
+              new Error(
+                `Gmail Authentication failed (${line}). Make sure you entered a valid 16-character Google App Password for ${options.user}.`
+              )
+            );
+          }
+          if (options.verifyOnly) {
+            step = 99;
+            sendLine("QUIT");
+            return resolve({ ok: true, response: line });
+          }
+          step = 5;
+          sendLine(`MAIL FROM:<${options.user}>`);
+        } else if (step === 5) {
+          if (code !== 250) {
+            socket.end();
+            return reject(new Error(`MAIL FROM rejected: ${line}`));
+          }
+          step = 6;
+          rcptIndex = 0;
+          sendLine(`RCPT TO:<${recipients[rcptIndex]}>`);
+        } else if (step === 6) {
+          if (code !== 250) {
+            socket.end();
+            return reject(new Error(`Recipient ${recipients[rcptIndex]} rejected: ${line}`));
+          }
+          rcptIndex++;
+          if (rcptIndex < recipients.length) {
+            sendLine(`RCPT TO:<${recipients[rcptIndex]}>`);
+          } else {
+            step = 7;
+            sendLine("DATA");
+          }
+        } else if (step === 7) {
+          if (code !== 354) {
+            socket.end();
+            return reject(new Error(`DATA command failed: ${line}`));
+          }
+          step = 8;
+          const boundary = `----=_Part_${Date.now()}`;
+          const headers = [
+            `From: "AutoFame Dealership" <${options.user}>`,
+            `To: ${options.to}`,
+            ...(options.cc ? [`Cc: ${options.cc}`] : []),
+            `Subject: =?UTF-8?B?${Buffer.from(options.subject || "", "utf8").toString("base64")}?=`,
+            `Message-ID: ${messageId}`,
+            `Date: ${new Date().toUTCString()}`,
+            `MIME-Version: 1.0`,
+            `Content-Type: multipart/alternative; boundary="${boundary}"`,
+            ``,
+            `--${boundary}`,
+            `Content-Type: text/plain; charset="UTF-8"`,
+            `Content-Transfer-Encoding: base64`,
+            ``,
+            Buffer.from(options.text || "", "utf8").toString("base64"),
+            ``,
+            `--${boundary}`,
+            `Content-Type: text/html; charset="UTF-8"`,
+            `Content-Transfer-Encoding: base64`,
+            ``,
+            Buffer.from(options.html || "", "utf8").toString("base64"),
+            ``,
+            `--${boundary}--`,
+            `.`,
+          ];
+          sendLine(headers.join("\r\n"));
+        } else if (step === 8) {
+          if (code !== 250) {
+            socket.end();
+            return reject(new Error(`Email delivery failed: ${line}`));
+          }
+          step = 99;
+          sendLine("QUIT");
+          return resolve({ ok: true, response: line, messageId });
+        }
+      }
+    });
+  });
+}
+
+export async function GET() {
+  const configuredEmail = process.env.GMAIL_USER || "elexsouthflow@gmail.com";
+  const envPass = process.env.GMAIL_APP_PASSWORD || "";
+
+  if (!envPass) {
+    return NextResponse.json({
+      connected: false,
+      email: configuredEmail,
+      requiresAppPassword: true,
+      message:
+        "Requires 16-character Google App Password for elexsouthflow@gmail.com (set GMAIL_APP_PASSWORD in .env.local or enter in Connect Gmail modal).",
+    });
   }
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>${payload.subject}</title>
-      </head>
-      <body style="margin: 0; padding: 0; background-color: #11100e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #eae7e1;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #11100e; padding: 32px 16px;">
-          <tr>
-            <td align="center">
-              <table width="100%" style="max-width: 600px; background-color: #1a1916; border: 1px solid #2e2b26; border-radius: 16px; overflow: hidden; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                <!-- Header -->
-                <tr>
-                  <td>
-                    <table width="100%">
-                      <tr>
-                        <td>
-                          <h1 style="color: #34d399; font-size: 24px; margin: 0; font-weight: 800; letter-spacing: -0.5px;">AutoFame</h1>
-                          <p style="color: #8e8a82; font-size: 11px; margin: 4px 0 0 0; text-transform: uppercase; letter-spacing: 1px;">Johannesburg South &bull; 1 Rifle Range Rd, Baragwanath</p>
-                        </td>
-                        <td align="right">
-                          <span style="background-color: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">
-                            AI Agent Gateway
-                          </span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Divider -->
-                <tr>
-                  <td style="padding-top: 20px; padding-bottom: 20px;">
-                    <div style="height: 1px; background-color: #2e2b26;"></div>
-                  </td>
-                </tr>
-
-                <!-- Salutation -->
-                <tr>
-                  <td>
-                    <h2 style="color: #f5f2eb; font-size: 18px; margin: 0 0 12px 0;">Dear ${customer},</h2>
-                    <p style="color: #a6a197; font-size: 14px; line-height: 1.6; margin: 0;">
-                      We hope this message finds you well. As part of your inquiry with AutoFame, our Autonomous Dealership Agent has prepared your vehicle details below.
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- Dynamic Content Body -->
-                <tr>
-                  <td>
-                    ${specificContent}
-                  </td>
-                </tr>
-
-                <!-- Contact & Footer -->
-                <tr>
-                  <td style="padding-top: 16px; border-top: 1px solid #2e2b26; margin-top: 24px;">
-                    <p style="color: #8e8a82; font-size: 12px; line-height: 1.5; margin: 0 0 8px 0;">
-                      Need assistance? Speak directly with our sales team at <strong style="color: #dedad2;">+27 11 942 1200</strong> or reply directly to this email.
-                    </p>
-                    <p style="color: #635f57; font-size: 11px; margin: 0;">
-                      &copy; ${new Date().getFullYear()} AutoFame (Pty) Ltd. National Credit Act (NCA) Registered &bull; FICA Compliant Dealership.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `;
+  try {
+    const verifyRes = await executeGmailSmtp({
+      user: configuredEmail,
+      pass: envPass,
+      verifyOnly: true,
+    });
+    return NextResponse.json({
+      connected: true,
+      verified: verifyRes.ok,
+      email: configuredEmail,
+      smtpResponse: verifyRes.response,
+    });
+  } catch (err: any) {
+    return NextResponse.json({
+      connected: false,
+      email: configuredEmail,
+      requiresAppPassword: true,
+      error: err.message,
+    });
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const payload: SendEmailPayload = await req.json();
-    const { to, subject, customerName, gateway = "agentmail" } = payload;
+    const senderEmail = (
+      payload.fromEmail ||
+      process.env.GMAIL_USER ||
+      "elexsouthflow@gmail.com"
+    ).trim();
+    const appPassword = (
+      payload.appPassword ||
+      process.env.GMAIL_APP_PASSWORD ||
+      ""
+    ).replace(/\s+/g, "");
+
+    // 1. Live SMTP Connection Verification
+    if (payload.action === "verify") {
+      if (!appPassword) {
+        return NextResponse.json(
+          {
+            connected: false,
+            requiresAppPassword: true,
+            error: `Please enter the 16-character Google App Password for ${senderEmail} to establish a real Gmail SMTP connection.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const verifyResult = await executeGmailSmtp({
+        user: senderEmail,
+        pass: appPassword,
+        verifyOnly: true,
+      });
+
+      return NextResponse.json({
+        connected: true,
+        verified: verifyResult.ok,
+        email: senderEmail,
+        smtpResponse: verifyResult.response,
+      });
+    }
+
+    // 2. Real Email Dispatch via smtp.gmail.com:465
+    const { to, cc, subject, body } = payload;
 
     if (!to || !subject) {
       return NextResponse.json(
@@ -161,105 +346,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const htmlContent = generateDealershipEmailHtml(payload);
-    const textContent = payload.body || `${subject} - AutoFame Dealership Johannesburg South.`;
-
-    const agentMailKey = process.env.AGENTMAIL_API_KEY;
-    const resendKey = process.env.RESEND_API_KEY;
-
-    let dispatchResult: any = null;
-    let selectedGateway = gateway;
-    let status: "SENT" | "QUEUED" = "QUEUED";
-
-    // 1. Dispatch via AgentMail (agentmail.to)
-    if (selectedGateway === "agentmail" && agentMailKey && agentMailKey !== "YOUR_AGENTMAIL_KEY") {
-      try {
-        const inboxId = process.env.AGENTMAIL_INBOX_ID || "autofame-deals";
-        const agentMailRes = await fetch(`https://api.agentmail.to/v1/inboxes/${inboxId}/messages`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${agentMailKey}`,
-          },
-          body: JSON.stringify({
-            to,
-            subject,
-            html: htmlContent,
-            text: textContent,
-            metadata: {
-              customerName: customerName || "Customer",
-              dealership: "AutoFame Johannesburg South",
-            },
-          }),
-        });
-
-        if (agentMailRes.ok) {
-          dispatchResult = await agentMailRes.json();
-          status = "SENT";
-        } else {
-          console.warn("AgentMail HTTP error, falling back to Resend or Queued Gateway");
-        }
-      } catch (err: any) {
-        console.warn("AgentMail dispatch failed:", err.message);
-      }
+    if (!appPassword) {
+      return NextResponse.json(
+        {
+          error: `Real Gmail connection requires your 16-character Google App Password for ${senderEmail}. Click 'Configure' next to Gmail to connect your account.`,
+          requiresAppPassword: true,
+          email: senderEmail,
+        },
+        { status: 401 }
+      );
     }
 
-    // 2. Dispatch via Resend AI Gateway (resend.com)
-    if (status !== "SENT" && (selectedGateway === "resend" || resendKey)) {
-      if (resendKey && resendKey !== "YOUR_RESEND_KEY") {
-        try {
-          const resendRes = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${resendKey}`,
-            },
-            body: JSON.stringify({
-              from: "AutoFame Dealership <deals@autofame.co.za>",
-              to: [to],
-              subject,
-              html: htmlContent,
-              text: textContent,
-            }),
-          });
+    const htmlContent = buildHtmlEmail(payload, senderEmail);
+    const textContent = body || subject;
 
-          if (resendRes.ok) {
-            dispatchResult = await resendRes.json();
-            selectedGateway = "resend";
-            status = "SENT";
-          }
-        } catch (resendErr: any) {
-          console.warn("Resend dispatch failed:", resendErr.message);
-        }
-      }
-    }
-
-    // 3. Simulated / Queued Mode if credentials not set yet in local environment
-    if (status !== "SENT") {
-      dispatchResult = {
-        id: `msg_af_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        status: "queued_for_delivery",
-        gateway: selectedGateway,
-        recipient: to,
-        timestamp: new Date().toISOString(),
-      };
-      status = "QUEUED";
-    }
+    const smtpResult = await executeGmailSmtp({
+      user: senderEmail,
+      pass: appPassword,
+      to,
+      cc,
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
 
     return NextResponse.json({
       success: true,
-      status,
-      gateway: selectedGateway,
+      status: "SENT",
+      gateway: "gmail_smtp_ssl",
+      from: senderEmail,
       recipient: to,
-      customerName: customerName || "Client",
+      cc: cc || null,
       subject,
-      result: dispatchResult,
+      messageId: smtpResult.messageId,
+      smtpResponse: smtpResult.response,
       deliveredAt: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("AI Email Gateway error:", error);
+    console.error("Real Gmail SMTP error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to dispatch email" },
+      {
+        error: error.message || "Failed to send email via smtp.gmail.com",
+        requiresAppPassword:
+          error.message?.includes("Authentication failed") ||
+          error.message?.includes("App Password"),
+      },
       { status: 500 }
     );
   }
