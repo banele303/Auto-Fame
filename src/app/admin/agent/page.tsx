@@ -787,10 +787,10 @@ export default function AdminAutoFameAgentPage() {
     selectedSessionId ? { sessionId: selectedSessionId } : "skip"
   );
 
-  // Connected Channels Configuration State (Defaulting to elexsouthflow@gmail.com)
-  const [connectedGmail, setConnectedGmail] = useState("elexsouthflow@gmail.com");
-  const [gmailAppPassword, setGmailAppPassword] = useState("");
-  const [gmailVerified, setGmailVerified] = useState(false);
+  // Connected Channels Configuration State (Defaulting to alexsouthflow3@gmail.com)
+  const [connectedGmail, setConnectedGmail] = useState("alexsouthflow3@gmail.com");
+  const [gmailAppPassword, setGmailAppPassword] = useState("dmjj jsyx cpqp dwlb");
+  const [gmailVerified, setGmailVerified] = useState(true);
   const [isVerifyingGmail, setIsVerifyingGmail] = useState(false);
   const [gmailVerifyError, setGmailVerifyError] = useState<string | null>(null);
 
@@ -849,21 +849,26 @@ export default function AdminAutoFameAgentPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedGmail = localStorage.getItem("autofame_connected_gmail");
-      const savedPass = localStorage.getItem("autofame_gmail_app_password") || "";
+      const savedPass = localStorage.getItem("autofame_gmail_app_password");
       const savedWa = localStorage.getItem("autofame_connected_whatsapp");
 
       const targetEmail =
-        savedGmail && savedGmail !== "autofame.dealers@gmail.com"
+        savedGmail &&
+        savedGmail !== "autofame.dealers@gmail.com" &&
+        savedGmail !== "alexsouthflow3@gmail.com"
           ? savedGmail
-          : "elexsouthflow@gmail.com";
+          : "alexsouthflow3@gmail.com";
+
+      const targetPass = savedPass || "dmjjjsyxcpqpdwlb";
 
       setConnectedGmail(targetEmail);
+      setGmailAppPassword(targetPass);
       localStorage.setItem("autofame_connected_gmail", targetEmail);
+      localStorage.setItem("autofame_gmail_app_password", targetPass);
 
-      if (savedPass) setGmailAppPassword(savedPass);
       if (savedWa) setConnectedWhatsApp(savedWa);
 
-      checkGmailConnection(targetEmail, savedPass);
+      checkGmailConnection(targetEmail, targetPass);
 
       const checkPuter = () => {
         if ((window as any).puter?.ai) {
@@ -1199,7 +1204,7 @@ export default function AdminAutoFameAgentPage() {
   // Verify & Save Real Gmail Connection
   const handleVerifyAndSaveChannels = async () => {
     setGmailVerifyError(null);
-    const trimmedEmail = connectedGmail.trim() || "elexsouthflow@gmail.com";
+    const trimmedEmail = connectedGmail.trim() || "alexsouthflow3@gmail.com";
     const cleanedPass = gmailAppPassword.replace(/\s+/g, "");
 
     if (typeof window !== "undefined") {
@@ -1844,7 +1849,7 @@ export default function AdminAutoFameAgentPage() {
       </main>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* REAL GMAIL (elexsouthflow@gmail.com) & CHANNELS MODAL      */}
+      {/* REAL GMAIL (alexsouthflow3@gmail.com) & CHANNELS MODAL      */}
       {/* ────────────────────────────────────────────────────────── */}
       {channelsModalOpen && (
         <div
@@ -1930,11 +1935,11 @@ export default function AdminAutoFameAgentPage() {
                 {/* Clear What's Needed Instructions */}
                 <div className="p-3 rounded-lg bg-[#161512] border border-[#2e2b26] space-y-1.5 text-[11px] text-[#a6a197]">
                   <p className="font-semibold text-[#eae7e1]">
-                    What is needed to connect <code className="text-emerald-400">elexsouthflow@gmail.com</code>:
+                    What is needed to connect <code className="text-emerald-400">alexsouthflow3@gmail.com</code>:
                   </p>
                   <ol className="list-decimal list-inside space-y-1">
                     <li>
-                      Sign in to <code className="text-[#dedad2]">elexsouthflow@gmail.com</code> at{" "}
+                      Sign in to <code className="text-[#dedad2]">alexsouthflow3@gmail.com</code> at{" "}
                       <a
                         href="https://myaccount.google.com/apppasswords"
                         target="_blank"

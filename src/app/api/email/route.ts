@@ -259,9 +259,12 @@ function executeGmailSmtp(options: {
   });
 }
 
+const DEFAULT_GMAIL_USER = "alexsouthflow3@gmail.com";
+const DEFAULT_GMAIL_PASS = "dmjjjsyxcpqpdwlb";
+
 export async function GET() {
-  const configuredEmail = process.env.GMAIL_USER || "elexsouthflow@gmail.com";
-  const envPass = process.env.GMAIL_APP_PASSWORD || "";
+  const configuredEmail = process.env.GMAIL_USER || DEFAULT_GMAIL_USER;
+  const envPass = (process.env.GMAIL_APP_PASSWORD || DEFAULT_GMAIL_PASS).replace(/\s+/g, "");
 
   if (!envPass) {
     return NextResponse.json({
@@ -269,7 +272,7 @@ export async function GET() {
       email: configuredEmail,
       requiresAppPassword: true,
       message:
-        "Requires 16-character Google App Password for elexsouthflow@gmail.com (set GMAIL_APP_PASSWORD in .env.local or enter in Connect Gmail modal).",
+        "Requires 16-character Google App Password for alexsouthflow3@gmail.com.",
     });
   }
 
@@ -298,15 +301,15 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const payload: SendEmailPayload = await req.json();
-    const senderEmail = (
-      payload.fromEmail ||
-      process.env.GMAIL_USER ||
-      "elexsouthflow@gmail.com"
-    ).trim();
+    const rawFrom = (payload.fromEmail || "").trim();
+    const senderEmail =
+      !rawFrom || rawFrom === "elexsouthflow@gmail.com" || rawFrom === "autofame.dealers@gmail.com"
+        ? process.env.GMAIL_USER || DEFAULT_GMAIL_USER
+        : rawFrom;
     const appPassword = (
       payload.appPassword ||
       process.env.GMAIL_APP_PASSWORD ||
-      ""
+      DEFAULT_GMAIL_PASS
     ).replace(/\s+/g, "");
 
     // 1. Live SMTP Connection Verification

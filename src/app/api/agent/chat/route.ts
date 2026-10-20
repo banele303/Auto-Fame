@@ -78,7 +78,7 @@ function getRealFormSubmissions(context: any) {
 /**
  * Build Gmail Draft Payload using real database records or user prompt
  */
-function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = "elexsouthflow@gmail.com") {
+function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com") {
   const lower = query.toLowerCase();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
   const realLeads = getRealFormSubmissions(context);
@@ -284,7 +284,7 @@ RULES:
 /**
  * Real-Time Database Query Responder (Zero Demo Data)
  */
-function generateDatabaseAnswer(query: string, context: any, connectedGmail = "elexsouthflow@gmail.com"): string {
+function generateDatabaseAnswer(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com"): string {
   const lower = query.toLowerCase().trim();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
   const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
@@ -492,7 +492,7 @@ async function streamOpenAI(
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, context, connectedGmail = "elexsouthflow@gmail.com" } = await req.json();
+    const { messages, context, connectedGmail = "alexsouthflow3@gmail.com" } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Messages array required" }), {
