@@ -389,7 +389,6 @@ function getDirectAnswerOnly(
       return "0";
     }
     const rows = waChannelMessages
-      .slice(0, 12)
       .map(
         (m: any) =>
           `| **${m.fromName || "Contact"}** | ${m.from || m.chatId} | ${(m.text || "")
@@ -397,7 +396,7 @@ function getDirectAnswerOnly(
             .slice(0, 90)} | **${new Date(m.timestamp).toLocaleDateString()}** |`
       )
       .join("\n");
-    return `| WhatsApp Contact | Phone / Chat ID | Message / Attachment | Date |\n| :--- | :--- | :--- | :---: |\n${rows}`;
+    return `| WhatsApp Contact (${waChannelMessages.length}) | Phone / Chat ID | Message / Status | Date |\n| :--- | :--- | :--- | :---: |\n${rows}`;
   }
 
   // 3. FINANCE APPLICATION COMPLETENESS & BANK SUBMISSION CHECK
@@ -2731,7 +2730,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                 <div className="p-3 rounded-xl bg-[#181714] border border-[#2e2b25] space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
-                      1. Choose or Search Contact ({waContacts.length})
+                      1. Choose or Search Contact ({waContacts.length} Synced)
                     </span>
                     <button
                       type="button"
@@ -2739,19 +2738,30 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                       className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1"
                     >
                       <RefreshCw className="h-3 w-3" />
-                      Refresh
+                      Sync All
                     </button>
                   </div>
 
-                  <input
-                    type="text"
-                    value={waSearchQuery}
-                    onChange={(e) => setWaSearchQuery(e.target.value)}
-                    placeholder="Search contact name or number (e.g. Martha, Blesz, Advance Auto, 074...)"
-                    className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={waSearchQuery}
+                      onChange={(e) => setWaSearchQuery(e.target.value)}
+                      placeholder={`Search all ${waContacts.length} contacts by name, phone, or message...`}
+                      className="w-full bg-[#12110f] border border-[#33302a] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                    {waSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setWaSearchQuery("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8a82] hover:text-white"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
 
-                  <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
+                  <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
                     {waContacts
                       .filter((c) => {
                         if (!waSearchQuery.trim()) return true;
@@ -2762,11 +2772,19 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                           c.lastMessage?.toLowerCase().includes(q)
                         );
                       })
-                      .map((c) => {
+                      .map((c, idx) => {
                         const isSelected = selectedWaContact?.id === c.id;
+                        const initials = (c.name || "WA")
+                          .replace(/[^A-Za-z0-9\s]/g, "")
+                          .trim()
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((w) => w[0] || "")
+                          .join("")
+                          .toUpperCase() || "WA";
                         return (
                           <button
-                            key={c.id}
+                            key={`${c.id}-${idx}`}
                             type="button"
                             onClick={() => {
                               setSelectedWaContact(c);
@@ -2778,12 +2796,15 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                               );
                             }}
                             className={cn(
-                              "w-full text-left px-2.5 py-2 rounded-lg border transition flex items-center justify-between gap-2",
+                              "w-full text-left px-2.5 py-2 rounded-lg border transition flex items-center justify-between gap-2.5",
                               isSelected
                                 ? "bg-emerald-500/15 border-emerald-500/50 text-[#f5f2eb]"
                                 : "bg-[#131210] hover:bg-[#1f1d19] border-[#262420] text-[#dedad2]"
                             )}
                           >
+                            <div className="h-7 w-7 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-[10px] font-bold text-emerald-300 shrink-0">
+                              {initials}
+                            </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold truncate">{c.name}</p>
                               <p className="text-[10px] text-[#8e8a82] truncate">
