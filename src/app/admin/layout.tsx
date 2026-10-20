@@ -98,18 +98,22 @@ export default function AdminLayout({
     window.location.reload();
   };
 
-  // 1. Loading State (Identical on server & client initial render - zero hydration mismatch)
+  // If on the standalone AI Agent page, bypass all admin layout wrappers and loading screens
+  if (pathname?.startsWith("/admin/agent")) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#1f1e1b] text-[#eae7e1] selection:bg-emerald-500 selection:text-white">
+        {children}
+      </div>
+    );
+  }
+
+  // 1. Loading State (No spinner)
   if (!mounted || isLoading || (authLoading && !hasLocalAdmin)) {
     return (
       <div 
         suppressHydrationWarning
-        className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-[#0f0e0d] text-[#eae7e1]"
-      >
-        <div className="w-10 h-10 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin"></div>
-        <p className="text-xs font-mono text-neutral-400 tracking-wide uppercase">
-          Initializing AutoFame Control Center...
-        </p>
-      </div>
+        className="fixed inset-0 z-[100] bg-[#0f0e0d]"
+      />
     );
   }
 

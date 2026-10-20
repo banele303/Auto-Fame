@@ -29,9 +29,6 @@ interface RepairRecord {
   technicianContact?: string;
 }
 
-/**
- * Extract real form submissions & leads from Convex context (zero demo data)
- */
 function getRealFormSubmissions(context: any) {
   const financings = Array.isArray(context?.financings) ? context.financings : [];
   const inquiries = Array.isArray(context?.inquiries) ? context.inquiries : [];
@@ -75,9 +72,6 @@ function getRealFormSubmissions(context: any) {
   ];
 }
 
-/**
- * Build Gmail Draft Payload using real database records or user prompt
- */
 function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com") {
   const lower = query.toLowerCase();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
@@ -88,7 +82,6 @@ function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = 
   let carName = cars[0] ? `${cars[0].year} ${cars[0].make} ${cars[0].model}` : "Selected Vehicle";
   let carPrice = cars[0]?.price || 0;
 
-  // 1. Check if user typed an email address in prompt
   const emailMatch = query.match(/([a-zA-Z0-9._+-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
   if (emailMatch) {
     to = emailMatch[1];
@@ -96,7 +89,6 @@ function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = 
     customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
-  // 2. Match against real leads from database forms
   const matchedLead = realLeads.find(
     (lead) =>
       (lead.customerName && lower.includes(lead.customerName.toLowerCase())) ||
@@ -110,7 +102,6 @@ function buildGmailDraftFromQuery(query: string, context: any, connectedGmail = 
     to = realLeads[0].email;
   }
 
-  // 3. Match against real cars in database
   const matchedCar = cars.find(
     (c) =>
       lower.includes(c.make?.toLowerCase() || "") ||
@@ -166,9 +157,6 @@ Email: ${connectedGmail}`;
   };
 }
 
-/**
- * Build WhatsApp Draft Payload using real database records or user prompt
- */
 function buildWhatsAppDraftFromQuery(query: string, context: any) {
   const lower = query.toLowerCase();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
@@ -179,13 +167,11 @@ function buildWhatsAppDraftFromQuery(query: string, context: any) {
   let carName = cars[0] ? `${cars[0].year} ${cars[0].make} ${cars[0].model}` : "your selected vehicle";
   let carPrice = cars[0]?.price || 0;
 
-  // Match phone number in query
   const phoneMatch = query.match(/(\+?27|0)\s*\d{2}\s*\d{3}\s*\d{4}/);
   if (phoneMatch) {
     to = phoneMatch[0];
   }
 
-  // Match real lead
   const matchedLead = realLeads.find(
     (lead) =>
       (lead.customerName && lower.includes(lead.customerName.toLowerCase())) ||
@@ -199,7 +185,6 @@ function buildWhatsAppDraftFromQuery(query: string, context: any) {
     to = realLeads[0].phone;
   }
 
-  // Match real car
   const matchedCar = cars.find(
     (c) =>
       lower.includes(c.make?.toLowerCase() || "") ||
@@ -223,9 +208,6 @@ function buildWhatsAppDraftFromQuery(query: string, context: any) {
   };
 }
 
-/**
- * Build System Prompt from 100% Real Convex Database Context
- */
 function buildSystemPrompt(context: any, connectedGmail: string) {
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
   const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
@@ -239,7 +221,7 @@ function buildSystemPrompt(context: any, connectedGmail: string) {
               `- [ID #${c.id}] ${c.year} ${c.make} ${c.model}: R${(c.price || 0).toLocaleString()} ZAR, ${(c.mileage || 0).toLocaleString()} km, ${c.color || "Standard"}, ${c.transmission || "Auto"}, Status: ${c.status}`
           )
           .join("\n")
-      : "No vehicles currently recorded in the cars database table.";
+      : "0 vehicles";
 
   const repairSummary =
     repairs.length > 0
@@ -249,7 +231,7 @@ function buildSystemPrompt(context: any, connectedGmail: string) {
               `- Job #${r.repairNumber}: ${r.carName} at ${r.workshopName} (${r.status}, Est Cost: R${(r.costEstimated || 0).toLocaleString()} ZAR)`
           )
           .join("\n")
-      : "No active workshop repair records in the carRepairs database table.";
+      : "0 repairs";
 
   const formsSummary =
     realLeads.length > 0
@@ -259,32 +241,35 @@ function buildSystemPrompt(context: any, connectedGmail: string) {
               `- [${f.type}] ${f.customerName} (Email: ${f.email || "N/A"}, Phone: ${f.phone || "N/A"}) | ${f.vehicle} | ${f.details} | Status: ${f.status}`
           )
           .join("\n")
-      : "No form submissions recorded yet in financingApplications, inquiries, or testDrives tables.";
+      : "0 form submissions";
 
-  return `You are AutoFame Agent, connected to AutoFame Dealership's real Convex database and channels:
-1. Gmail Channel: ${connectedGmail} (Real SMTP via smtp.gmail.com:465)
-2. WhatsApp Channel: Real Whapi.Cloud / WhatsApp dispatch
-3. Live Convex Database (100% real data, zero fake/demo records):
+  return `You are AutoFame Agent.
+DATABASE FACTS:
+- Total Cars: ${cars.length}
+- Available Cars: ${cars.filter((c) => c.status === "AVAILABLE").length}
+- Sold Cars: ${cars.filter((c) => c.status === "SOLD").length}
+- Workshop Cars: ${cars.filter((c) => c.status === "MAINTENANCE" || c.status === "REPAIR").length}
+- Form Leads: ${realLeads.length}
+- Connected Gmail: ${connectedGmail}
 
-REAL DATABASE INVENTORY (${cars.length} Cars):
+INVENTORY:
 ${inventorySummary}
 
-REAL WEBSITE FORM SUBMISSIONS (${realLeads.length} Submissions):
+LEADS:
 ${formsSummary}
 
-REAL WORKSHOP REPAIRS (${repairs.length} Repairs):
+REPAIRS:
 ${repairSummary}
 
-RULES:
-- Report ONLY the exact records present in the database above. Never invent demo cars or demo customer names.
-- If a table is empty, state clearly that there are 0 records in that table right now.
-- Format currency in South African Rand (R... ZAR).`;
+STRICT OUTPUT RULE:
+- Give ONLY the direct answer to what the user asked. Do NOT include any extra commentary, greetings, tables, or explanations.
+- For example, if the user asks "how many cars" or "how many cars do we have", respond with ONLY the number: ${cars.length}`;
 }
 
 /**
- * Real-Time Database Query Responder (Zero Demo Data)
+ * Direct Answer Engine — Gives ONLY the exact answer requested
  */
-function generateDatabaseAnswer(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com"): string {
+function generateDirectDatabaseAnswer(query: string, context: any, connectedGmail = "alexsouthflow3@gmail.com"): string {
   const lower = query.toLowerCase().trim();
   const cars: CarRecord[] = Array.isArray(context?.cars) ? context.cars : [];
   const repairs: RepairRecord[] = Array.isArray(context?.repairs) ? context.repairs : [];
@@ -295,9 +280,70 @@ function generateDatabaseAnswer(query: string, context: any, connectedGmail = "a
   const soldCars = cars.filter((c) => c.status === "SOLD");
   const workshopCars = cars.filter((c) => c.status === "MAINTENANCE" || c.status === "REPAIR");
   const totalShowroomValue = availableCars.reduce((s, c) => s + (c.price || 0), 0);
-  const averagePrice = availableCars.length > 0 ? Math.round(totalShowroomValue / availableCars.length) : 0;
 
-  // 1. GMAIL / EMAIL COMPOSE IN CHAT
+  // 1. EXACT COUNT QUESTIONS -> Return ONLY the number
+  if (
+    lower.includes("how many available") ||
+    lower.includes("available car count")
+  ) {
+    return `${availableCars.length}`;
+  }
+
+  if (
+    lower.includes("how many sold") ||
+    lower.includes("sold car count")
+  ) {
+    return `${soldCars.length}`;
+  }
+
+  if (
+    lower.includes("how many repair") ||
+    lower.includes("how many in workshop") ||
+    lower.includes("how many maintenance")
+  ) {
+    return `${workshopCars.length || repairs.length}`;
+  }
+
+  if (
+    lower.includes("how many form") ||
+    lower.includes("how many lead") ||
+    lower.includes("how many inquir") ||
+    lower.includes("how many application")
+  ) {
+    return `${realLeads.length}`;
+  }
+
+  if (
+    lower.includes("how many car") ||
+    lower.includes("how many vehicle") ||
+    lower.includes("total car") ||
+    lower.includes("car count") ||
+    lower.includes("stock count") ||
+    lower.includes("number of cars") ||
+    lower.includes("how much cars") ||
+    lower.includes("how many do we have")
+  ) {
+    return `${totalCars}`;
+  }
+
+  // 2. VALUE / PRICE QUESTIONS -> Return ONLY the price/car
+  if (lower.includes("total value") || lower.includes("showroom value") || lower.includes("inventory value")) {
+    return `R${totalShowroomValue.toLocaleString()} ZAR`;
+  }
+
+  if (lower.includes("cheapest") || lower.includes("lowest price")) {
+    if (cars.length === 0) return "0 cars in database";
+    const cheapest = [...cars].sort((a, b) => (a.price || 0) - (b.price || 0))[0];
+    return `${cheapest.year} ${cheapest.make} ${cheapest.model} — R${(cheapest.price || 0).toLocaleString()} ZAR`;
+  }
+
+  if (lower.includes("most expensive") || lower.includes("highest price")) {
+    if (cars.length === 0) return "0 cars in database";
+    const mostExp = [...cars].sort((a, b) => (b.price || 0) - (a.price || 0))[0];
+    return `${mostExp.year} ${mostExp.make} ${mostExp.model} — R${(mostExp.price || 0).toLocaleString()} ZAR`;
+  }
+
+  // 3. GMAIL / EMAIL COMPOSE
   if (
     lower.includes("email") ||
     lower.includes("gmail") ||
@@ -306,16 +352,10 @@ function generateDatabaseAnswer(query: string, context: any, connectedGmail = "a
     lower.includes("imael")
   ) {
     const draft = buildGmailDraftFromQuery(query, context, connectedGmail);
-    return `### ✉️ Gmail Channel (\`${connectedGmail}\`) — Compose Email
-
-I have opened the **Gmail Composer** below connected to **\`${connectedGmail}\`**${
-      draft.to ? ` addressed to **\`${draft.to}\`**` : ""
-    }.
-
-Review the fields below and click **Send with Gmail** to dispatch directly through Google's SMTP server (\`smtp.gmail.com:465\`).`;
+    return `Opened Gmail composer in Canvas (${connectedGmail}${draft.to ? ` → ${draft.to}` : ""}).`;
   }
 
-  // 2. WHATSAPP COMPOSE IN CHAT
+  // 4. WHATSAPP COMPOSE
   if (
     lower.includes("whatsapp") ||
     lower.includes("what app") ||
@@ -323,171 +363,46 @@ Review the fields below and click **Send with Gmail** to dispatch directly throu
     lower.includes("send link")
   ) {
     const waDraft = buildWhatsAppDraftFromQuery(query, context);
-    return `### 💬 WhatsApp Channel — Compose Message
-
-I have opened the **WhatsApp Composer** below${
-      waDraft.to ? ` for **${waDraft.customerName}** (\`${waDraft.to}\`)` : ""
-    }.
-
-Enter or verify the phone number and message below, then click **Send on WhatsApp**.`;
+    return `Opened WhatsApp composer in Canvas${waDraft.to ? ` (${waDraft.to})` : ""}.`;
   }
 
-  // 3. WEBSITE FORMS, FINANCING SUBMISSIONS, INQUIRIES & LEADS
+  // 5. FORMS / LEADS
   if (
     lower.includes("form") ||
     lower.includes("submission") ||
     lower.includes("inquir") ||
     lower.includes("lead") ||
     lower.includes("applicant") ||
-    lower.includes("who applied") ||
     lower.includes("test drive") ||
     lower.includes("customer")
   ) {
-    if (realLeads.length === 0) {
-      return `### 📋 Website Forms & Customer Submissions (Live Database)
-
-There are currently **0 form submissions** recorded in your Convex database (\`financingApplications\`, \`inquiries\`, and \`testDrives\` tables are empty).
-
-As soon as a customer submits a finance application on \`/financing\`, books a test drive, or sends a vehicle inquiry on the website, their real details will appear here automatically.`;
-    }
-
-    const formRows = realLeads
-      .map(
-        (f) =>
-          `| **${f.type}** | **${f.customerName}** | \`${f.email || "—"}\` | \`${f.phone || "—"}\` | **${f.vehicle}** | ${f.details} | **${f.status}** |`
-      )
+    if (realLeads.length === 0) return "0 form submissions.";
+    return realLeads
+      .map((f) => `${f.customerName} (${f.type}) — ${f.email || f.phone || "No contact"} — ${f.status}`)
       .join("\n");
-
-    return `### 📋 Live Website Form Submissions (${realLeads.length} Records)
-
-| Form Type | Customer Name | Email | Phone | Vehicle / Loan | Details | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :---: |
-${formRows}`;
   }
 
-  // 4. WORKSHOP / REPAIRS QUERY
-  if (
-    lower.includes("repair") ||
-    lower.includes("workshop") ||
-    lower.includes("service") ||
-    lower.includes("job card")
-  ) {
-    if (repairs.length === 0) {
-      return `### 🔧 Workshop & Repair Status (Live Database)
-
-There are currently **0 active repair records** in the \`carRepairs\` database table (${workshopCars.length} vehicles marked as \`MAINTENANCE\` in inventory).`;
-    }
-
-    const repairRows = repairs
-      .map(
-        (r) =>
-          `| **${r.repairNumber}** | **${r.carName}** | ${r.workshopName} | **${r.status}** | \`R${(r.costEstimated || 0).toLocaleString()} ZAR\` | ${r.estimatedCompletionDate || "TBD"} |`
-      )
+  // 6. BRAND / MODEL MATCH
+  const matchedCars = cars.filter(
+    (c) =>
+      lower.includes(c.make?.toLowerCase() || "") ||
+      lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
+  );
+  if (matchedCars.length > 0) {
+    return matchedCars
+      .map((c) => `${c.year} ${c.make} ${c.model} — R${(c.price || 0).toLocaleString()} ZAR (${c.status})`)
       .join("\n");
-
-    return `### 🔧 Live Workshop & Vehicle Repairs (${repairs.length} Records)
-
-| Job Card | Vehicle | Workshop | Status | Est. Cost | Est. Completion |
-| :--- | :--- | :--- | :---: | :---: | :---: |
-${repairRows}`;
   }
 
-  // 5. CAR COUNT / INVENTORY QUERY
-  if (totalCars === 0) {
-    return `### 🚗 AutoFame Inventory Database (Live Sync)
-
-There are currently **0 vehicles** in your Convex \`cars\` table. Add vehicles in the Inventory section and they will immediately sync here.`;
+  // 7. LIST CARS
+  if (lower.includes("list") || lower.includes("inventory") || lower.includes("stock") || lower.includes("cars")) {
+    if (cars.length === 0) return "0";
+    return cars
+      .map((c) => `${c.year} ${c.make} ${c.model} — R${(c.price || 0).toLocaleString()} ZAR (${c.status})`)
+      .join("\n");
   }
 
-  const tableRows = cars
-    .map(
-      (c) =>
-        `| **#${c.id}** | **${c.year} ${c.make} ${c.model}** | \`R${(c.price || 0).toLocaleString()} ZAR\` | ${(c.mileage || 0).toLocaleString()} km | ${c.transmission || "Auto"} | ${c.color || "Standard"} | **${c.status}** |`
-    )
-    .join("\n");
-
-  return `### 🚗 AutoFame Live Database Inventory (${totalCars} Vehicles)
-
-| Metric | Live Database Value |
-| :--- | :--- |
-| **Total Cars in Database** | **${totalCars} Cars** |
-| **Available for Sale** | **${availableCars.length} Cars** |
-| **In Workshop / Maintenance** | **${workshopCars.length} Cars** |
-| **Sold Cars** | **${soldCars.length} Cars** |
-| **Total Available Showroom Value** | **R${totalShowroomValue.toLocaleString()} ZAR** (Avg: \`R${averagePrice.toLocaleString()} ZAR\`) |
-| **Website Form Submissions** | **${realLeads.length} Submissions** |
-| **Connected Gmail Account** | \`${connectedGmail}\` |
-
----
-
-#### 📋 Live Vehicles in \`cars\` Table:
-
-| ID | Vehicle | Price (ZAR) | Mileage | Transmission | Color | Status |
-| :---: | :--- | :---: | :---: | :--- | :--- | :---: |
-${tableRows}`;
-}
-
-async function streamOpenAI(
-  apiKey: string,
-  messages: any[],
-  systemPrompt: string,
-  controller: ReadableStreamDefaultController,
-  encoder: TextEncoder
-) {
-  const openAiMessages = [
-    { role: "system", content: systemPrompt },
-    ...messages.map((m: any) => ({ role: m.role, content: m.content || "" })),
-  ];
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: openAiMessages,
-      stream: true,
-      temperature: 0.3,
-    }),
-  });
-
-  if (!res.ok) {
-    const errJson = await res.json().catch(() => null);
-    throw new Error(errJson?.error?.message || `OpenAI HTTP ${res.status}`);
-  }
-
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response body from OpenAI");
-
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === "[DONE]") continue;
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const chunkText = parsed.choices?.[0]?.delta?.content;
-          if (chunkText) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "token", text: chunkText })}\n\n`)
-            );
-          }
-        } catch {}
-      }
-    }
-  }
+  return `${totalCars}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -501,12 +416,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const openaiKey =
-      req.headers.get("x-openai-api-key") ||
-      process.env.OPENAI_API_KEY ||
-      "";
-
-    const systemPrompt = buildSystemPrompt(context, connectedGmail);
     const lastUserMessage = messages[messages.length - 1]?.content || "";
     const lowerQuery = lastUserMessage.toLowerCase();
 
@@ -528,36 +437,19 @@ export async function POST(req: NextRequest) {
       actionPayload = buildWhatsAppDraftFromQuery(lastUserMessage, context);
     }
 
+    const directAnswer = generateDirectDatabaseAnswer(lastUserMessage, context, connectedGmail);
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
-      async start(controller) {
+      start(controller) {
         if (actionPayload) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "meta", actionPayload })}\n\n`)
           );
         }
-
-        let aiSuccess = false;
-        if (openaiKey) {
-          try {
-            await streamOpenAI(openaiKey, messages, systemPrompt, controller, encoder);
-            aiSuccess = true;
-          } catch (openAiErr: any) {
-            console.warn("OpenAI stream fallback:", openAiErr.message);
-          }
-        }
-
-        if (!aiSuccess) {
-          const databaseAnswer = generateDatabaseAnswer(lastUserMessage, context, connectedGmail);
-          const words = databaseAnswer.split(/(\s+)/);
-          for (let i = 0; i < words.length; i++) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "token", text: words[i] })}\n\n`)
-            );
-            await new Promise((r) => setTimeout(r, 8));
-          }
-        }
-
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: "token", text: directAnswer })}\n\n`)
+        );
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
         controller.close();
       },
