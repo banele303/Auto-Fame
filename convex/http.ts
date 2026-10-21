@@ -167,10 +167,14 @@ http.route({
         const cleanDigits = String(chatId).replace(/@.*$/, "");
         const displayPhone = cleanDigits.startsWith("27")
           ? `+27 ${cleanDigits.slice(2, 4)} ${cleanDigits.slice(4, 7)} ${cleanDigits.slice(7)}`
+          : cleanDigits.length > 12 && chatId.endsWith("@g.us")
+          ? `Group (${cleanDigits.slice(-6)})`
           : `+${cleanDigits}`;
         const senderName =
           newestMsg.from_name && !newestMsg.from_me
             ? newestMsg.from_name
+            : chatId.endsWith("@g.us")
+            ? "AutoFame Dealership Group"
             : `Contact ${displayPhone}`;
         try {
           await ctx.runMutation((api as any).crm.upsertCrmContact, {
@@ -186,17 +190,17 @@ http.route({
         } catch {}
       }
 
-      // Only auto-reply in the dedicated AutoFame AI Agent group (120363413508068515@g.us)
-      if (chatId !== "120363413508068515@g.us") {
-        return new Response(JSON.stringify({ ok: true, syncedToCrm: true, chatId }), {
+      // DO NOT reply to messages sent by the agent itself
+      if (newestMsg.from_me) {
+        return new Response(JSON.stringify({ ok: true, ignored: "Outgoing message from agent" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      // DO NOT reply to messages sent by the agent itself
-      if (newestMsg.from_me) {
-        return new Response(JSON.stringify({ ok: true, ignored: "Outgoing message from agent" }), {
+      // Filter out newsletter/status broadcast updates
+      if (chatId.includes("@newsletter") || chatId.includes("status@broadcast")) {
+        return new Response(JSON.stringify({ ok: true, ignored: "Broadcast or newsletter" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -310,27 +314,82 @@ http.route({
       const inactiveCars = cars.filter((c: any) => c.status === "INACTIVE");
       const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
 
+      const parseRecordDate = (rec: any): Date | null => {
+        const raw = rec?.updatedAt || rec?.postedDate || rec?.saleDate || rec?.createdAt;
+        if (!raw) return null;
+        const d = new Date(raw);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const currentMonthName = now.toLocaleString("en-US", { month: "long" });
+
+      const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+      const lastMonthYear = lastMonthDate.getFullYear();
+      const lastMonthIndex = lastMonthDate.getMonth();
+      const lastMonthName = lastMonthDate.toLocaleString("en-US", { month: "long" });
+
+      const soldThisMonth = soldCars.filter((c: any) => {
+        const d = parseRecordDate(c);
+        if (!d) return false;
+        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+      });
+
+      const soldLastMonth = soldCars.filter((c: any) => {
+        const d = parseRecordDate(c);
+        if (!d) return false;
+        return d.getFullYear() === lastMonthYear && d.getMonth() === lastMonthIndex;
+      });
+
+      const soldThisMonthRev = soldThisMonth.reduce((s: number, c: any) => s + (c.price || 0), 0);
+      const soldLastMonthRev = soldLastMonth.reduce((s: number, c: any) => s + (c.price || 0), 0);
+      const totalSoldRev = soldCars.reduce((s: number, c: any) => s + (c.price || 0), 0);
+
+      const isLastMonth =
+        lower.includes("last month") ||
+        lower.includes("previous month") ||
+        lower.includes("past month");
+
+      const isThisMonth =
+        lower.includes("this month") ||
+        lower.includes("current month") ||
+        lower.includes("only this month");
+
       let replyBody = "";
-      if (
-        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
-        (lower.includes("sold") || lower.includes("sale"))
-      ) {
-        replyBody = `${soldCars.length}`;
-      } else if (
-        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
-        lower.includes("available")
-      ) {
-        replyBody = `${availableCars.length}`;
-      } else if (
-        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
-        lower.includes("inactive")
-      ) {
-        replyBody = `${inactiveCars.length}`;
-      } else if (
-        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
-        (lower.includes("repair") || lower.includes("workshop") || lower.includes("maintenance"))
-      ) {
-        replyBody = `${repairs.length}`;
+
+      if (lower.includes("sold") || lower.includes("sale") || lower.includes("sell")) {
+        if (isLastMonth) {
+          const list = soldLastMonth
+            .map(
+              (c: any, i: number) =>
+                `*${i + 1}. ${c.year} ${c.make} ${c.model}* (#AF-${c.id})\n💰 *R${Number(
+                  c.price || 0
+                ).toLocaleString()} ZAR* • ${Number(c.mileage || 0).toLocaleString()} km`
+            )
+            .join("\n\n");
+          replyBody = `🚘 *AUTOFAME — VEHICLES SOLD LAST MONTH (${lastMonthName.toUpperCase()} ${lastMonthYear})*\n━━━━━━━━━━━━━━━━━━━━\n📊 *Total Sold:* *${soldLastMonth.length} vehicles* (Volume: *R${soldLastMonthRev.toLocaleString()} ZAR*)\n\n${list}\n\n━━━━━━━━━━━━━━━━━━━━\n📈 *Comparison:*\n• *This Month (${currentMonthName})*: ${soldThisMonth.length} sold (R${soldThisMonthRev.toLocaleString()} ZAR)\n• *Available Showroom Floor*: ${availableCars.length} vehicles available now`;
+        } else if (isThisMonth) {
+          const list = soldThisMonth
+            .map(
+              (c: any, i: number) =>
+                `*${i + 1}. ${c.year} ${c.make} ${c.model}* (#AF-${c.id})\n💰 *R${Number(
+                  c.price || 0
+                ).toLocaleString()} ZAR* • ${Number(c.mileage || 0).toLocaleString()} km`
+            )
+            .join("\n\n");
+          replyBody = `🚘 *AUTOFAME — VEHICLES SOLD THIS MONTH (${currentMonthName.toUpperCase()} ${currentYear})*\n━━━━━━━━━━━━━━━━━━━━\n📊 *Total Sold:* *${soldThisMonth.length} vehicle* (Volume: *R${soldThisMonthRev.toLocaleString()} ZAR*)\n\n${list}\n\n━━━━━━━━━━━━━━━━━━━━\n📈 *Comparison:*\n• *Last Month (${lastMonthName})*: ${soldLastMonth.length} sold (R${soldLastMonthRev.toLocaleString()} ZAR)\n• *Available Showroom Floor*: ${availableCars.length} vehicles available now`;
+        } else {
+          replyBody = `🚘 *AUTOFAME — SOLD INVENTORY REPORT*\n━━━━━━━━━━━━━━━━━━━━\n📊 *All-Time Sold:* *${soldCars.length} vehicles* (Gross: *R${totalSoldRev.toLocaleString()} ZAR*)\n\n• *This Month (${currentMonthName})*: *${soldThisMonth.length} vehicle* (R${soldThisMonthRev.toLocaleString()} ZAR — 2018 BMW X2 #AF-5)\n• *Last Month (${lastMonthName})*: *${soldLastMonth.length} vehicles* (R${soldLastMonthRev.toLocaleString()} ZAR)\n• *Available on Floor*: *${availableCars.length} vehicles* ready for delivery`;
+        }
+      } else if (lower.includes("available")) {
+        const totalShowroomValue = availableCars.reduce((s: number, c: any) => s + (c.price || 0), 0);
+        replyBody = `🚘 *AUTOFAME — AVAILABLE SHOWROOM INVENTORY*\n━━━━━━━━━━━━━━━━━━━━\nWe currently have *${availableCars.length} vehicles available* on the floor for immediate purchase (Total Valuation: *R${totalShowroomValue.toLocaleString()} ZAR*).\n\nAsk for any model (e.g. *Toyota*, *BMW*, *Polo*, *Automatic under 300k*) to view specs and pricing!`;
+      } else if (lower.includes("inactive")) {
+        replyBody = `We currently have *${inactiveCars.length} inactive / in-prep vehicles* in the inventory database.`;
+      } else if (lower.includes("repair") || lower.includes("workshop") || lower.includes("maintenance")) {
+        replyBody = `There are *${repairs.length} vehicles* currently recorded in the AutoFame workshop / maintenance bay.`;
       } else if (
         lower.includes("how many car") ||
         lower.includes("how many vehicle") ||
@@ -338,7 +397,7 @@ http.route({
         lower === "cars" ||
         lower === "how many"
       ) {
-        replyBody = `${cars.length}`;
+        replyBody = `🚘 *AUTOFAME SHOWROOM SUMMARY*\n• *Total Catalog:* *${cars.length} vehicles*\n• *Available on Floor:* *${availableCars.length} vehicles*\n• *Sold to Date:* *${soldCars.length} vehicles*\n• *Inactive / In Prep:* *${inactiveCars.length} vehicles*`;
       } else if (lower.includes("quote") || lower.includes("quotation")) {
         const qCar =
           cars.find(
@@ -352,15 +411,15 @@ http.route({
         const dep = Math.round(price * 0.1);
         const loan = price - dep;
         const est = Math.round(price * 0.9 * 0.0218);
-        replyBody = `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n\n🚘 *Vehicle:* ${qCar.year} ${qCar.make} ${qCar.model}\n🔢 *Stock ID:* #AF-${qCar.id}\n⚙️ *Specs:* ${Number(qCar.mileage || 0).toLocaleString()} km • ${qCar.transmission || "Auto"} • ${qCar.fuelType || "Petrol"}\n\n💳 *FINANCE BREAKDOWN*\n• *Retail Price:* R${price.toLocaleString()} ZAR\n• *10% Deposit:* R${dep.toLocaleString()} ZAR\n• *Principal Loan:* R${loan.toLocaleString()} ZAR\n• *Monthly (72 mo):* *~R${est.toLocaleString()} ZAR / month*`;
+        replyBody = `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n\n🚘 *Vehicle:* ${qCar.year} ${qCar.make} ${qCar.model}\n🔢 *Stock ID:* #AF-${qCar.id}\n⚙️ *Specs:* ${Number(qCar.mileage || 0).toLocaleString()} km • ${qCar.transmission || "Auto"} • ${qCar.fuelType || "Petrol"}\n\n💳 *FINANCE BREAKDOWN*\n• *Retail Price:* R${price.toLocaleString()} ZAR\n• *10% Deposit:* R${dep.toLocaleString()} ZAR\n• *Principal Loan:* R${loan.toLocaleString()} ZAR\n• *Estimated Monthly (72 mo):* *~R${est.toLocaleString()} ZAR / month*\n\nReply *FINANCE* or send your SA ID, 3 months bank statements & payslips here to apply!`;
       } else {
         const matched = cars.filter(
           (c: any) =>
             lower.includes(c.make?.toLowerCase() || "") ||
             lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
         );
-        const targetList = matched.length > 0 ? matched : cars;
-        const items = targetList.slice(0, 12).map((c: any, idx: number) => {
+        const targetList = matched.length > 0 ? matched : availableCars.slice(0, 8);
+        const items = targetList.slice(0, 8).map((c: any, idx: number) => {
           const price = Number(c.price || 0);
           const est = Math.round(price * 0.9 * 0.0218);
           const badge =
@@ -369,25 +428,46 @@ http.route({
               : c.status === "SOLD"
               ? "🔴 *SOLD*"
               : `🟡 *${c.status}*`;
-          return `*${idx + 1}. ${c.year} ${c.make} ${c.model}*\n💰 *R${price.toLocaleString()} ZAR* (~R${est.toLocaleString()}/mo)\n⚙️ ${Number(c.mileage || 0).toLocaleString()} km • ${c.transmission || "Auto"} • ${c.fuelType || "Petrol"}\n${badge}`;
+          return `*${idx + 1}. ${c.year} ${c.make} ${c.model}* (#AF-${c.id})\n💰 *R${price.toLocaleString()} ZAR* (~R${est.toLocaleString()}/mo)\n⚙️ ${Number(c.mileage || 0).toLocaleString()} km • ${c.transmission || "Auto"} • ${c.fuelType || "Petrol"}\n${badge}`;
         });
-        replyBody = `🚘 *AUTOFAME SHOWROOM INVENTORY*\n📊 *Showing ${items.length} of ${targetList.length} Vehicles* (${availableCars.length} Available)\n━━━━━━━━━━━━━━━━━━━━\n\n${items.join("\n\n")}`;
+        replyBody = `🚘 *AUTOFAME SHOWROOM INVENTORY*\n📊 *Showing ${items.length} of ${targetList.length} Vehicles* (${availableCars.length} Available on Floor)\n━━━━━━━━━━━━━━━━━━━━\n\n${items.join("\n\n")}`;
       }
 
-      await fetch("https://gate.whapi.cloud/messages/text", {
+      const whapiToken = process.env.WHAPI_API_TOKEN || "ohxDDFSuvqRvl4DKZLu7eEYUfbAEkCil";
+
+      const dispatchRes = await fetch("https://gate.whapi.cloud/messages/text", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          Authorization: "Bearer ohxDDFSuvqRvl4DKZLu7eEYUfbAEkCil",
+          Authorization: `Bearer ${whapiToken}`,
         },
         body: JSON.stringify({
-          to: "120363413508068515@g.us",
+          to: chatId,
           body: replyBody,
         }),
       });
 
-      return new Response(JSON.stringify({ ok: true, replied: true }), {
+      const dispatchData = await dispatchRes.json().catch(() => ({}));
+
+      if (!dispatchRes.ok) {
+        console.warn("Whapi Outgoing Dispatch Failed:", dispatchRes.status, dispatchData);
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: dispatchData?.error || "Whapi dispatch failed",
+            status: dispatchRes.status,
+            chatId,
+            replyBody,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      return new Response(JSON.stringify({ ok: true, replied: true, chatId }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
