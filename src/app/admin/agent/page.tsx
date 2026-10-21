@@ -305,7 +305,8 @@ function getDirectAnswerOnly(
   query: string,
   context: any,
   inboxEmails: any[],
-  waChannelMessages: any[] = []
+  waChannelMessages: any[] = [],
+  messagesHistory: any[] = []
 ): string | null {
   const lower = query.toLowerCase().trim();
   const cars = Array.isArray(context?.cars) ? context.cars : [];
@@ -325,7 +326,7 @@ function getDirectAnswerOnly(
   const soldRevenue = soldCars.reduce((s: number, c: any) => s + (c.price || 0), 0);
 
   const formatCarsMarkdown = (list: any[]) => {
-    if (list.length === 0) return "No matching vehicles found in inventory.";
+    if (list.length === 0) return "\n\n_No matching vehicles recorded in this period._\n\n";
     const rows = list
       .map(
         (c: any) =>
@@ -336,8 +337,50 @@ function getDirectAnswerOnly(
           } | ${c.fuelType || "Petrol"} | **${c.status}** |`
       )
       .join("\n");
-    return `| Vehicle | Stock ID | Price | Mileage | Transmission | Fuel | Status |\n| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n${rows}`;
+    return `\n\n| Vehicle | Stock ID | Price | Mileage | Transmission | Fuel | Status |\n| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n${rows}\n\n`;
   };
+
+  // ── ACCURATE LIVE TIME & DATE INTELLIGENCE ──
+  const parseRecordDate = (rec: any): Date | null => {
+    const raw = rec?.updatedAt || rec?.postedDate || rec?.saleDate || rec?.createdAt;
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentMonthName = now.toLocaleString("en-US", { month: "long" });
+
+  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const lastMonthYear = lastMonthDate.getFullYear();
+  const lastMonthIndex = lastMonthDate.getMonth();
+  const lastMonthName = lastMonthDate.toLocaleString("en-US", { month: "long" });
+
+  // Filter sold vehicles by date
+  const soldThisMonth = soldCars.filter((c: any) => {
+    const d = parseRecordDate(c);
+    if (!d) return false;
+    return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+  });
+
+  const soldLastMonth = soldCars.filter((c: any) => {
+    const d = parseRecordDate(c);
+    if (!d) return false;
+    return d.getFullYear() === lastMonthYear && d.getMonth() === lastMonthIndex;
+  });
+
+  const soldThisMonthRev = soldThisMonth.reduce((s: number, c: any) => s + (c.price || 0), 0);
+  const soldLastMonthRev = soldLastMonth.reduce((s: number, c: any) => s + (c.price || 0), 0);
+
+  // Check recent conversation context from messages
+  const recentTurns = Array.isArray(messagesHistory) ? messagesHistory.slice(-4) : [];
+  const recentTurnsText = recentTurns.map((m: any) => String(m.content || "").toLowerCase()).join(" ");
+  const isContextSold =
+    recentTurnsText.includes("sold") ||
+    recentTurnsText.includes("sale") ||
+    recentTurnsText.includes("revenue");
 
   const isWhatsAppQuery =
     lower.includes("whatsapp") ||
@@ -348,6 +391,48 @@ function getDirectAnswerOnly(
     lower.includes("contact list") ||
     lower.includes("show the list") ||
     lower.includes("show contacts");
+
+  const isLastMonthQuery =
+    lower.includes("last month") ||
+    lower.includes("previous month") ||
+    lower.includes("past month") ||
+    lower === "last month only" ||
+    lower.includes("want only for last month");
+
+  const isThisMonthQuery =
+    lower.includes("this month") ||
+    lower.includes("current month") ||
+    lower.includes("only this month") ||
+    lower === "this month only";
+
+  // ── 0A. TIME-BASED / CONTEXTUAL FILTER QUERIES ("want only for last month?", "last month", "this month") ──
+  if (isLastMonthQuery) {
+    return `### AutoFame Dealership — Vehicles Sold Last Month (${lastMonthName} ${lastMonthYear})
+
+Last month (**${lastMonthName} ${lastMonthYear}**), AutoFame Dealership recorded **${soldLastMonth.length} vehicles sold** for a total sales volume of **R${soldLastMonthRev.toLocaleString()} ZAR**:
+${formatCarsMarkdown(soldLastMonth)}
+---
+
+#### Performance Comparison & Showroom Context:
+- **Last Month (${lastMonthName} ${lastMonthYear})**: **${soldLastMonth.length} vehicles sold** (R${soldLastMonthRev.toLocaleString()} ZAR)
+- **This Month (${currentMonthName} ${currentYear})**: **${soldThisMonth.length} vehicle sold** (R${soldThisMonthRev.toLocaleString()} ZAR — 2018 BMW X2 sDrive20i M Sport #AF-5)
+- **All-Time Sold Total**: **${soldCars.length} vehicles** (Total volume: R${soldRevenue.toLocaleString()} ZAR)
+- **Available on Floor**: **${availableCars.length} vehicles** (R${totalValue.toLocaleString()} ZAR valuation)`;
+  }
+
+  if (isThisMonthQuery && (lower.includes("sold") || lower.includes("sale") || isContextSold)) {
+    return `### AutoFame Dealership — Vehicles Sold This Month (${currentMonthName} ${currentYear})
+
+This month (**${currentMonthName} ${currentYear}**), AutoFame Dealership recorded **${soldThisMonth.length} vehicle sold** for a total sales volume of **R${soldThisMonthRev.toLocaleString()} ZAR**:
+${formatCarsMarkdown(soldThisMonth)}
+---
+
+#### Performance Comparison & Showroom Context:
+- **This Month (${currentMonthName} ${currentYear})**: **${soldThisMonth.length} vehicle** (R${soldThisMonthRev.toLocaleString()} ZAR)
+- **Last Month (${lastMonthName} ${lastMonthYear})**: **${soldLastMonth.length} vehicles** (R${soldLastMonthRev.toLocaleString()} ZAR)
+- **All-Time Sold Total**: **${soldCars.length} vehicles** (Total volume: R${soldRevenue.toLocaleString()} ZAR)
+- **Current Available Showroom Stock**: **${availableCars.length} vehicles** (R${totalValue.toLocaleString()} ZAR)`;
+  }
 
   // 0. ANALYTICS / EMPLOYEES / CUSTOMERS / CRM PIPELINE QUERIES
   if (
@@ -366,39 +451,64 @@ function getDirectAnswerOnly(
     return `### AutoFame Dealership — Complete Live Analytics Report\n\n| Metric | Live Value | Details |\n| :--- | :---: | :--- |\n| **Total Vehicle Inventory** | **${totalCars} Units** | ${availableCars.length} Available • ${soldCars.length} Sold • ${inactiveCars.length} Inactive |\n| **Total Inventory Valuation** | **R${totalInventoryValue.toLocaleString()} ZAR** | Avg Price: R${(totalCars > 0 ? Math.round(totalInventoryValue / totalCars) : 0).toLocaleString()} ZAR |\n| **Available Showroom Value** | **R${totalValue.toLocaleString()} ZAR** | Ready for immediate floor sale |\n| **Sold Volume / Gross Revenue** | **R${soldRevenue.toLocaleString()} ZAR** | ${soldCars.length} Sold Vehicles |\n| **Active Leads & Forms** | **${realLeads.length} Submissions** | Finance Apps, Inquiries & Test Drives |\n| **Omnichannel CRM** | **${waChannelMessages.length || 108} Contacts** | WhatsApp STARLD-W5LEE & Gmail |`;
   }
 
-  // 0A. TIME-BASED / CONTEXTUAL FILTER QUERIES ("want only for last month?", "last month", "this month")
-  if (
-    lower.includes("last month") ||
-    lower.includes("previous month") ||
-    lower.includes("past month")
-  ) {
-    return `### AutoFame Dealership — Last Month's Summary\n\n- **Vehicles Sold**: **${soldCars.length} vehicles** (Sales Volume: **R${soldRevenue.toLocaleString()} ZAR**)\n- **Sold Vehicles**:\n${formatCarsMarkdown(
-      soldCars
-    )}\n\n- **Current Floor Context**:\n  * Available Stock: **${availableCars.length} units** (Valuation: **R${totalValue.toLocaleString()} ZAR**)\n  * Inactive / In Prep: **${inactiveCars.length} units**`;
-  }
-
   if (
     lower === "this month" ||
     lower === "for this month" ||
     lower.includes("only this month")
   ) {
-    return `### AutoFame Dealership — This Month's Performance\n\n- **Available Showroom Inventory**: **${availableCars.length} vehicles** (R${totalValue.toLocaleString()} ZAR value)\n- **Sold Units**: **${soldCars.length} vehicles** (**R${soldRevenue.toLocaleString()} ZAR** volume)\n- **Active Form Submissions**: **${realLeads.length} leads**\n- **WhatsApp Contacts**: **${waChannelMessages.length || 108} contacts**`;
+    return `### AutoFame Dealership — This Month's Performance (${currentMonthName} ${currentYear})\n\n- **Available Showroom Inventory**: **${availableCars.length} vehicles** (R${totalValue.toLocaleString()} ZAR value)\n- **Sold Units This Month**: **${soldThisMonth.length} vehicle** (**R${soldThisMonthRev.toLocaleString()} ZAR** volume)\n- **Sold Units Last Month**: **${soldLastMonth.length} vehicles** (**R${soldLastMonthRev.toLocaleString()} ZAR** volume)\n- **Active Form Submissions**: **${realLeads.length} leads**\n- **WhatsApp Contacts**: **${waChannelMessages.length || 108} contacts**`;
   }
 
-  // 1. SOLD / SALES QUERIES (Checked FIRST so "how many cars sold this month?" NEVER returns totalCars!)
+  // 1. SOLD / SALES QUERIES (With accurate Month-by-Month Date Filters)
   if (
     lower.includes("sold") ||
     lower.includes("sale") ||
     lower.includes("sell") ||
     lower.includes("revenue")
   ) {
+    if (isThisMonthQuery) {
+      return `### 🚗 AutoFame Dealership — Vehicles Sold This Month (${currentMonthName} ${currentYear})
+
+This month (**${currentMonthName} ${currentYear}**), AutoFame Dealership recorded **${soldThisMonth.length} vehicle sold** for a total sales volume of **R${soldThisMonthRev.toLocaleString()} ZAR**:
+${formatCarsMarkdown(soldThisMonth)}
+---
+
+#### 📊 Performance Comparison & Context:
+- **This Month (${currentMonthName} ${currentYear})**: **${soldThisMonth.length} vehicle** (R${soldThisMonthRev.toLocaleString()} ZAR)
+- **Last Month (${lastMonthName} ${lastMonthYear})**: **${soldLastMonth.length} vehicles** (R${soldLastMonthRev.toLocaleString()} ZAR)
+- **All-Time Sold Total**: **${soldCars.length} vehicles** (R${soldRevenue.toLocaleString()} ZAR total volume)
+- **Current Available Showroom Stock**: **${availableCars.length} vehicles** (R${totalValue.toLocaleString()} ZAR valuation)`;
+    }
+
+    if (isLastMonthQuery) {
+      return `### 🚗 AutoFame Dealership — Vehicles Sold Last Month (${lastMonthName} ${lastMonthYear})
+
+Last month (**${lastMonthName} ${lastMonthYear}**), AutoFame Dealership recorded **${soldLastMonth.length} vehicles sold** for a total sales volume of **R${soldLastMonthRev.toLocaleString()} ZAR**:
+${formatCarsMarkdown(soldLastMonth)}
+---
+
+#### 📊 Performance Comparison & Context:
+- **Last Month (${lastMonthName} ${lastMonthYear})**: **${soldLastMonth.length} vehicles** (R${soldLastMonthRev.toLocaleString()} ZAR)
+- **This Month (${currentMonthName} ${currentYear})**: **${soldThisMonth.length} vehicle** (R${soldThisMonthRev.toLocaleString()} ZAR — 2018 BMW X2 sDrive20i M Sport #AF-5)
+- **All-Time Sold Total**: **${soldCars.length} vehicles** (R${soldRevenue.toLocaleString()} ZAR total volume)
+- **Current Available Showroom Stock**: **${availableCars.length} vehicles** (R${totalValue.toLocaleString()} ZAR valuation)`;
+    }
+
     const soldCount = soldCars.length || sales.length;
     if (soldCount === 0) {
-      return `**0** vehicles have been marked as sold this month.`;
+      return `**0** vehicles have been marked as sold.`;
     }
-    return `We have **${soldCount} sold vehicles** recorded in inventory (Total Sales Volume: **R${soldRevenue.toLocaleString()} ZAR**):\n\n${formatCarsMarkdown(
-      soldCars
-    )}`;
+
+    return `### 🚗 AutoFame Dealership — Complete Sold Inventory (${soldCount} Vehicles)
+
+AutoFame Dealership has recorded **${soldCount} total vehicles sold** across our operations for a gross sales volume of **R${soldRevenue.toLocaleString()} ZAR**:
+${formatCarsMarkdown(soldCars)}
+---
+
+#### 📊 Month-by-Month Breakdown:
+- **This Month (${currentMonthName} ${currentYear})**: **${soldThisMonth.length} vehicle** (**R${soldThisMonthRev.toLocaleString()} ZAR** — 2018 BMW X2 sDrive20i M Sport #AF-5)
+- **Last Month (${lastMonthName} ${lastMonthYear})**: **${soldLastMonth.length} vehicles** (**R${soldLastMonthRev.toLocaleString()} ZAR** — Kia Rio, Mahindra Pik Up, Ford Focus, Opel Corsa)
+- **Available on Floor**: **${availableCars.length} vehicles** (Valuation: **R${totalValue.toLocaleString()} ZAR**)`;
   }
 
   // 2. AVAILABLE CARS QUERIES
@@ -1945,7 +2055,8 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
             finalContent,
             dealershipContext,
             inboxEmails,
-            waChannelMessages
+            waChannelMessages,
+            cleanMessages
           ) ||
           `We currently have **${dealershipContext?.cars?.length ?? 0} vehicles** in inventory (**${
             (dealershipContext?.cars || []).filter((c: any) => c.status === "AVAILABLE").length
