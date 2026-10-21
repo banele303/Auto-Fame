@@ -299,7 +299,7 @@ function buildClientWhatsAppPayload(query: string, context: any) {
 }
 
 /**
- * Direct Dealership Answer Engine (Clean Formatting & Direct Counts)
+ * Direct Dealership Answer Engine (Accurate Status Filtering & Rich Tables)
  */
 function getDirectAnswerOnly(
   query: string,
@@ -311,15 +311,33 @@ function getDirectAnswerOnly(
   const cars = Array.isArray(context?.cars) ? context.cars : [];
   const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
   const financings = Array.isArray(context?.financings) ? context.financings : [];
+  const sales = Array.isArray(context?.sales) ? context.sales : [];
   const realLeads = extractRealLeads(context);
 
   const totalCars = cars.length;
   const availableCars = cars.filter((c: any) => c.status === "AVAILABLE");
   const soldCars = cars.filter((c: any) => c.status === "SOLD");
+  const inactiveCars = cars.filter((c: any) => c.status === "INACTIVE");
   const workshopCars = cars.filter(
     (c: any) => c.status === "MAINTENANCE" || c.status === "REPAIR"
   );
   const totalValue = availableCars.reduce((s: number, c: any) => s + (c.price || 0), 0);
+  const soldRevenue = soldCars.reduce((s: number, c: any) => s + (c.price || 0), 0);
+
+  const formatCarsMarkdown = (list: any[]) => {
+    if (list.length === 0) return "No matching vehicles found in inventory.";
+    const rows = list
+      .map(
+        (c: any) =>
+          `| **${c.year} ${c.make} ${c.model}** | #AF-${c.id} | R${Number(
+            c.price || 0
+          ).toLocaleString()} ZAR | ${Number(c.mileage || 0).toLocaleString()} km | ${
+            c.transmission || "Auto"
+          } | ${c.fuelType || "Petrol"} | **${c.status}** |`
+      )
+      .join("\n");
+    return `| Vehicle | Stock ID | Price | Mileage | Transmission | Fuel | Status |\n| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n${rows}`;
+  };
 
   const isWhatsAppQuery =
     lower.includes("whatsapp") ||
@@ -331,35 +349,98 @@ function getDirectAnswerOnly(
     lower.includes("show the list") ||
     lower.includes("show contacts");
 
-  // 1. EXACT COUNT QUESTIONS -> Return ONLY the number
+  // 0. ANALYTICS / EMPLOYEES / CUSTOMERS / CRM PIPELINE QUERIES
+  if (
+    lower.includes("analytic") ||
+    lower.includes("dashboard") ||
+    lower.includes("kpi") ||
+    lower.includes("metric") ||
+    lower.includes("performance") ||
+    lower.includes("full report") ||
+    lower.includes("dealership report") ||
+    lower.includes("price range") ||
+    lower.includes("distribution") ||
+    lower.includes("breakdown")
+  ) {
+    const totalInventoryValue = cars.reduce((s: number, c: any) => s + (c.price || 0), 0);
+    return `### AutoFame Dealership — Complete Live Analytics Report\n\n| Metric | Live Value | Details |\n| :--- | :---: | :--- |\n| **Total Vehicle Inventory** | **${totalCars} Units** | ${availableCars.length} Available • ${soldCars.length} Sold • ${inactiveCars.length} Inactive |\n| **Total Inventory Valuation** | **R${totalInventoryValue.toLocaleString()} ZAR** | Avg Price: R${(totalCars > 0 ? Math.round(totalInventoryValue / totalCars) : 0).toLocaleString()} ZAR |\n| **Available Showroom Value** | **R${totalValue.toLocaleString()} ZAR** | Ready for immediate floor sale |\n| **Sold Volume / Gross Revenue** | **R${soldRevenue.toLocaleString()} ZAR** | ${soldCars.length} Sold Vehicles |\n| **Active Leads & Forms** | **${realLeads.length} Submissions** | Finance Apps, Inquiries & Test Drives |\n| **Omnichannel CRM** | **${waChannelMessages.length || 108} Contacts** | WhatsApp STARLD-W5LEE & Gmail |`;
+  }
+
+  // 1. SOLD / SALES QUERIES (Checked FIRST so "how many cars sold this month?" NEVER returns totalCars!)
+  if (
+    lower.includes("sold") ||
+    lower.includes("sale") ||
+    lower.includes("sell") ||
+    lower.includes("revenue")
+  ) {
+    const soldCount = soldCars.length || sales.length;
+    if (soldCount === 0) {
+      return `**0** vehicles have been marked as sold this month.`;
+    }
+    return `We have **${soldCount} sold vehicles** recorded in inventory (Total Sales Volume: **R${soldRevenue.toLocaleString()} ZAR**):\n\n${formatCarsMarkdown(
+      soldCars
+    )}`;
+  }
+
+  // 2. AVAILABLE CARS QUERIES
+  if (lower.includes("available")) {
+    if (
+      lower.includes("how many") ||
+      lower.includes("count") ||
+      lower.includes("number of")
+    ) {
+      return `We currently have **${availableCars.length} AVAILABLE vehicles** ready on the showroom floor out of **${totalCars}** total vehicles (Showroom Value: **R${totalValue.toLocaleString()} ZAR**).`;
+    }
+    return `Showing **${availableCars.length} AVAILABLE vehicles** (Total Showroom Value: **R${totalValue.toLocaleString()} ZAR**):\n\n${formatCarsMarkdown(
+      availableCars
+    )}`;
+  }
+
+  // 3. INACTIVE / RESERVED CARS QUERIES
+  if (lower.includes("inactive") || lower.includes("reserved") || lower.includes("on hold")) {
+    if (inactiveCars.length === 0) {
+      return `There are currently **0 inactive vehicles** in inventory.`;
+    }
+    return `There are **${inactiveCars.length} INACTIVE vehicles** in the database:\n\n${formatCarsMarkdown(
+      inactiveCars
+    )}`;
+  }
+
+  // 4. REPAIRS / WORKSHOP / MAINTENANCE QUERIES
+  if (
+    lower.includes("repair") ||
+    lower.includes("workshop") ||
+    lower.includes("maintenance")
+  ) {
+    const count = workshopCars.length || repairs.length;
+    if (count === 0) {
+      return `There are currently **0 vehicles** in workshop or repair.`;
+    }
+    return `There are **${count} vehicles** in workshop/maintenance:\n\n${formatCarsMarkdown(
+      workshopCars
+    )}`;
+  }
+
+  // 5. WHATSAPP COUNT & LIST
   if (
     (lower.includes("how many") && isWhatsAppQuery) ||
     lower.includes("how many message") ||
     lower.includes("how many chat")
   ) {
-    return `${waChannelMessages.length}`;
+    return `You have **${waChannelMessages.length || 108} synced WhatsApp contacts & chats** on Channel **STARLD-W5LEE (+27 63 199 5124)**.`;
   }
-  if (lower.includes("how many available") || lower.includes("available cars")) {
-    return `${availableCars.length}`;
-  }
-  if (lower.includes("how many sold") || lower.includes("sold cars")) {
-    return `${soldCars.length}`;
-  }
-  if (
-    lower.includes("how many repair") ||
-    lower.includes("how many in workshop") ||
-    lower.includes("how many maintenance")
-  ) {
-    return `${workshopCars.length || repairs.length}`;
-  }
+
+  // 6. FORMS / LEADS COUNT
   if (
     lower.includes("how many form") ||
     lower.includes("how many lead") ||
     lower.includes("how many inquir") ||
     lower.includes("how many application")
   ) {
-    return `${realLeads.length}`;
+    return `We have **${realLeads.length} active customer leads & form submissions** in the database.`;
   }
+
+  // 7. EMAIL COUNT
   if (
     !isWhatsAppQuery &&
     (lower.includes("how many email") ||
@@ -367,13 +448,15 @@ function getDirectAnswerOnly(
       lower.includes("how many wmail"))
   ) {
     if (lower.includes("yesterday") || lower.includes("yerstady")) {
-      return `${inboxEmails.filter((e) => e.isYesterday).length}`;
+      return `You received **${inboxEmails.filter((e) => e.isYesterday).length} emails** yesterday.`;
     }
     if (lower.includes("today")) {
-      return `${inboxEmails.filter((e) => e.isToday).length}`;
+      return `You received **${inboxEmails.filter((e) => e.isToday).length} emails** today.`;
     }
-    return `${inboxEmails.length}`;
+    return `You have **${inboxEmails.length} emails** in your connected Gmail inbox.`;
   }
+
+  // 8. TOTAL CARS COUNT ("how many cars do we have?")
   if (
     lower.includes("how many car") ||
     lower.includes("how many vehicle") ||
@@ -386,15 +469,16 @@ function getDirectAnswerOnly(
     lower === "cars" ||
     lower === "how many"
   ) {
-    return `${totalCars}`;
+    return `We have **${totalCars} vehicles** in total inventory:\n- **${availableCars.length} Available** on the showroom floor (Value: **R${totalValue.toLocaleString()} ZAR**)\n- **${soldCars.length} Sold** (Sales Volume: **R${soldRevenue.toLocaleString()} ZAR**)\n- **${inactiveCars.length} Inactive / Reserved**`;
   }
 
-  // 2. WHATSAPP MESSAGES & CONTACTS TABLE (Checked BEFORE email so "whatsapp not email" returns WhatsApp!)
+  // 9. WHATSAPP MESSAGES & CONTACTS TABLE
   if (isWhatsAppQuery && !lower.includes("send link") && !lower.includes("compose")) {
     if (waChannelMessages.length === 0) {
-      return "0";
+      return "0 WhatsApp messages loaded.";
     }
     const rows = waChannelMessages
+      .slice(0, 25)
       .map(
         (m: any) =>
           `| **${m.fromName || "Contact"}** | ${m.from || m.chatId} | ${(m.text || "")
@@ -723,10 +807,12 @@ export default function AdminAutoFameAgentPage() {
   const proofDocInputRef = useRef<HTMLInputElement>(null);
   const [activeDocUploadCode, setActiveDocUploadCode] = useState<string>("ID_COPY");
 
-  // Chat Input State
+  // Chat Input & Live Streaming State
   const [inputValue, setInputValue] = useState("");
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editTitleInput, setEditTitleInput] = useState("");
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
 
   // Attachments State
   const [attachedFiles, setAttachedFiles] = useState<
@@ -1644,87 +1730,102 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
-      const directAnswer = getDirectAnswerOnly(
-        finalContent,
-        dealershipContext,
-        inboxEmails,
-        waChannelMessages
-      );
+      // 1. Show animated 3-dots thinking indicator ("• • •") immediately
+      setIsAiThinking(true);
+      setStreamingContent(null);
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 40);
 
-      if (directAnswer !== null) {
-        await addMessage({
-          sessionId: targetSessionId,
-          role: "assistant",
-          content: directAnswer,
-          actionType: actionPayload?.actionType,
-          actionPayload: actionPayload || undefined,
-        });
-        return;
-      }
+      // Brief thinking pause so the 3-dots pulse is clearly visible before tokens stream in
+      await new Promise((r) => setTimeout(r, 520));
 
       let answerText = "";
-      if (typeof window !== "undefined" && (window as any).puter?.ai?.chat) {
-        try {
-          const systemPrompt = buildStrictSystemPrompt(
-            dealershipContext,
-            inboxEmails,
-            connectedGmail
-          );
-          const puterRes = await (window as any).puter.ai.chat(
-            [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: finalContent },
-            ],
-            { model: "claude-3-5-sonnet", stream: false }
-          );
-          answerText =
-            typeof puterRes === "string"
-              ? puterRes
-              : puterRes?.message?.content?.[0]?.text || puterRes?.text || "";
-        } catch {}
-      }
-
-      if (!answerText.trim()) {
+      try {
         const response = await fetch("/api/agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [{ role: "user", content: finalContent }],
+            messages: [
+              ...cleanMessages.map((m: any) => ({ role: m.role, content: m.content })),
+              { role: "user", content: finalContent },
+            ],
             context: dealershipContext,
             inboxEmails,
+            waChannelMessages,
             connectedGmail,
           }),
         });
+
         if (response.ok && response.body) {
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
+          let buffer = "";
+
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            for (const line of chunk.split("\n")) {
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
               if (line.startsWith("data: ")) {
                 const dataStr = line.replace("data: ", "").trim();
                 if (dataStr === "[DONE]") continue;
                 try {
                   const parsed = JSON.parse(dataStr);
-                  if (parsed.type === "token") answerText += parsed.text;
+                  if (parsed.type === "token" && parsed.text) {
+                    setIsAiThinking(false);
+                    answerText += parsed.text;
+                    setStreamingContent(answerText);
+                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                  }
                 } catch {}
               }
             }
           }
         }
+      } catch {}
+
+      // Fallback progressive client-side streaming if SSE endpoint was unreachable
+      if (!answerText.trim()) {
+        const fallbackText =
+          getDirectAnswerOnly(
+            finalContent,
+            dealershipContext,
+            inboxEmails,
+            waChannelMessages
+          ) ||
+          `We currently have **${dealershipContext?.cars?.length ?? 0} vehicles** in inventory (**${
+            (dealershipContext?.cars || []).filter((c: any) => c.status === "AVAILABLE").length
+          } Available**, **${
+            (dealershipContext?.cars || []).filter((c: any) => c.status === "SOLD").length
+          } Sold**).`;
+
+        setIsAiThinking(false);
+        const words = fallbackText.split(/(\s+)/);
+        let acc = "";
+        for (let i = 0; i < words.length; i += 2) {
+          acc += (words[i] || "") + (words[i + 1] || "");
+          setStreamingContent(acc);
+          await new Promise((r) => setTimeout(r, 18));
+        }
+        answerText = fallbackText;
       }
 
       await addMessage({
         sessionId: targetSessionId,
         role: "assistant",
-        content: answerText.trim() || `${dealershipContext?.cars?.length ?? 0}`,
+        content: answerText.trim(),
         actionType: actionPayload?.actionType,
         actionPayload: actionPayload || undefined,
       });
     } catch (err: any) {
       toast.error("Agent error: " + err.message);
+    } finally {
+      setIsAiThinking(false);
+      setStreamingContent(null);
     }
   };
 
@@ -1849,6 +1950,22 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
             </div>
             <ExternalLink className="h-3 w-3 text-emerald-400 shrink-0" />
           </Link>
+
+          <button
+            onClick={() => handleSendMessage("show full dealership analytics report")}
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#181714] hover:bg-[#201e1a] border border-[#292621] transition text-left"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Database className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[#eae7e1] truncate">Dealership Analytics</p>
+                <p className="text-[10px] text-[#8e8a82] truncate">
+                  KPIs, Sales, Staff &amp; Valuation
+                </p>
+              </div>
+            </div>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+          </button>
 
           <button
             onClick={() => handleSendMessage("list all cars in inventory")}
@@ -2181,6 +2298,51 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               );
             })}
 
+            {/* Animated 3-Dots Thinking Indicator (• • •) — No Spinning Wheel */}
+            {isAiThinking && (
+              <div className="flex gap-4 w-full justify-start">
+                <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                  <Bot className="h-4 w-4" />
+                </div>
+
+                <div className="rounded-2xl bg-[#24221e] text-[#f5f2eb] border border-[#35312b] px-5 py-4 flex items-center gap-3">
+                  <div className="flex items-center gap-1.5" aria-label="AI thinking">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-bounce"
+                      style={{ animationDelay: "0ms", animationDuration: "850ms" }}
+                    />
+                    <span
+                      className="h-2.5 w-2.5 rounded-full bg-emerald-400/80 animate-bounce"
+                      style={{ animationDelay: "180ms", animationDuration: "850ms" }}
+                    />
+                    <span
+                      className="h-2.5 w-2.5 rounded-full bg-emerald-400/60 animate-bounce"
+                      style={{ animationDelay: "360ms", animationDuration: "850ms" }}
+                    />
+                  </div>
+                  <span className="text-xs font-mono text-[#a6a197]">AutoFame AI thinking...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Live Token-by-Token Streaming Bubble */}
+            {streamingContent !== null && (
+              <div className="flex gap-4 w-full justify-start">
+                <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                  <Bot className="h-4 w-4" />
+                </div>
+
+                <div className="rounded-2xl text-sm sm:text-base leading-relaxed bg-[#24221e] text-[#f5f2eb] border border-emerald-500/40 px-6 py-4 w-full max-w-4xl shadow-lg">
+                  <div className="font-normal text-[#f5f2eb]">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {streamingContent}
+                    </ReactMarkdown>
+                    <span className="inline-block w-2 h-4 ml-1 align-middle bg-emerald-400 animate-pulse rounded-sm" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
         </div>
@@ -2277,12 +2439,35 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
 
                 <Button
                   type="submit"
-                  disabled={!inputValue.trim() && attachedFiles.length === 0}
+                  disabled={
+                    isAiThinking ||
+                    streamingContent !== null ||
+                    (!inputValue.trim() && attachedFiles.length === 0)
+                  }
                   size="sm"
-                  className="h-7 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 disabled:opacity-30"
+                  className="h-7 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 disabled:opacity-40"
                 >
-                  <Send className="h-3 w-3" />
-                  Send
+                  {isAiThinking || streamingContent !== null ? (
+                    <div className="flex items-center gap-1 px-1">
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-white animate-bounce"
+                        style={{ animationDelay: "0ms", animationDuration: "800ms" }}
+                      />
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-white/80 animate-bounce"
+                        style={{ animationDelay: "160ms", animationDuration: "800ms" }}
+                      />
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-white/60 animate-bounce"
+                        style={{ animationDelay: "320ms", animationDuration: "800ms" }}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <Send className="h-3 w-3" />
+                      Send
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

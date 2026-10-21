@@ -155,17 +155,127 @@ export const getDealershipContext = query({
     const financings = await ctx.db.query("financingApplications").order("desc").take(25);
     const financingDetails = await ctx.db.query("financingApplicationDetails").order("desc").take(25);
     const financingDocs = await ctx.db.query("financingApplicationDocuments").order("desc").take(100);
-    // 4. Inquiries & Test Drives & Customers from Website Forms
-    const inquiries = await ctx.db.query("inquiries").order("desc").take(25);
-    const testDrives = await ctx.db.query("testDrives").order("desc").take(20);
-    const customers = await ctx.db.query("customers").order("desc").take(30);
-    const sales = await ctx.db.query("sales").order("desc").take(20);
+    // 4. Inquiries & Test Drives & Customers & Employees & Dealerships & Reviews & CRM Contacts from Convex DB
+    const inquiries = await ctx.db.query("inquiries").order("desc").collect();
+    const testDrives = await ctx.db.query("testDrives").order("desc").collect();
+    const customers = await ctx.db.query("customers").order("desc").collect();
+    const sales = await ctx.db.query("sales").order("desc").collect();
+    const employees = await ctx.db.query("employees").collect();
+    const dealerships = await ctx.db.query("dealerships").collect();
+    const reviews = await ctx.db.query("reviews").collect();
+    const posts = await ctx.db.query("posts").collect();
+    const crmContacts = await ctx.db.query("crmContacts").order("desc").collect();
     // 5. CRM Events (WhatsApp, Gmail Dispatches, Leads)
     const crmEvents = await ctx.db.query("crmEvents").order("desc").take(30);
 
     const availableCars = cars.filter((c) => c.status === "AVAILABLE");
     const soldCars = cars.filter((c) => c.status === "SOLD");
+    const inactiveCars = cars.filter((c) => c.status === "INACTIVE");
     const maintenanceCars = cars.filter((c) => c.status === "MAINTENANCE" || c.status === "REPAIR");
+
+    const enrichedSales = sales.map((s) => {
+      const car = cars.find((c) => c.id === s.carId);
+      const cust = customers.find((c) => c.cognitoId === s.customerId);
+      const emp = employees.find((e) => e.cognitoId === s.employeeId);
+      return {
+        id: s.id,
+        salePrice: s.salePrice,
+        downPayment: s.downPayment,
+        tradeInValue: s.tradeInValue,
+        saleDate: s.saleDate,
+        carId: s.carId,
+        carName: car ? `${car.year} ${car.make} ${car.model}` : `Car #${s.carId}`,
+        customerName: cust?.name || s.customerId,
+        employeeName: emp?.name || s.employeeId,
+      };
+    });
+
+    const enrichedEmployees = employees.map((e) => {
+      const empSales = sales.filter((s) => s.employeeId === e.cognitoId);
+      const empInquiries = inquiries.filter((i) => i.employeeId === e.cognitoId);
+      const empTestDrives = testDrives.filter((t) => t.employeeId === e.cognitoId);
+      const empRevenue = empSales.reduce((sum, s) => sum + (s.salePrice || 0), 0);
+      return {
+        id: e.id,
+        cognitoId: e.cognitoId,
+        name: e.name,
+        email: e.email,
+        phone: e.phoneNumber,
+        role: e.role,
+        status: e.status,
+        commission: e.commission,
+        hireDate: e.hireDate,
+        salesCount: empSales.length,
+        salesRevenue: empRevenue,
+        inquiriesCount: empInquiries.length,
+        testDrivesCount: empTestDrives.length,
+      };
+    });
+
+    // Comprehensive Dealership Analytics Breakdown
+    const makeBreakdown: Record<string, { count: number; available: number; sold: number; totalValue: number }> = {};
+    const carTypeBreakdown: Record<string, number> = {};
+    const fuelBreakdown: Record<string, number> = {};
+    const transmissionBreakdown: Record<string, number> = {};
+    const priceRangeBuckets = [
+      { label: "R0 - R100k", min: 0, max: 100000, count: 0 },
+      { label: "R100k - R200k", min: 100000, max: 200000, count: 0 },
+      { label: "R200k - R300k", min: 200000, max: 300000, count: 0 },
+      { label: "R300k - R400k", min: 300000, max: 400000, count: 0 },
+      { label: "R400k - R500k", min: 400000, max: 500000, count: 0 },
+      { label: "R500k+", min: 500000, max: Infinity, count: 0 },
+    ];
+
+    for (const c of cars) {
+      const mk = c.make || "Other";
+      if (!makeBreakdown[mk]) {
+        makeBreakdown[mk] = { count: 0, available: 0, sold: 0, totalValue: 0 };
+      }
+      makeBreakdown[mk].count += 1;
+      if (c.status === "AVAILABLE") makeBreakdown[mk].available += 1;
+      if (c.status === "SOLD") makeBreakdown[mk].sold += 1;
+      makeBreakdown[mk].totalValue += c.price || 0;
+
+      const cType = c.carType || c.condition || "Vehicle";
+      carTypeBreakdown[cType] = (carTypeBreakdown[cType] || 0) + 1;
+
+      const fuel = c.fuelType || "Petrol";
+      fuelBreakdown[fuel] = (fuelBreakdown[fuel] || 0) + 1;
+
+      const trans = c.transmission || "Automatic";
+      transmissionBreakdown[trans] = (transmissionBreakdown[trans] || 0) + 1;
+
+      const p = c.price || 0;
+      const bucket = priceRangeBuckets.find((b) => p >= b.min && p < b.max);
+      if (bucket) bucket.count += 1;
+    }
+
+    const customerCities: Record<string, number> = {};
+    for (const cust of customers) {
+      const city = cust.city || "Johannesburg";
+      customerCities[city] = (customerCities[city] || 0) + 1;
+    }
+
+    const crmStageBreakdown: Record<string, { count: number; valueZar: number }> = {};
+    for (const contact of crmContacts) {
+      const st = contact.stage || "NEW_LEAD";
+      if (!crmStageBreakdown[st]) {
+        crmStageBreakdown[st] = { count: 0, valueZar: 0 };
+      }
+      crmStageBreakdown[st].count += 1;
+      crmStageBreakdown[st].valueZar += contact.dealValueZar || 0;
+    }
+
+    const totalInventoryValue = cars.reduce((sum, c) => sum + (c.price || 0), 0);
+    const soldCarsValue = soldCars.reduce((sum, c) => sum + (c.price || 0), 0);
+    const salesTableRevenue = sales.reduce((sum, s) => sum + (s.salePrice || 0), 0);
+    const totalGrossRevenue = salesTableRevenue || soldCarsValue;
+    const avgMileage =
+      cars.length > 0 ? Math.round(cars.reduce((sum, c) => sum + (c.mileage || 0), 0) / cars.length) : 0;
+    const avgReviewRating =
+      reviews.length > 0
+        ? Number((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1))
+        : 5.0;
 
     const totalShowroomValue = availableCars.reduce((sum, c) => sum + (c.price || 0), 0);
     const averagePrice = availableCars.length > 0 ? Math.round(totalShowroomValue / availableCars.length) : 0;
@@ -323,6 +433,7 @@ export const getDealershipContext = query({
         totalInventory: cars.length,
         availableCount: availableCars.length,
         soldCount: soldCars.length,
+        inactiveCount: inactiveCars.length,
         maintenanceCount: maintenanceCars.length,
         inRepairCount: repairs.filter((r) => r.status !== "COMPLETED" && r.status !== "COLLECTED").length || maintenanceCars.length,
         pendingFinancingCount: financings.filter((f) => f.status === "PENDING").length,
@@ -335,6 +446,7 @@ export const getDealershipContext = query({
         cheapestCar: cheapestCar ? `${cheapestCar.year} ${cheapestCar.make} ${cheapestCar.model} (R${(cheapestCar.price || 0).toLocaleString()} ZAR)` : null,
         mostExpensiveCar: mostExpensiveCar ? `${mostExpensiveCar.year} ${mostExpensiveCar.make} ${mostExpensiveCar.model} (R${(mostExpensiveCar.price || 0).toLocaleString()} ZAR)` : null,
       },
+      sales: enrichedSales,
       cars: cars.map((c) => ({
         id: c.id,
         make: c.make,
@@ -373,8 +485,54 @@ export const getDealershipContext = query({
         email: c.email,
         phone: c.phoneNumber,
         city: c.city,
+        favoritesCount: Array.isArray(c.favorites) ? c.favorites.length : 0,
       })),
+      employees: enrichedEmployees,
+      dealershipBranches: dealerships,
+      reviews: reviews.map((r) => {
+        const car = cars.find((c) => c.id === r.carId);
+        return {
+          id: r.id,
+          rating: r.rating,
+          title: r.title,
+          comment: r.comment,
+          reviewDate: r.reviewDate,
+          carName: car ? `${car.year} ${car.make} ${car.model}` : `Car #${r.carId}`,
+        };
+      }),
+      posts: posts.map((p) => ({
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        published: p.published,
+        authorName: p.authorName,
+      })),
+      crmContacts: crmContacts.slice(0, 50),
       crmEvents: crmEvents.slice(0, 20),
+      analytics: {
+        totalInventoryValue,
+        availableShowroomValue: totalShowroomValue,
+        soldInventoryValue: soldCarsValue,
+        salesTableRevenue,
+        totalGrossRevenue,
+        averagePrice,
+        avgMileage,
+        avgReviewRating,
+        reviewsCount: reviews.length,
+        postsCount: posts.length,
+        employeesCount: employees.length,
+        activeEmployeesCount: employees.filter((e) => e.status === "ACTIVE").length,
+        crmContactsCount: crmContacts.length,
+        crmPipelineValue: crmContacts.reduce((s, c) => s + (c.dealValueZar || 0), 0),
+        crmHotLeadsCount: crmContacts.filter((c) => c.priority === "HOT").length,
+        crmStageBreakdown,
+        makeBreakdown,
+        carTypeBreakdown,
+        fuelBreakdown,
+        transmissionBreakdown,
+        priceRangeBuckets: priceRangeBuckets.map((b) => ({ label: b.label, count: b.count })),
+        customerCities,
+      },
     };
   },
 });

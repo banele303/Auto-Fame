@@ -200,14 +200,29 @@ http.route({
       const cars = Array.isArray(context?.cars) ? context.cars : [];
       const availableCars = cars.filter((c: any) => c.status === "AVAILABLE");
       const soldCars = cars.filter((c: any) => c.status === "SOLD");
+      const inactiveCars = cars.filter((c: any) => c.status === "INACTIVE");
       const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
 
       let replyBody = "";
-      if (lower.includes("how many available")) {
-        replyBody = `${availableCars.length}`;
-      } else if (lower.includes("how many sold")) {
+      if (
+        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
+        (lower.includes("sold") || lower.includes("sale"))
+      ) {
         replyBody = `${soldCars.length}`;
-      } else if (lower.includes("how many repair")) {
+      } else if (
+        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
+        lower.includes("available")
+      ) {
+        replyBody = `${availableCars.length}`;
+      } else if (
+        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
+        lower.includes("inactive")
+      ) {
+        replyBody = `${inactiveCars.length}`;
+      } else if (
+        (lower.includes("how many") || lower.includes("count") || lower.includes("number of")) &&
+        (lower.includes("repair") || lower.includes("workshop") || lower.includes("maintenance"))
+      ) {
         replyBody = `${repairs.length}`;
       } else if (
         lower.includes("how many car") ||
