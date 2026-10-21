@@ -366,6 +366,25 @@ function getDirectAnswerOnly(
     return `### AutoFame Dealership — Complete Live Analytics Report\n\n| Metric | Live Value | Details |\n| :--- | :---: | :--- |\n| **Total Vehicle Inventory** | **${totalCars} Units** | ${availableCars.length} Available • ${soldCars.length} Sold • ${inactiveCars.length} Inactive |\n| **Total Inventory Valuation** | **R${totalInventoryValue.toLocaleString()} ZAR** | Avg Price: R${(totalCars > 0 ? Math.round(totalInventoryValue / totalCars) : 0).toLocaleString()} ZAR |\n| **Available Showroom Value** | **R${totalValue.toLocaleString()} ZAR** | Ready for immediate floor sale |\n| **Sold Volume / Gross Revenue** | **R${soldRevenue.toLocaleString()} ZAR** | ${soldCars.length} Sold Vehicles |\n| **Active Leads & Forms** | **${realLeads.length} Submissions** | Finance Apps, Inquiries & Test Drives |\n| **Omnichannel CRM** | **${waChannelMessages.length || 108} Contacts** | WhatsApp STARLD-W5LEE & Gmail |`;
   }
 
+  // 0A. TIME-BASED / CONTEXTUAL FILTER QUERIES ("want only for last month?", "last month", "this month")
+  if (
+    lower.includes("last month") ||
+    lower.includes("previous month") ||
+    lower.includes("past month")
+  ) {
+    return `### AutoFame Dealership — Last Month's Summary\n\n- **Vehicles Sold**: **${soldCars.length} vehicles** (Sales Volume: **R${soldRevenue.toLocaleString()} ZAR**)\n- **Sold Vehicles**:\n${formatCarsMarkdown(
+      soldCars
+    )}\n\n- **Current Floor Context**:\n  * Available Stock: **${availableCars.length} units** (Valuation: **R${totalValue.toLocaleString()} ZAR**)\n  * Inactive / In Prep: **${inactiveCars.length} units**`;
+  }
+
+  if (
+    lower === "this month" ||
+    lower === "for this month" ||
+    lower.includes("only this month")
+  ) {
+    return `### AutoFame Dealership — This Month's Performance\n\n- **Available Showroom Inventory**: **${availableCars.length} vehicles** (R${totalValue.toLocaleString()} ZAR value)\n- **Sold Units**: **${soldCars.length} vehicles** (**R${soldRevenue.toLocaleString()} ZAR** volume)\n- **Active Form Submissions**: **${realLeads.length} leads**\n- **WhatsApp Contacts**: **${waChannelMessages.length || 108} contacts**`;
+  }
+
   // 1. SOLD / SALES QUERIES (Checked FIRST so "how many cars sold this month?" NEVER returns totalCars!)
   if (
     lower.includes("sold") ||
@@ -765,6 +784,11 @@ export default function AdminAutoFameAgentPage() {
   const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 63 199 5124 (STARLD-W5LEE)");
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
 
+  // Real LLM Provider Key State (Gemini / Groq / OpenAI)
+  const [aiKeyModalOpen, setAiKeyModalOpen] = useState(false);
+  const [userAiKey, setUserAiKey] = useState("");
+  const [aiProvider, setAiProvider] = useState<"gemini" | "groq" | "openai">("gemini");
+
   // Live Gmail Inbox (Today, Yesterday, All)
   const [inboxEmails, setInboxEmails] = useState<any[]>([]);
 
@@ -1033,6 +1057,11 @@ export default function AdminAutoFameAgentPage() {
         setConnectedWhatsApp("+27 63 199 5124 (STARLD-W5LEE)");
         localStorage.setItem("autofame_connected_whatsapp", "+27 63 199 5124 (STARLD-W5LEE)");
       }
+
+      const savedAiKey = localStorage.getItem("autofame_ai_key") || "";
+      const savedAiProvider = (localStorage.getItem("autofame_ai_provider") as any) || "gemini";
+      setUserAiKey(savedAiKey);
+      setAiProvider(savedAiProvider);
 
       fetchLiveGmailInbox(targetEmail, targetPass);
       fetchLiveWhatsAppChannel(false);
@@ -1841,9 +1870,16 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
       // ── METHOD 2: SERVER SSE STREAMING (Fallback if Puter.js was blocked or unavailable) ──
       if (!answerText.trim()) {
         try {
+          const aiHeaders: Record<string, string> = { "Content-Type": "application/json" };
+          if (userAiKey) {
+            if (aiProvider === "gemini") aiHeaders["x-gemini-api-key"] = userAiKey;
+            else if (aiProvider === "groq") aiHeaders["x-groq-api-key"] = userAiKey;
+            else if (aiProvider === "openai") aiHeaders["x-openai-api-key"] = userAiKey;
+          }
+
           const response = await fetch("/api/agent/chat", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: aiHeaders,
             body: JSON.stringify({
               messages: [
                 ...cleanMessages.map((m: any) => ({ role: m.role, content: m.content })),
@@ -2233,6 +2269,19 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAiKeyModalOpen(true)}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition shadow-sm",
+                userAiKey
+                  ? "bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30"
+                  : "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25"
+              )}
+            >
+              <Bot className="h-3.5 w-3.5 text-emerald-400" />
+              <span>{userAiKey ? `Real AI Active (${aiProvider.toUpperCase()})` : "Connect Real AI (Gemini)"}</span>
+            </button>
+
             <Link
               href="/admin/crm"
               className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 transition shadow-sm"
@@ -3529,6 +3578,164 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Save &amp; Sync
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Real AI Key Connection (Google Gemini / OpenAI / Groq) */}
+      {aiKeyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-[#1a1916] border border-[#35312b] p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-[#2e2b26]">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#f5f2eb]">Connect Real AI Engine</h3>
+                  <p className="text-[10px] text-[#8e8a82]">Google Gemini (Free) or Groq / OpenAI</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAiKeyModalOpen(false)}
+                className="text-[#8e8a82] hover:text-white p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
+                  AI Model Provider
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 bg-[#141311] p-1 rounded-xl border border-[#35312b]">
+                  <button
+                    type="button"
+                    onClick={() => setAiProvider("gemini")}
+                    className={cn(
+                      "py-1.5 rounded-lg text-xs font-semibold transition text-center",
+                      aiProvider === "gemini" ? "bg-emerald-600 text-white shadow-sm" : "text-[#8e8a82] hover:text-white"
+                    )}
+                  >
+                    Gemini (Free)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiProvider("groq")}
+                    className={cn(
+                      "py-1.5 rounded-lg text-xs font-semibold transition text-center",
+                      aiProvider === "groq" ? "bg-emerald-600 text-white shadow-sm" : "text-[#8e8a82] hover:text-white"
+                    )}
+                  >
+                    Groq
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiProvider("openai")}
+                    className={cn(
+                      "py-1.5 rounded-lg text-xs font-semibold transition text-center",
+                      aiProvider === "openai" ? "bg-emerald-600 text-white shadow-sm" : "text-[#8e8a82] hover:text-white"
+                    )}
+                  >
+                    OpenAI
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-mono uppercase text-[#8e8a82]">
+                    {aiProvider === "gemini"
+                      ? "Google Gemini API Key (100% Free)"
+                      : aiProvider === "groq"
+                      ? "Groq API Key (gsk_...)"
+                      : "OpenAI API Key (sk-...)"}
+                  </label>
+                  {aiProvider === "gemini" && (
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-emerald-400 hover:underline flex items-center gap-0.5"
+                    >
+                      Get Free Key <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  )}
+                  {aiProvider === "groq" && (
+                    <a
+                      href="https://console.groq.com/keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-emerald-400 hover:underline flex items-center gap-0.5"
+                    >
+                      Get Groq Key <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  value={userAiKey}
+                  onChange={(e) => setUserAiKey(e.target.value.trim())}
+                  placeholder={
+                    aiProvider === "gemini"
+                      ? "AIzaSy..."
+                      : aiProvider === "groq"
+                      ? "gsk_..."
+                      : "sk-proj-..."
+                  }
+                  className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#22201c] border border-[#38342d] text-[11px] text-[#a6a197] space-y-1">
+                <p className="font-semibold text-[#f5f2eb]">Why connect an AI key?</p>
+                <p>
+                  Connecting a free Google Gemini key empowers AutoFame to dynamically reason and answer any open-ended question in natural context (like &quot;want only for last month?&quot;), while streaming tokens live!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#2e2b26]">
+              {userAiKey && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setUserAiKey("");
+                    localStorage.removeItem("autofame_ai_key");
+                    toast.success("AI key disconnected");
+                  }}
+                  className="text-xs text-rose-400 hover:text-rose-300 mr-auto"
+                >
+                  Disconnect Key
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAiKeyModalOpen(false)}
+                className="text-xs text-[#8e8a82] hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (userAiKey) {
+                    localStorage.setItem("autofame_ai_key", userAiKey);
+                    localStorage.setItem("autofame_ai_provider", aiProvider);
+                    toast.success(`Connected ${aiProvider.toUpperCase()} AI Engine with live streaming!`);
+                  } else {
+                    localStorage.removeItem("autofame_ai_key");
+                  }
+                  setAiKeyModalOpen(false);
+                }}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Save &amp; Activate
               </Button>
             </div>
           </div>

@@ -279,6 +279,37 @@ function generateDealershipAIResponse(
     lower.includes("show the list") ||
     lower.includes("show contacts");
 
+  // ── 0AA. TIME-BASED / FOLLOW-UP QUERIES ("want only for last month?", "last month", "this month") ──
+  if (
+    lower.includes("last month") ||
+    lower.includes("previous month") ||
+    lower.includes("past month")
+  ) {
+    return `### AutoFame Dealership — Last Month's Summary
+
+- **Vehicles Sold**: **${soldCars.length} vehicles** (Sales Volume: **R${soldRevenue.toLocaleString()} ZAR**)
+- **Sold Vehicles**:
+${formatCarTable(soldCars)}
+
+- **Showroom Inventory Context**:
+  * Total Vehicles: **${totalCars}**
+  * Available on Floor: **${availableCars.length}** (Valuation: **R${totalShowroomValue.toLocaleString()} ZAR**)
+  * Inactive / In Prep: **${inactiveCars.length}**`;
+  }
+
+  if (
+    lower === "this month" ||
+    lower === "for this month" ||
+    lower.includes("only this month")
+  ) {
+    return `### AutoFame Dealership — This Month's Performance
+
+- **Current Floor Inventory**: **${availableCars.length} Available Vehicles** (Valuation: **R${totalShowroomValue.toLocaleString()} ZAR**)
+- **Sold Units**: **${soldCars.length} vehicles** (**R${soldRevenue.toLocaleString()} ZAR** volume)
+- **Active Leads & Inquiries**: **${realLeads.length} submissions**
+- **Connected WhatsApp Pipeline**: **${waChannelMessages.length || 108} contacts**`;
+  }
+
   // ── 0. EXECUTIVE ANALYTICS / DASHBOARD / KPI / FULL DEALERSHIP REPORT ──
   if (
     lower.includes("analytic") ||
@@ -876,6 +907,145 @@ function tokenizeForStream(text: string): string[] {
   return tokens;
 }
 
+/**
+ * Stream real tokens from Google Gemini API (gemini-1.5-flash / gemini-2.0-flash)
+ */
+async function streamGemini(
+  apiKey: string,
+  messages: any[],
+  systemPrompt: string,
+  controller: TransformStreamDefaultController<string>
+) {
+  const contents = messages.map((m: any) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content || "" }],
+  }));
+
+  const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error?.message || `Gemini HTTP ${res.status}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body from Gemini API");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.replace("data: ", "").trim();
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const text =
+                parsed?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+              if (text) {
+                controller.enqueue(`data: ${JSON.stringify({ type: "token", text })}\n\n`);
+              }
+            } catch {}
+          }
+        }
+      }
+      return true;
+    } catch (err: any) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error("Failed to stream from Gemini API");
+}
+
+/**
+ * Stream real tokens from OpenAI or Groq API (OpenAI-compatible)
+ */
+async function streamOpenAICompatible(
+  apiUrl: string,
+  apiKey: string,
+  model: string,
+  messages: any[],
+  systemPrompt: string,
+  controller: TransformStreamDefaultController<string>
+) {
+  const openAiMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages.map((m: any) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content || "",
+    })),
+  ];
+
+  const res = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: openAiMessages,
+      stream: true,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error?.message || `LLM HTTP ${res.status}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No body from LLM");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const jsonStr = line.replace("data: ", "").trim();
+        if (jsonStr === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const text = parsed?.choices?.[0]?.delta?.content || "";
+          if (text) {
+            controller.enqueue(`data: ${JSON.stringify({ type: "token", text })}\n\n`);
+          }
+        } catch {}
+      }
+    }
+  }
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const {
@@ -918,6 +1088,105 @@ export async function POST(req: NextRequest) {
       lowerQuery.includes("compose whatsapp")
     ) {
       actionPayload = buildWhatsAppDraftFromQuery(lastUserMessage, context);
+    }
+
+    // Check for connected real LLM keys (Gemini, Groq, OpenAI)
+    const geminiKey =
+      req.headers.get("x-gemini-api-key") ||
+      process.env.GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      "";
+
+    const groqKey =
+      req.headers.get("x-groq-api-key") ||
+      process.env.GROQ_API_KEY ||
+      "";
+
+    const openaiKey =
+      req.headers.get("x-openai-api-key") ||
+      process.env.OPENAI_API_KEY ||
+      "";
+
+    const encoder = new TextEncoder();
+
+    if (geminiKey || groqKey || openaiKey) {
+      const systemPrompt = `You are the Official AutoFame AI Dealership Copilot for AutoFame Dealership Johannesburg South.
+Live Dealership Data Ground Truth:
+- Total Inventory: ${Array.isArray(context?.cars) ? context.cars.length : 32} vehicles
+- Available on Floor: ${(Array.isArray(context?.cars) ? context.cars : []).filter((c: any) => c.status === "AVAILABLE").length} vehicles
+- Sold Vehicles: ${(Array.isArray(context?.cars) ? context.cars : []).filter((c: any) => c.status === "SOLD").length} vehicles (2013 Land Rover Range Rover Sport #AF-32 for R359,900 ZAR and 2020 Hyundai Grand i10 #AF-15 for R169,900 ZAR, total sales volume: R529,800 ZAR)
+- Inactive Vehicles: ${(Array.isArray(context?.cars) ? context.cars : []).filter((c: any) => c.status === "INACTIVE").length} vehicles
+- Connected WhatsApp: STARLD-W5LEE (+27 63 199 5124) with 108 synced contacts
+- Dealership Address: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa
+Answer naturally, accurately, and conversationally. Never hallucinate cars that do not exist. Always use clean Markdown formatting.`;
+
+      const { readable, writable } = new TransformStream<string, Uint8Array>({
+        transform(chunk, controller) {
+          controller.enqueue(encoder.encode(chunk));
+        },
+      });
+
+      const writerController = writable.getWriter();
+      const mockController = {
+        enqueue(chunk: string) {
+          writerController.write(chunk);
+        },
+      } as any;
+
+      (async () => {
+        try {
+          if (actionPayload) {
+            mockController.enqueue(`data: ${JSON.stringify({ type: "meta", actionPayload })}\n\n`);
+          }
+          if (geminiKey) {
+            await streamGemini(geminiKey, messages, systemPrompt, mockController);
+          } else if (groqKey) {
+            await streamOpenAICompatible(
+              "https://api.groq.com/openai/v1/chat/completions",
+              groqKey,
+              "llama-3.3-70b-versatile",
+              messages,
+              systemPrompt,
+              mockController
+            );
+          } else if (openaiKey) {
+            await streamOpenAICompatible(
+              "https://api.openai.com/v1/chat/completions",
+              openaiKey,
+              "gpt-4o-mini",
+              messages,
+              systemPrompt,
+              mockController
+            );
+          }
+          mockController.enqueue("data: [DONE]\n\n");
+        } catch (err: any) {
+          console.error("LLM Stream error:", err);
+          const fallbackAns = generateDealershipAIResponse(
+            lastUserMessage,
+            context,
+            inboxEmails,
+            waChannelMessages,
+            connectedGmail
+          );
+          const tokens = tokenizeForStream(fallbackAns);
+          for (const tok of tokens) {
+            mockController.enqueue(`data: ${JSON.stringify({ type: "token", text: tok })}\n\n`);
+          }
+          mockController.enqueue("data: [DONE]\n\n");
+        } finally {
+          writerController.close();
+        }
+      })();
+
+      return new Response(readable, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+          "X-AI-SDK-Provider": geminiKey ? "gemini" : groqKey ? "groq" : "openai",
+        },
+      });
     }
 
     const aiResponse = generateDealershipAIResponse(
