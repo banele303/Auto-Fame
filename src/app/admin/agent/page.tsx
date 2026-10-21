@@ -725,34 +725,29 @@ function buildDealershipAgentSystemPrompt(
     .map((e: any) => `${e.name} (${e.role}, Status: ${e.status}, Commission: ${e.commission}%, Sales: ${e.salesCount || 0})`)
     .join("; ");
 
-  return `You are the Official AutoFame AI Dealership Copilot — an autonomous, highly knowledgeable, and articulate executive automotive assistant for AutoFame Dealership Johannesburg South (1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013).
+  return `You are the AutoFame Autonomous Dealership AI Agent — an articulate, proactive, and deeply knowledgeable executive automotive AI partner for AutoFame Dealership Johannesburg South (1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013).
 
-LIVE VERIFIED DATABASE FACTS (100% GROUND TRUTH — NEVER HALLUCINATE):
+YOUR AUTONOMOUS CAPABILITIES (REAL AGENT):
+1. Answer ANY question naturally: You are a genuine thinking AI. Whether asked about vehicle specs, market trends, comparisons, dealership performance, follow-up questions like "want only for last month?", or open-ended advice, think for yourself and respond with deep intelligence, warmth, and accuracy. Never output robotic canned templates.
+2. Effortless Email & Communication Writing: When asked to write, compose, draft, or send an email, write the entire polished email directly in the chat without hesitation! Include an attention-grabbing Subject line, warm greeting, compelling vehicle selling points, realistic finance breakdown, FICA requirements checklist, and professional dealership sign-off.
+3. Conversational Memory & Context: Pay close attention to previous messages in this conversation. If the user asks a short follow-up (e.g. "want only for last month?", "what about automatic?", "give me quotes for both"), understand what they are referring to and answer directly.
+4. Live Dealership Ground Truth (Verified Facts):
 - Total Vehicles in System: ${cars.length} cars
-- Available Showroom Floor Vehicles: ${availableCars.length} cars (Total Value: R${totalValue.toLocaleString()} ZAR)
+- Available Showroom Floor Vehicles: ${availableCars.length} cars (Showroom Value: R${totalValue.toLocaleString()} ZAR, Average Price: R${(totalCars > 0 ? Math.round(totalValue / (availableCars.length || 1)) : 0).toLocaleString()} ZAR)
 - Sold Vehicles: ${soldCars.length} cars (Total Sales Volume: R${soldRevenue.toLocaleString()} ZAR)
-  * Sold Vehicles Breakdown:
+  * Sold Vehicles:
 ${soldCarsList || "None"}
-- Inactive / Reserved Vehicles: ${inactiveCars.length} cars
-- Workshop / Repairs Active: ${workshopCars.length || repairs.length} vehicles
+- Inactive / In-Prep Vehicles: ${inactiveCars.length} cars
+- Active Workshop / Maintenance: ${workshopCars.length || repairs.length} vehicles
 - Connected WhatsApp Channel: STARLD-W5LEE (+27 63 199 5124) with ${waContacts.length || 108} synced contacts
 - Connected Dealership Gmail: ${connectedGmail} with ${inboxEmails.length} inbox emails
-- Customer Leads & Inquiries: ${realLeads.length} active submissions
-- Employees & Sales Team: ${employees.length} staff members (${empList || "Sales Associates & Managers"})
-- Registered Customers: ${customers.length} clients
-- FICA Finance Requirements: 1) SA ID Copy, 2) Valid Driver's License, 3) 3 Months Bank Statements, 4) Latest Payslips, 5) Proof of Residence
+- Staff: ${employees.length} employees (${empList || "Sales Associates & Managers"})
+- FICA Documentation: 1) SA ID Copy, 2) Valid Driver's License, 3) 3 Months Bank Statements, 4) Latest Payslips, 5) Proof of Residence
 
-ALL VEHICLES IN INVENTORY:
+FULL LIVE INVENTORY (${cars.length} VEHICLES):
 ${carInventoryList}
 
-CORE BEHAVIOR RULES:
-1. Always be helpful, intelligent, precise, and professional.
-2. If asked count questions:
-   - "how many cars do we have?" -> State 32 vehicles in total inventory, and give the breakdown (26 Available, 2 Sold, 4 Inactive) and total showroom value.
-   - "how many cars sold this month?" / "how many sold?" -> State exactly 2 vehicles sold (Total sales volume: R529,800 ZAR) and list the two vehicles: 2013 Land Rover Range Rover Sport (R359,900 ZAR) and 2020 Hyundai Grand i10 (R169,900 ZAR).
-   - "how many available cars?" -> State exactly 26 vehicles available on the showroom floor.
-3. When recommending vehicles, filtering by budget (e.g. under R200k, under R300k, SUV, bakkie, automatic), providing comparisons, quotations, or analytics reports, use clean, formatted GitHub-flavored Markdown tables.
-4. Calculate finance estimates using standard SA vehicle finance terms: 10% deposit, 72 months term, ~11.75% prime interest rate (~2.18% of financed principal per month).`;
+When formatting tables, quotes, or comparisons, use clean, beautiful Markdown tables.`;
 }
 
 export default function AdminAutoFameAgentPage() {
@@ -1821,14 +1816,33 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
             content: m.content,
           }));
 
-          const puterResponse = await (window as any).puter.ai.chat(
-            [
-              { role: "system", content: systemPrompt },
-              ...recentHistory,
-              { role: "user", content: finalContent },
-            ],
-            { model: "claude-3-5-sonnet", stream: true }
-          );
+          const messagesPayload = [
+            { role: "system", content: systemPrompt },
+            ...recentHistory,
+            { role: "user", content: finalContent },
+          ];
+
+          let puterResponse: any = null;
+
+          // Attempt 1: Call puter.ai.chat with stream
+          try {
+            puterResponse = await (window as any).puter.ai.chat(messagesPayload, { stream: true });
+          } catch {
+            // Attempt 2: Free model without stream option
+            try {
+              puterResponse = await (window as any).puter.ai.chat(messagesPayload);
+            } catch {
+              // Attempt 3: Combined string prompt
+              const fullPrompt = `${systemPrompt}\n\nRecent Chat:\n${recentHistory
+                .map((m: any) => `${m.role}: ${m.content}`)
+                .join("\n")}\n\nUser: ${finalContent}\n\nAssistant:`;
+              try {
+                puterResponse = await (window as any).puter.ai.chat(fullPrompt, { stream: true });
+              } catch {
+                puterResponse = await (window as any).puter.ai.chat(fullPrompt);
+              }
+            }
+          }
 
           setIsAiThinking(false);
 
@@ -1857,7 +1871,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               for (let i = 0; i < tokens.length; i += 2) {
                 acc += (tokens[i] || "") + (tokens[i + 1] || "");
                 setStreamingContent(acc);
-                await new Promise((r) => setTimeout(r, 16));
+                await new Promise((r) => setTimeout(r, 14));
               }
               answerText = rawText;
             }

@@ -870,22 +870,41 @@ ${priceRows}`;
     )}`;
   }
 
-  // ── 16. INTELLIGENT CONVERSATIONAL & DEALERSHIP OVERVIEW FALLBACK (Never dumps "32"!) ──
-  const topAvailable = availableCars.slice(0, 5);
-  return `### AutoFame Dealership Intelligence — Live Summary
+  // ── 16. EMAIL / LETTER DRAFTING REQUEST ──
+  if (
+    lower.includes("write email") ||
+    lower.includes("draft email") ||
+    lower.includes("send email") ||
+    lower.includes("compose email") ||
+    (lower.includes("write") && lower.includes("email")) ||
+    (lower.includes("draft") && lower.includes("email"))
+  ) {
+    const draft = buildGmailDraftFromQuery(query, context, connectedGmail);
+    return `### ✉️ Dealership Email Draft Ready
 
-Here is the real-time breakdown for **"${query}"** based on our live Convex database:
+**To:** \`${draft.to || "Client <client@example.com>"}\`  
+**From:** \`${connectedGmail}\`  
+**Subject:** **${draft.subject}**
 
-- **Total Inventory**: **${totalCars} vehicles** (**${availableCars.length} Available**, **${soldCars.length} Sold**, **${inactiveCars.length} Inactive**)
-- **Available Showroom Value**: **R${totalShowroomValue.toLocaleString()} ZAR**
-- **Sold This Month**: **${soldCars.length} vehicles** (**R${soldRevenue.toLocaleString()} ZAR** volume)
-- **Active Leads & Finance Applications**: **${realLeads.length} submissions**
-- **Connected Channels**: WhatsApp **STARLD-W5LEE** (+27 63 199 5124) & Gmail (**${connectedGmail}**)
+---
 
-#### Featured Available Showroom Stock
-${formatCarTable(topAvailable)}
+${draft.body}
 
-*Tip: Ask me specific questions like "how many cars sold this month?", "show automatic cars under R300k", "compare our VW Polo models", or "generate a quote for the Toyota Hilux".*`;
+---
+
+*I have also loaded this draft into your Gmail Composer drawer so you can review and click Send with 1 click!*`;
+  }
+
+  // ── 17. NATURAL CONVERSATIONAL RESPONSE (No rigid templates) ──
+  return `I understand your query regarding **"${query}"**.
+
+Here is our live dealership status from the Convex database:
+- **Available Vehicles on Floor**: **${availableCars.length} vehicles** ready for immediate purchase (Showroom Value: **R${totalShowroomValue.toLocaleString()} ZAR**).
+- **Sold Vehicles**: **${soldCars.length} vehicles** (**R${soldRevenue.toLocaleString()} ZAR** sales volume).
+- **Active Finance & Inquiries**: **${realLeads.length} leads** in the pipeline.
+- **Connected Channels**: WhatsApp **STARLD-W5LEE** (+27 63 199 5124) with **${waChannelMessages.length || 108} contacts** & Gmail (\`${connectedGmail}\`).
+
+You can ask me to write an email to any client, calculate finance for a vehicle, compare models in stock, or break down sales performance!`;
 }
 
 /**
