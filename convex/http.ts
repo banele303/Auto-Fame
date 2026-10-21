@@ -194,7 +194,114 @@ http.route({
         });
       }
 
-      const lower = incomingText.toLowerCase();
+      // DO NOT reply to messages sent by the agent itself
+      if (newestMsg.from_me) {
+        return new Response(JSON.stringify({ ok: true, ignored: "Outgoing message from agent" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const lower = incomingText.toLowerCase().trim();
+
+      // STRICT KEYWORD FILTER: Only reply if the message explicitly contains dealership trigger keywords
+      const isAgentMentioned =
+        lower.includes("@agent") ||
+        lower.includes("@ai") ||
+        lower.includes("@autofame") ||
+        lower.includes("autofame") ||
+        lower.includes("bot");
+
+      const isCountQuery =
+        lower.includes("how many") ||
+        lower.includes("count") ||
+        lower.includes("number of cars") ||
+        lower.includes("how much cars") ||
+        lower === "cars";
+
+      const isStockQuery =
+        lower.includes("inventory") ||
+        lower.includes("stock") ||
+        lower.includes("available cars") ||
+        lower.includes("show cars") ||
+        lower.includes("list cars") ||
+        lower.includes("cars for sale") ||
+        lower.includes("all cars");
+
+      const isStatusQuery =
+        lower.includes("sold") ||
+        lower.includes("sale") ||
+        lower.includes("available") ||
+        lower.includes("inactive") ||
+        lower.includes("repair") ||
+        lower.includes("workshop") ||
+        lower.includes("maintenance");
+
+      const isFinanceQuoteQuery =
+        lower.includes("quote") ||
+        lower.includes("quotation") ||
+        lower.includes("finance") ||
+        lower.includes("deposit") ||
+        lower.includes("installment") ||
+        lower.includes("instalment") ||
+        lower.includes("loan") ||
+        lower.includes("fica");
+
+      const isVehicleSearchQuery =
+        lower.includes("toyota") ||
+        lower.includes("hilux") ||
+        lower.includes("volkswagen") ||
+        lower.includes("vw") ||
+        lower.includes("polo") ||
+        lower.includes("ford") ||
+        lower.includes("ranger") ||
+        lower.includes("bmw") ||
+        lower.includes("mercedes") ||
+        lower.includes("hyundai") ||
+        lower.includes("isuzu") ||
+        lower.includes("bakkie") ||
+        lower.includes("suv") ||
+        lower.includes("hatchback") ||
+        lower.includes("sedan") ||
+        lower.includes("diesel") ||
+        lower.includes("petrol") ||
+        lower.includes("automatic") ||
+        lower.includes("manual") ||
+        lower.includes("price") ||
+        lower.includes("budget") ||
+        lower.includes("cheapest") ||
+        lower.includes("under r");
+
+      const isDealershipInfoQuery =
+        lower.includes("address") ||
+        lower.includes("location") ||
+        lower.includes("where are you") ||
+        lower.includes("contact");
+
+      const shouldReply =
+        isAgentMentioned ||
+        isCountQuery ||
+        isStockQuery ||
+        isStatusQuery ||
+        isFinanceQuoteQuery ||
+        isVehicleSearchQuery ||
+        isDealershipInfoQuery;
+
+      // If no valid dealership keywords match, DO NOT auto-reply! (Preserves conversation hygiene)
+      if (!shouldReply) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            syncedToCrm: true,
+            replied: false,
+            reason: "Message does not match dealership query keywords",
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
 
       const context = await ctx.runQuery(api.agent.getDealershipContext, {});
       const cars = Array.isArray(context?.cars) ? context.cars : [];

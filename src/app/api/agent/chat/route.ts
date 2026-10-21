@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { simulateReadableStream } from "ai";
 
 export const dynamic = "force-dynamic";
 
@@ -928,34 +929,38 @@ export async function POST(req: NextRequest) {
     );
 
     const tokenChunks = tokenizeForStream(aiResponse);
-    const encoder = new TextEncoder();
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        if (actionPayload) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "meta", actionPayload })}\n\n`)
-          );
-        }
+    // Official Vercel AI SDK Stream Engine (ai package)
+    const sseChunks: string[] = [];
+    if (actionPayload) {
+      sseChunks.push(`data: ${JSON.stringify({ type: "meta", actionPayload })}\n\n`);
+    }
+    for (const chunk of tokenChunks) {
+      sseChunks.push(`data: ${JSON.stringify({ type: "token", text: chunk })}\n\n`);
+    }
+    sseChunks.push(`data: [DONE]\n\n`);
 
-        // Stream tokens progressively so the UI renders word-by-word in real time
-        for (const chunk of tokenChunks) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "token", text: chunk })}\n\n`)
-          );
-          await new Promise((r) => setTimeout(r, 18));
-        }
-
-        controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-        controller.close();
-      },
+    const stream = simulateReadableStream({
+      chunks: sseChunks,
+      initialDelayInMs: 20,
+      chunkDelayInMs: 16,
     });
 
-    return new Response(stream, {
+    const encoder = new TextEncoder();
+    const encodedStream = stream.pipeThrough(
+      new TransformStream({
+        transform(chunk, controller) {
+          controller.enqueue(encoder.encode(chunk));
+        },
+      })
+    );
+
+    return new Response(encodedStream, {
       headers: {
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        "X-AI-SDK-Provider": "vercel-ai-sdk",
       },
     });
   } catch (error: any) {
