@@ -1234,7 +1234,6 @@ Answer naturally, accurately, and conversationally. Never hallucinate cars that 
       chunkDelayInMs: 16,
     });
 
-    const encoder = new TextEncoder();
     const encodedStream = stream.pipeThrough(
       new TransformStream({
         transform(chunk, controller) {
