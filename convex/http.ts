@@ -191,13 +191,22 @@ http.route({
         } catch {}
       }
 
-      // In 1-on-1 private direct chats, do not auto-reply if the dealership owner sent the message.
-      // In group chats, allow replies even if from_me is true (e.g. owner testing or querying in the group from their phone).
-      if (newestMsg.from_me && !isGroup) {
-        return new Response(JSON.stringify({ ok: true, ignored: "Outgoing message from agent in direct chat" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+      // STRICT PROTECTION: ZERO auto-replying for direct chats, personal contacts, or other groups!
+      // ONLY allow auto-reply inside the dedicated internal AutoFame group: 120363413508068515@g.us
+      const isInternalAgentGroup = chatId === "120363413508068515@g.us";
+      if (!isInternalAgentGroup) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            syncedToCrm: true,
+            replied: false,
+            reason: "Auto-reply strictly disabled outside dedicated internal agent group",
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
 
       // Filter out newsletter/status broadcast updates
@@ -210,9 +219,7 @@ http.route({
 
       const lower = incomingText.toLowerCase().trim();
 
-      // Auto-reply filter:
-      // In direct 1-on-1 chats, reply to all user inquiries.
-      // In group chats, reply if agent is mentioned, greeting is sent, or dealership keywords match.
+      // In the internal group, reply when @agent is tagged or when asking dealership questions for ourselves:
       const isAgentMentioned =
         lower.includes("@agent") ||
         lower.includes("agent") ||
@@ -322,7 +329,6 @@ http.route({
         lower.includes("contact");
 
       const shouldReply =
-        !isGroup ||
         isAgentMentioned ||
         isCountQuery ||
         isStockQuery ||
@@ -330,9 +336,9 @@ http.route({
         isFinanceQuoteQuery ||
         isVehicleSearchQuery ||
         isDealershipInfoQuery ||
-        isGreeting;
+        (isGreeting && isAgentMentioned);
 
-      // If in group and no valid dealership / agent triggers match, DO NOT auto-reply (preserves group hygiene)
+      // If no valid dealership / agent triggers match in the group, DO NOT auto-reply
       if (!shouldReply) {
         return new Response(
           JSON.stringify({
