@@ -91,6 +91,7 @@ export const upsertCrmContact = mutation({
     isRecentChat: v.optional(v.boolean()),
     notes: v.optional(v.string()),
     ficaDocsCount: v.optional(v.number()),
+    pipelineOrder: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const now = new Date().toISOString();
@@ -147,6 +148,10 @@ export const upsertCrmContact = mutation({
           args.ficaDocsCount !== undefined
             ? args.ficaDocsCount
             : existing.ficaDocsCount,
+        pipelineOrder:
+          args.pipelineOrder !== undefined
+            ? args.pipelineOrder
+            : existing.pipelineOrder,
         updatedAt: now,
       });
       return existing._id;
@@ -177,6 +182,7 @@ export const upsertCrmContact = mutation({
       isRecentChat: args.isRecentChat ?? true,
       notes: args.notes || "",
       ficaDocsCount: args.ficaDocsCount || 0,
+      pipelineOrder: args.pipelineOrder,
       createdAt: now,
       updatedAt: now,
     });

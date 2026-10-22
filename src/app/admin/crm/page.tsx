@@ -30,6 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import PipelineBoard from "./PipelineBoard";
 
 type PipelineStage =
   | "NEW_LEAD"
@@ -524,6 +525,55 @@ export default function DealershipCrmPage() {
     } catch (err: any) {
       toast.error(err.message || "Could not update stage");
     }
+  };
+
+  // Drag & drop pipeline: persist stage + position (fractional pipelineOrder)
+  const handlePipelineMove = async (
+    contact: any,
+    nextStage: string,
+    pipelineOrder: number
+  ) => {
+    const base = {
+      contactKey: contact.contactKey,
+      chatId: contact.chatId,
+      name: contact.name,
+      phone: contact.phone,
+      email: contact.email,
+      stage: nextStage,
+      priority: contact.priority || "HOT",
+      source: contact.source || "WHATSAPP",
+      assignedCarId: contact.assignedCarId,
+      assignedCarName: contact.assignedCarName,
+      dealValueZar: contact.dealValueZar,
+      depositZar: contact.depositZar,
+      lastMessage: contact.lastMessage,
+      lastContactedLabel: contact.lastContactedLabel || "Updated",
+      lastContactedAt: contact.lastContactedAt,
+      isRecentChat: contact.isRecentChat ?? true,
+      notes: contact.notes,
+    };
+    try {
+      await upsertCrmContact({ ...base, pipelineOrder });
+    } catch (err: any) {
+      // Backend not yet redeployed with pipelineOrder support — still persist the stage.
+      if (String(err?.message || "").includes("pipelineOrder")) {
+        await upsertCrmContact(base);
+      } else {
+        throw err;
+      }
+    }
+  };
+
+  const handlePriorityChange = async (contact: any, priority: string) => {
+    await upsertCrmContact({
+      contactKey: contact.contactKey,
+      chatId: contact.chatId,
+      name: contact.name,
+      phone: contact.phone,
+      stage: contact.stage,
+      priority,
+      lastContactedAt: contact.lastContactedAt,
+    });
   };
 
   const handleSendOmnichannelMessage = async () => {
@@ -1674,93 +1724,18 @@ ${
       {/* VIEW 2: FULL-WIDTH RESPONSIVE PIPELINE GRID (ZERO SCROLL)  */}
       {/* ────────────────────────────────────────────────────────── */}
       {activeView === "pipeline" && (
-        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 p-3 bg-[#11100e] overflow-hidden">
-          {PIPELINE_STAGES.map((stage, stageIdx) => {
-            const stageContacts = masterContacts.filter((c) => c.stage === stage.id);
-            const stageTotalZar = stageContacts.reduce(
-              (s, c) => s + Number(c.dealValueZar || 249900),
-              0
-            );
-            const nextStage = PIPELINE_STAGES[stageIdx + 1]?.id;
-
-            return (
-              <div
-                key={stage.id}
-                className="rounded-xl bg-[#161512] border border-[#25231f] flex flex-col h-full overflow-hidden"
-              >
-                <div className="p-2.5 border-b border-[#25231f] space-y-0.5 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span
-                        className={cn("h-2 w-2 rounded-full shrink-0", stage.dotClass)}
-                      />
-                      <span className="text-[11px] font-bold text-[#f5f2eb] uppercase truncate">
-                        {stage.label}
-                      </span>
-                    </div>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-[#22201c] text-[#dedad2] shrink-0">
-                      {stageContacts.length}
-                    </span>
-                  </div>
-                  <p className="text-[10px] font-mono text-emerald-400">
-                    R{stageTotalZar.toLocaleString()} ZAR
-                  </p>
-                </div>
-
-                {/* Top 4 cards fitted cleanly per column */}
-                <div className="flex-1 p-2 space-y-2 overflow-hidden flex flex-col">
-                  {stageContacts.slice(0, 4).map((c, idx) => (
-                    <div
-                      key={`${c.contactKey}-${idx}`}
-                      className="p-2.5 rounded-lg bg-[#1c1a17] hover:bg-[#22201c] border border-[#2e2b25] space-y-1.5 transition"
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="text-xs font-bold text-[#f5f2eb] truncate">{c.name}</p>
-                        <span className="text-[9px] font-mono text-emerald-400 shrink-0">
-                          {c.lastContactedLabel || "Synced"}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-[#a09c94] truncate">
-                        {c.assignedCarName}
-                      </p>
-                      <div className="flex items-center justify-between gap-1 pt-1 border-t border-[#262420]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleSelectContact(c);
-                            setActiveView("inbox");
-                          }}
-                          className="px-2 py-0.5 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-[10px] font-semibold text-emerald-300"
-                        >
-                          Open
-                        </button>
-                        {nextStage && (
-                          <button
-                            type="button"
-                            onClick={() => handleStageChange(c, nextStage)}
-                            className="px-2 py-0.5 rounded bg-[#262420] hover:bg-[#33302a] text-[10px] font-semibold text-[#dedad2] flex items-center gap-0.5"
-                          >
-                            Next <ChevronRight className="h-2.5 w-2.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {stageContacts.length > 4 && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveView("directory")}
-                      className="mt-auto w-full py-1 rounded-lg bg-[#1c1a17] border border-[#292621] text-[10px] font-mono text-emerald-400 hover:text-white"
-                    >
-                      +{stageContacts.length - 4} more in Directory →
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <PipelineBoard
+          contacts={masterContacts}
+          stages={PIPELINE_STAGES}
+          onMove={handlePipelineMove}
+          onPriorityChange={handlePriorityChange}
+          onOpen={(c) => {
+            handleSelectContact(c);
+            setActiveView("inbox");
+          }}
+        />
       )}
+
 
       {/* ────────────────────────────────────────────────────────── */}
       {/* VIEW 3: ZERO-SCROLL PAGINATED MASTER CONTACT DIRECTORY     */}

@@ -437,6 +437,7 @@ export default defineSchema({
     isRecentChat: v.optional(v.boolean()),
     notes: v.optional(v.string()),
     ficaDocsCount: v.optional(v.number()),
+    pipelineOrder: v.optional(v.number()), // Fractional sort key for drag & drop ordering within a stage
     createdAt: v.string(),
     updatedAt: v.string(),
   })
