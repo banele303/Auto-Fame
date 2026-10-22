@@ -154,6 +154,7 @@ http.route({
       }
 
       const chatId = newestMsg.chat_id || newestMsg.from || "";
+      const isGroup = chatId.includes("@g.us");
       const incomingText = (
         newestMsg.text?.body ||
         newestMsg.document?.caption ||
@@ -190,9 +191,10 @@ http.route({
         } catch {}
       }
 
-      // DO NOT reply to messages sent by the agent itself
-      if (newestMsg.from_me) {
-        return new Response(JSON.stringify({ ok: true, ignored: "Outgoing message from agent" }), {
+      // In 1-on-1 private direct chats, do not auto-reply if the dealership owner sent the message.
+      // In group chats, allow replies even if from_me is true (e.g. owner testing or querying in the group from their phone).
+      if (newestMsg.from_me && !isGroup) {
+        return new Response(JSON.stringify({ ok: true, ignored: "Outgoing message from agent in direct chat" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -207,8 +209,6 @@ http.route({
       }
 
       const lower = incomingText.toLowerCase().trim();
-
-      const isGroup = chatId.includes("@g.us");
 
       // Auto-reply filter:
       // In direct 1-on-1 chats, reply to all user inquiries.
@@ -237,12 +237,30 @@ http.route({
         lower.includes("help") ||
         lower.includes("test");
 
+      const isCarMentioned =
+        lower.includes("car") ||
+        lower.includes("cars") ||
+        lower.includes("vehicle") ||
+        lower.includes("vehicles") ||
+        lower.includes("dealership") ||
+        lower.includes("stock") ||
+        lower.includes("inventory") ||
+        lower.includes("bakkie") ||
+        lower.includes("suv");
+
       const isCountQuery =
         lower.includes("how many") ||
+        lower.includes("how much") ||
+        lower.includes("how car") ||
+        lower.includes("how cars") ||
+        lower.includes("what car") ||
+        lower.includes("what cars") ||
         lower.includes("count") ||
-        lower.includes("number of cars") ||
-        lower.includes("how much cars") ||
-        lower === "cars";
+        lower.includes("number of") ||
+        lower.includes("total") ||
+        lower.includes("do we have") ||
+        lower === "cars" ||
+        lower === "car";
 
       const isStockQuery =
         lower.includes("inventory") ||
@@ -421,8 +439,17 @@ http.route({
         lower.includes("how many car") ||
         lower.includes("how many vehicle") ||
         lower.includes("how many do we have") ||
+        lower.includes("how car do we have") ||
+        lower.includes("cars do we have") ||
+        lower.includes("car do we have") ||
+        lower.includes("how car") ||
+        lower.includes("how cars") ||
+        lower.includes("total car") ||
+        lower.includes("total stock") ||
         lower === "cars" ||
-        lower === "how many"
+        lower === "car" ||
+        lower === "how many" ||
+        (isCountQuery && (isCarMentioned || lower.includes("stock") || lower.includes("inventory")))
       ) {
         replyBody = `🚘 *AUTOFAME SHOWROOM SUMMARY*\n• *Total Catalog:* *${cars.length} vehicles*\n• *Available on Floor:* *${availableCars.length} vehicles*\n• *Sold to Date:* *${soldCars.length} vehicles*\n• *Inactive / In Prep:* *${inactiveCars.length} vehicles*`;
       } else if (lower.includes("quote") || lower.includes("quotation")) {

@@ -1,4 +1,31 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+export const getAllRawCars = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("cars").collect();
+  },
+});
+
+export const importCarsBatch = mutation({
+  args: { cars: v.array(v.any()) },
+  handler: async (ctx, args) => {
+    let inserted = 0;
+    for (const c of args.cars) {
+      const { _id, _creationTime, ...rest } = c;
+      const existing = await ctx.db
+        .query("cars")
+        .filter((q) => q.eq(q.field("id"), rest.id))
+        .first();
+      if (!existing) {
+        await ctx.db.insert("cars", rest);
+        inserted++;
+      }
+    }
+    return { inserted };
+  },
+});
 
 export const seedInitialData = mutation({
   args: {},
