@@ -617,85 +617,64 @@ export async function buildFinanceSubmissionWorkflow(
   let responseText = "";
 
   if (emailSent) {
-    responseText = `### 🏛️ AutoFame Vehicle Asset Finance — Bank Submission Confirmation
+    responseText = `### ✅ Vehicle Finance Application Submitted to Bank
 
-**Official Bank Credit Dossier Dispatched Successfully!**
-The complete Vehicle Asset Finance application has been officially generated as a signed PDF application form, bundled with all mandatory FICA proof documents, and submitted directly to the bank's credit desk via verified Gmail TLS SMTP.
+Your official vehicle finance application for **${fullName}** has been generated and emailed directly to the bank's credit desk with all supporting FICA documentation.
 
----
-
-#### 📋 Submission Dossier Overview:
-| Field | Official Submission Record |
+| Detail | Status |
 | :--- | :--- |
-| **Dossier Reference #** | **\`${appId}\`** (AutoFame F&I Tracking) |
-| **Applicant Name** | **${fullName}** |
-| **South African ID** | **\`${idNumber}\`** (Verified for Bureau Scoring) |
-| **Contact Phone / WhatsApp** | \`${phone}\` |
-| **Applicant Email (CC'd)** | \`${email}\` |
-| **Selected Vehicle** | **${carName}** (Showroom Value: R${carPrice.toLocaleString()} ZAR) |
-| **Financing Structure** | R${loanPrincipal.toLocaleString()} Principal @ 11.75% over ${termMonths} Months (~R${estMonthlyInstalment.toLocaleString()}/mo) |
-| **Affordability Assessment** | Gross: R${grossIncome.toLocaleString()} • Net: R${netIncome.toLocaleString()} • Disposable: **R${disposableSurplus.toLocaleString()}** |
-| **Bank Destination** | **\`${bankEmail}\`** (${bankName}) |
-| **Generated PDF Form** | \`AutoFame_Official_Finance_Application_${firstName}_${lastName}.pdf\` (**Attached**) |
-| **Supporting FICA Pack** | **5/5 Files Attached** (ID, Driver's License, Bank Statements, Payslips, Proof of Address) |
-| **SMTP Delivery Status** | **✅ 250 2.0.0 OK (Dispatched via ${connectedGmail})** |
+| **Application Ref** | **\`${appId}\`** |
+| **Applicant** | **${fullName}** (ID: \`${idNumber}\`) |
+| **Vehicle** | **${carName}** (R${carPrice.toLocaleString()} ZAR) |
+| **Finance Request** | R${loanPrincipal.toLocaleString()} ZAR over ${termMonths} months (~R${estMonthlyInstalment.toLocaleString()}/mo) |
+| **Bank Recipient** | **\`${bankEmail}\`** (${bankName}) |
+| **Client Copy** | CC'd to \`${email}\` |
+| **Official PDF Attached** | \`AutoFame_Official_Finance_Application_${firstName}_${lastName}.pdf\` |
+| **FICA Documents** | 5/5 verified files attached (ID, Driver's License, Bank Statements, Payslips, Proof of Address) |
+| **Delivery Status** | **Sent via Gmail TLS SMTP** |
 
----
-
-#### 🔬 South African Vehicle Asset Finance Bank Submission Standards (NCA & FICA):
-1. **National Credit Act (NCA Sec. 81) Affordability**: The bank requires a positive disposable surplus after existing debt and living expenses. ${fullName}'s surplus of **R${disposableSurplus.toLocaleString()} ZAR** easily services the **~R${estMonthlyInstalment.toLocaleString()} ZAR/mo** instalment (Debt-to-Income < 28%).
-2. **Automated Credit Bureau Pull**: The bank credit engine immediately validates ${idNumber} against TransUnion, Experian, and XDS for payment profile history and adverse listings.
-3. **FICA KYC Compliance**: Stamped 3-month bank statements and payslips match the stated salary credits.
-4. **Next Step**: The bank credit desk turnaround time is typically **2 to 4 business hours** for final pre-approval or contract signing voucher.`;
+The bank credit assessment typically takes **2 to 4 business hours**. We will notify you as soon as pre-approval is received.`;
   } else {
-    responseText = `### 🏛️ AutoFame Vehicle Asset Finance — Bank Submission & PDF Engine
+    // Check if any mandatory item is missing
+    const missing: string[] = [];
+    if (!firstName || firstName === "Valued") missing.push("Applicant Full Name");
+    if (!idNumber || idNumber.length !== 13) missing.push("13-digit South African ID Number");
+    if (!carName) missing.push("Vehicle selection");
+    if (!grossIncome) missing.push("Gross Monthly Income");
+    if (!employer) missing.push("Employer Name");
 
-AutoFame AI can automatically **compile the official South African Vehicle Asset Finance Application PDF form** on behalf of the client, verify all mandatory FICA documentation under the National Credit Act, and dispatch the complete credit pack to the bank.
+    if (missing.length > 0) {
+      responseText = `### 📋 Vehicle Finance Application for ${fullName}
 
----
+I can fill the official bank finance application form and submit it to the bank on your behalf. To proceed, I just need a few missing details:
 
-#### 1. Live Completeness & Readiness Check for **${fullName}**:
-| Information Category | Field Description | Status | Current Value |
-| :--- | :--- | :---: | :--- |
-| **Applicant Particulars** | Full Legal Name | ✅ | **${fullName}** |
-| | South African ID (13 Digits) | ✅ | **\`${idNumber}\`** |
-| | Contact Phone / WhatsApp | ✅ | \`${phone}\` |
-| | Email Address | ✅ | \`${email}\` |
-| | Physical Residential Address | ✅ | ${address} |
-| **Vehicle Particulars** | Selected Showroom Vehicle | ✅ | **${carName}** |
-| | Retail Price (Incl. VAT) | ✅ | **R${carPrice.toLocaleString()} ZAR** |
-| | Proposed Finance Amount | ✅ | R${loanPrincipal.toLocaleString()} ZAR (10% Deposit: R${deposit.toLocaleString()}) |
-| | Term & Instalment | ✅ | ${termMonths} Months • ~R${estMonthlyInstalment.toLocaleString()}/mo |
-| **Affordability (NCA Sec 81)** | Employer & Occupation | ✅ | ${employer} • ${jobTitle} |
-| | Gross Monthly Salary | ✅ | **R${grossIncome.toLocaleString()} ZAR** |
-| | Net Disposable Surplus | ✅ | **R${disposableSurplus.toLocaleString()} ZAR** (Positive Surplus) |
-| **Mandatory FICA Pack** | 1. Copy of South African ID | ✅ | Ready & Verified |
-| | 2. Valid Driver's License | ✅ | Ready & Verified |
-| | 3. 3 Months Stamped Bank Statements | ✅ | Ready & Verified |
-| | 4. 3 Months Official Payslips | ✅ | Ready & Verified |
-| | 5. Proof of Residential Address | ✅ | Ready & Verified (< 3 Months Old) |
+${missing.map((m) => `• ❌ **Missing**: ${m}`).join("\n")}
 
----
+**Mandatory FICA Documents Required by the Bank:**
+1. Clear copy of South African ID (Smart Card front & back, or Green Book)
+2. Valid South African Driver's License
+3. Latest 3 months official stamped bank statements (PDF)
+4. Latest 3 months salary payslips
+5. Proof of residential address (< 3 months old)
 
-#### 2. Research: How Vehicle Asset Finance Submissions Work in South Africa
-Submitting a vehicle finance application to South African tier-1 financiers (**WesBank, MFC / Nedbank, Absa Vehicle & Asset Finance, Standard Bank**) requires strict adherence to:
-1. **National Credit Act (Act 34 of 2005 - Section 81)**:
-   - Financiers are legally prohibited from granting reckless credit.
-   - The dealership F&I must submit a comprehensive income, expense, and debt obligation schedule.
-   - The applicant's net surplus must exceed the monthly repayment by a safety buffer.
-2. **Financial Intelligence Centre Act (FICA - Act 38 of 2001)**:
-   - Full identity verification via 13-digit green barcoded ID or smart card (both sides).
-   - Proof of physical residence not older than 3 calendar months (utility bill, rates, or signed lease).
-   - Stamped 3 months consecutive bank statements proving regular salary deposits matching the payslips.
-3. **Official Dossier & PDF Generation**:
-   - The dealership generates a standardized Vehicle Asset Finance Dossier containing the Offer to Purchase (OTP), signed NCA disclosure, vehicle specification sheet, and FICA proof bundle.
-   - Transmitted directly to the bank's wholesale dealer credit desk (\`${bankEmail}\`) with CC to the applicant.
+Please reply with the missing information or upload your documents in the Finance Container on the left, and I'll generate the filled PDF and send it to the bank for you.`;
+    } else {
+      responseText = `### 📋 Finance Application Ready for ${fullName}
 
----
+All information has been verified and your official bank application form is ready to be submitted:
 
-#### 3. Ready to Submit to the Bank:
-The application dossier is **100% complete and ready**.
-- **Action**: Say **"Submit finance to the bank"** or **"Send finance application for ${firstName} to the bank"**, or click the **Verify & Email Application to Bank** button in the Finance Container drawer on the left to dispatch immediately with the filled PDF attached!`;
+| Information | Details |
+| :--- | :--- |
+| **Applicant** | **${fullName}** (ID: \`${idNumber}\`) |
+| **Contact** | \`${phone}\` • \`${email}\` |
+| **Vehicle** | **${carName}** (R${carPrice.toLocaleString()} ZAR) |
+| **Loan Amount** | R${loanPrincipal.toLocaleString()} ZAR (10% deposit: R${deposit.toLocaleString()} ZAR) |
+| **Est. Monthly Payment** | ~R${estMonthlyInstalment.toLocaleString()} ZAR / month (${termMonths} months) |
+| **Employment** | ${employer} • ${jobTitle} (Gross: R${grossIncome.toLocaleString()} / mo) |
+| **FICA Pack** | 5/5 verified documents ready (ID, Driver's License, Bank Statements, Payslips, Proof of Address) |
+
+The official PDF application form has been prepared. Say **"Submit to bank"** or click **Verify & Email Application to Bank** to dispatch the complete dossier to **${bankEmail}** immediately.`;
+    }
   }
 
   const actionPayload = {
@@ -2200,7 +2179,7 @@ ${emailGroundTruth || "No recent messages"}
 Email & Operational Directives:
 - Answer any questions about WhatsApp conversations, contacts, discussions with clients (e.g. Precious, Martha, etc.), emails, inventory, and finance accurately using the ground truth above.
 - When asked what was discussed with a contact (e.g. "what did we discuss with Precious today?"), provide the exact details, greetings, voice notes exchanged, reactions, and topics discussed from the conversation history.
-- When asked about submitting finance to the bank, sending email on behalf of client, filling PDF forms, or checking required documents: explain South African NCA Section 81 affordability rules, FICA KYC requirements, the 5 mandatory proof documents, and confirm bank submission status.
+- When asked about submitting finance to the bank, sending email on behalf of client, filling PDF forms, or checking required documents: assist the user directly, clearly, and politely. Check which details and FICA documents (ID, driver's license, 3 months bank statements, payslips, proof of residence) are ready or missing, and confirm when the application has been submitted to the bank. Never lecture or cite academic research to the client.
 - When asked to write or send emails, fulfill user instructions completely, generating formal, polished letters with warm greetings, clear details, and professional sign-offs.
 - Always use clean Markdown formatting. Never hallucinate nonexistent cars.
 ${explicitFinanceResponse ? `\n\nOfficial Vehicle Asset Finance Submission & PDF Dossier Ground Truth:\n${explicitFinanceResponse}` : ""}`;
