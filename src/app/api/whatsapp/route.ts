@@ -1,299 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  DEFAULT_WHAPI_TOKEN,
+  DEFAULT_CHANNEL_ID,
+  AUTOFAME_AGENT_GROUP_ID,
+  SYNCED_WHAPI_CONTACTS,
+  normalizeToChatId,
+  fetchContactMessagesFromWhapi,
+  formatContactDiscussion,
+  findContactInQuery,
+} from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_WHAPI_TOKEN = "gfsvMATZZV5XA5bOi71jCmhyxdE7STgO";
-const DEFAULT_CHANNEL_ID = "ANTMAN-ZPBZZ";
-const AUTOFAME_AGENT_GROUP_ID = "120363413508068515@g.us";
-
 // Track answered message IDs in memory so we never double-reply
 const answeredMessageIds = new Set<string>();
-
-/**
- * Synced Phonebook Contacts & Recent Chats from Whapi Channel ANTMAN-ZPBZZ (+27 63 199 5124)
- * Ensures contact search, selection, and chat history always work even if Whapi trial quota is at 0.
- */
-const SYNCED_WHAPI_CONTACTS: {
-  id: string;
-  chatId: string;
-  name: string;
-  phone: string;
-  lastMessage?: string;
-  fromMe?: boolean;
-  timestamp?: string;
-  lastContactedLabel?: string;
-  isRecentChat?: boolean;
-}[] = [
-  {
-    id: AUTOFAME_AGENT_GROUP_ID,
-    chatId: AUTOFAME_AGENT_GROUP_ID,
-    name: "AutoFame AI Agent (Group)",
-    phone: "+27 63 199 5124",
-    lastMessage: "AutoFame Dealership AI Agent Channel — Ask inventory, quotes, or finance",
-    fromMe: false,
-    timestamp: "2026-10-20T10:30:00.000Z",
-    lastContactedLabel: "Today • Live Agent",
-    isRecentChat: true,
-  },
-  {
-    id: "27602471161",
-    chatId: "27602471161@s.whatsapp.net",
-    name: "Contact +27 60 247 1161",
-    phone: "+27 60 247 1161",
-    lastMessage: "Morning",
-    fromMe: true,
-    timestamp: "2026-10-20T08:52:42.000Z",
-    lastContactedLabel: "Today 10:52 AM",
-    isRecentChat: true,
-  },
-  {
-    id: "27697642905",
-    chatId: "27697642905@s.whatsapp.net",
-    name: "Precious",
-    phone: "+27 69 764 2905",
-    lastMessage: "😂lol",
-    fromMe: false,
-    timestamp: "2026-10-20T08:12:20.000Z",
-    lastContactedLabel: "Today 10:12 AM",
-    isRecentChat: true,
-  },
-  {
-    id: "27637310437",
-    chatId: "27637310437@s.whatsapp.net",
-    name: "Contact +27 63 731 0437",
-    phone: "+27 63 731 0437",
-    lastMessage: "Morning Sir I hope you good, wanted to ask if its not yet sorted this side...",
-    fromMe: true,
-    timestamp: "2026-10-20T05:10:08.000Z",
-    lastContactedLabel: "Today 07:10 AM",
-    isRecentChat: true,
-  },
-  {
-    id: "27747404229",
-    chatId: "27747404229@s.whatsapp.net",
-    name: "Client +27 74 740 4229",
-    phone: "+27 74 740 4229",
-    lastMessage: "Going to cost only R432 — Okay and that will cost how much",
-    fromMe: true,
-    timestamp: "2026-10-20T05:08:47.000Z",
-    lastContactedLabel: "Today 07:08 AM",
-    isRecentChat: true,
-  },
-  {
-    id: "27736936626",
-    chatId: "27736936626@s.whatsapp.net",
-    name: "Thamu (+27 73 693 6626)",
-    phone: "+27 73 693 6626",
-    lastMessage: "Awe Thamu",
-    fromMe: true,
-    timestamp: "2026-10-19T17:17:27.000Z",
-    lastContactedLabel: "Yesterday 19:17",
-    isRecentChat: true,
-  },
-  {
-    id: "27631227343",
-    chatId: "27631227343@s.whatsapp.net",
-    name: "Blesz (Mableza)",
-    phone: "+27 63 122 7343",
-    lastMessage: "Recent WhatsApp Chat — Blesz",
-    fromMe: false,
-    timestamp: "2026-10-19T14:20:00.000Z",
-    lastContactedLabel: "Yesterday 16:20",
-    isRecentChat: true,
-  },
-  {
-    id: "27689523316",
-    chatId: "27689523316@s.whatsapp.net",
-    name: "Contact +27 68 952 3316",
-    phone: "+27 68 952 3316",
-    lastMessage: "Hello",
-    fromMe: true,
-    timestamp: "2026-10-19T13:33:53.000Z",
-    lastContactedLabel: "Yesterday 15:33",
-    isRecentChat: true,
-  },
-  {
-    id: "27762232914",
-    chatId: "27762232914@s.whatsapp.net",
-    name: "Contact +27 76 223 2914",
-    phone: "+27 76 223 2914",
-    lastMessage: "Thanks I got the message",
-    fromMe: true,
-    timestamp: "2026-10-19T12:31:57.000Z",
-    lastContactedLabel: "Yesterday 14:31",
-    isRecentChat: true,
-  },
-  {
-    id: "27833482059",
-    chatId: "27833482059@s.whatsapp.net",
-    name: "Advance Auto (Tshepo Seepe)",
-    phone: "+27 83 348 2059",
-    lastMessage: "Advance Auto Dealership Contact",
-    fromMe: false,
-    timestamp: "2026-10-19T12:00:00.000Z",
-    lastContactedLabel: "Yesterday 14:00",
-    isRecentChat: true,
-  },
-  {
-    id: "27781286020",
-    chatId: "27781286020@s.whatsapp.net",
-    name: "JD Auto Cars",
-    phone: "+27 78 128 6020",
-    lastMessage: "JD Auto Cars Contact",
-    fromMe: false,
-    timestamp: "2026-10-19T11:30:00.000Z",
-    lastContactedLabel: "Yesterday 13:30",
-    isRecentChat: true,
-  },
-  {
-    id: "27733256354",
-    chatId: "27733256354@s.whatsapp.net",
-    name: "Imperial (Imperial Cons, Anytech S)",
-    phone: "+27 73 325 6354",
-    lastMessage: "Imperial Contact",
-    fromMe: false,
-    timestamp: "2026-10-19T11:00:00.000Z",
-    lastContactedLabel: "Yesterday 13:00",
-    isRecentChat: true,
-  },
-  {
-    id: "27837324229",
-    chatId: "27837324229@s.whatsapp.net",
-    name: "Martha (Maria Engelbrecht)",
-    phone: "+27 83 732 4229",
-    lastMessage:
-      "Bank: Capitec | Account Holder: MS MARIA ENGELBRECHT | Business Name: West Bulk Bags | Account Type: Entrepreneur Account | Account number: 2558165883",
-    fromMe: false,
-    timestamp: "2026-10-19T10:08:25.000Z",
-    lastContactedLabel: "Yesterday 12:08",
-    isRecentChat: true,
-  },
-  {
-    id: "27656379695",
-    chatId: "27656379695@s.whatsapp.net",
-    name: "Contact +27 65 637 9695",
-    phone: "+27 65 637 9695",
-    lastMessage: "Morning",
-    fromMe: true,
-    timestamp: "2026-10-19T09:59:02.000Z",
-    lastContactedLabel: "Yesterday 11:59",
-    isRecentChat: true,
-  },
-  {
-    id: "27799363808",
-    chatId: "27799363808@s.whatsapp.net",
-    name: "Contact +27 79 936 3808",
-    phone: "+27 79 936 3808",
-    lastMessage: "Am good my brother Its Alex here...",
-    fromMe: true,
-    timestamp: "2026-10-19T09:35:20.000Z",
-    lastContactedLabel: "Yesterday 11:35",
-    isRecentChat: true,
-  },
-  { id: "27791065911", chatId: "27791065911@s.whatsapp.net", name: "Weja (wellew)", phone: "+27 79 106 5911", lastMessage: "Saved Phonebook Contact" },
-  { id: "27610162097", chatId: "27610162097@s.whatsapp.net", name: "Zach", phone: "+27 61 016 2097", lastMessage: "Saved Phonebook Contact" },
-  { id: "27785016233", chatId: "27785016233@s.whatsapp.net", name: "Zinto", phone: "+27 78 501 6233", lastMessage: "Saved Phonebook Contact" },
-  { id: "263715855616", chatId: "263715855616@s.whatsapp.net", name: "Ndonsi", phone: "+263 71 585 5616", lastMessage: "Saved Phonebook Contact" },
-  { id: "27629904937", chatId: "27629904937@s.whatsapp.net", name: "Anty Ntombi", phone: "+27 62 990 4937", lastMessage: "Saved Phonebook Contact" },
-  { id: "263788112597", chatId: "263788112597@s.whatsapp.net", name: "Buumi", phone: "+263 78 811 2597", lastMessage: "Saved Phonebook Contact" },
-  { id: "27847558440", chatId: "27847558440@s.whatsapp.net", name: "Ayibongwe", phone: "+27 84 755 8440", lastMessage: "Saved Phonebook Contact" },
-  { id: "27665002247", chatId: "27665002247@s.whatsapp.net", name: "My Love", phone: "+27 66 500 2247", lastMessage: "Saved Phonebook Contact" },
-  { id: "27707652431", chatId: "27707652431@s.whatsapp.net", name: "Frank", phone: "+27 70 765 2431", lastMessage: "Saved Phonebook Contact" },
-  { id: "27697086121", chatId: "27697086121@s.whatsapp.net", name: "South Gate", phone: "+27 69 708 6121", lastMessage: "Saved Phonebook Contact" },
-  { id: "263710769630", chatId: "263710769630@s.whatsapp.net", name: "Thabani", phone: "+263 71 076 9630", lastMessage: "Saved Phonebook Contact" },
-  { id: "27725046118", chatId: "27725046118@s.whatsapp.net", name: "Sled", phone: "+27 72 504 6118", lastMessage: "Saved Phonebook Contact" },
-  { id: "263781619370", chatId: "263781619370@s.whatsapp.net", name: "Maphuma Scott", phone: "+263 78 161 9370", lastMessage: "Saved Phonebook Contact" },
-  { id: "27783926931", chatId: "27783926931@s.whatsapp.net", name: "Rose", phone: "+27 78 392 6931", lastMessage: "Saved Phonebook Contact" },
-  { id: "27837055495", chatId: "27837055495@s.whatsapp.net", name: "York", phone: "+27 83 705 5495", lastMessage: "Saved Phonebook Contact" },
-  { id: "27681498392", chatId: "27681498392@s.whatsapp.net", name: "Makhado", phone: "+27 68 149 8392", lastMessage: "Saved Phonebook Contact" },
-  { id: "27817477939", chatId: "27817477939@s.whatsapp.net", name: "Mandla", phone: "+27 81 747 7939", lastMessage: "Saved Phonebook Contact" },
-  { id: "27640160448", chatId: "27640160448@s.whatsapp.net", name: "Synergy Holdingd", phone: "+27 64 016 0448", lastMessage: "Saved Phonebook Contact" },
-  { id: "27724605673", chatId: "27724605673@s.whatsapp.net", name: "Edias Moyo", phone: "+27 72 460 5673", lastMessage: "Saved Phonebook Contact" },
-  { id: "27710395516", chatId: "27710395516@s.whatsapp.net", name: "Bhekie", phone: "+27 71 039 5516", lastMessage: "Saved Phonebook Contact" },
-  { id: "27677624853", chatId: "27677624853@s.whatsapp.net", name: "Ruth", phone: "+27 67 762 4853", lastMessage: "Saved Phonebook Contact" },
-  { id: "27784753871", chatId: "27784753871@s.whatsapp.net", name: "Siya Siya", phone: "+27 78 475 3871", lastMessage: "Saved Phonebook Contact" },
-  { id: "27659264090", chatId: "27659264090@s.whatsapp.net", name: "Ayaa", phone: "+27 65 926 4090", lastMessage: "Saved Phonebook Contact" },
-  { id: "27699644296", chatId: "27699644296@s.whatsapp.net", name: "Godeshy", phone: "+27 69 964 4296", lastMessage: "Saved Phonebook Contact" },
-  { id: "27683723056", chatId: "27683723056@s.whatsapp.net", name: "Elias", phone: "+27 68 372 3056", lastMessage: "Saved Phonebook Contact" },
-  { id: "27680781107", chatId: "27680781107@s.whatsapp.net", name: "Maolger", phone: "+27 68 078 1107", lastMessage: "Saved Phonebook Contact" },
-  { id: "27843389054", chatId: "27843389054@s.whatsapp.net", name: "Young Rick", phone: "+27 84 338 9054", lastMessage: "Saved Phonebook Contact" },
-  { id: "27672562521", chatId: "27672562521@s.whatsapp.net", name: "Jay Oil", phone: "+27 67 256 2521", lastMessage: "Saved Phonebook Contact" },
-  { id: "27638542543", chatId: "27638542543@s.whatsapp.net", name: "Gazi", phone: "+27 63 854 2543", lastMessage: "Saved Phonebook Contact" },
-  { id: "27842814665", chatId: "27842814665@s.whatsapp.net", name: "Maidi Mashao", phone: "+27 84 281 4665", lastMessage: "Saved Phonebook Contact" },
-  { id: "27653355454", chatId: "27653355454@s.whatsapp.net", name: "Talia", phone: "+27 65 335 5454", lastMessage: "Saved Phonebook Contact" },
-  { id: "27799765903", chatId: "27799765903@s.whatsapp.net", name: "Gcobani Hlubi", phone: "+27 79 976 5903", lastMessage: "Saved Phonebook Contact" },
-  { id: "27715712713", chatId: "27715712713@s.whatsapp.net", name: "Archie Maubane", phone: "+27 71 571 2713", lastMessage: "Saved Phonebook Contact" },
-  { id: "27689523316", chatId: "27689523316@s.whatsapp.net", name: "Contact +27 68 952 3316", phone: "+27 68 952 3316", lastMessage: "Hello", fromMe: true },
-  { id: "27656379695", chatId: "27656379695@s.whatsapp.net", name: "Contact +27 65 637 9695", phone: "+27 65 637 9695", lastMessage: "Morning", fromMe: true },
-  { id: "27685206008", chatId: "27685206008@s.whatsapp.net", name: "Innocent dbouy Dumazi", phone: "+27 68 520 6008", lastMessage: "WhatsApp Contact" },
-  { id: "27810437088", chatId: "27810437088@s.whatsapp.net", name: "garethpiorek98", phone: "+27 81 043 7088", lastMessage: "WhatsApp Contact" },
-  { id: "27846702322", chatId: "27846702322@s.whatsapp.net", name: "Nec2", phone: "+27 84 670 2322", lastMessage: "Saved Phonebook Contact" },
-  { id: "27740737617", chatId: "27740737617@s.whatsapp.net", name: "P2", phone: "+27 74 073 7617", lastMessage: "Saved Phonebook Contact" },
-  { id: "27813238936", chatId: "27813238936@s.whatsapp.net", name: "Bath2", phone: "+27 81 323 8936", lastMessage: "Saved Phonebook Contact" },
-  { id: "27766469620", chatId: "27766469620@s.whatsapp.net", name: "Painter3", phone: "+27 76 646 9620", lastMessage: "Saved Phonebook Contact" },
-  { id: "27837365220", chatId: "27837365220@s.whatsapp.net", name: "Painter4", phone: "+27 83 736 5220", lastMessage: "Saved Phonebook Contact" },
-  { id: "27693466396", chatId: "27693466396@s.whatsapp.net", name: "Dum", phone: "+27 69 346 6396", lastMessage: "Saved Phonebook Contact" },
-  { id: "27766965583", chatId: "27766965583@s.whatsapp.net", name: "Painti", phone: "+27 76 696 5583", lastMessage: "Saved Phonebook Contact" },
-  { id: "27826069421", chatId: "27826069421@s.whatsapp.net", name: "Pep", phone: "+27 82 606 9421", lastMessage: "Saved Phonebook Contact" },
-  { id: "263713622833", chatId: "263713622833@s.whatsapp.net", name: "Delight", phone: "+263 71 362 2833", lastMessage: "Saved Phonebook Contact" },
-  { id: "27698413050", chatId: "27698413050@s.whatsapp.net", name: "Skimmm", phone: "+27 69 841 3050", lastMessage: "Saved Phonebook Contact" },
-  { id: "263771903221", chatId: "263771903221@s.whatsapp.net", name: "Mazuzu", phone: "+263 77 190 3221", lastMessage: "Saved Phonebook Contact" },
-  { id: "27782050180", chatId: "27782050180@s.whatsapp.net", name: "Plumbee", phone: "+27 78 205 0180", lastMessage: "Saved Phonebook Contact" },
-  { id: "27786197272", chatId: "27786197272@s.whatsapp.net", name: "Electric Stuff", phone: "+27 78 619 7272", lastMessage: "Saved Phonebook Contact" },
-  { id: "263787948750", chatId: "263787948750@s.whatsapp.net", name: "Ashy", phone: "+263 78 794 8750", lastMessage: "Saved Phonebook Contact" },
-  { id: "27678939128", chatId: "27678939128@s.whatsapp.net", name: "MK", phone: "+27 67 893 9128", lastMessage: "Saved Phonebook Contact" },
-  { id: "27749358488", chatId: "27749358488@s.whatsapp.net", name: "God Father", phone: "+27 74 935 8488", lastMessage: "Saved Phonebook Contact" },
-  { id: "27640490688", chatId: "27640490688@s.whatsapp.net", name: "Heater", phone: "+27 64 049 0688", lastMessage: "Saved Phonebook Contact" },
-  { id: "27724556589", chatId: "27724556589@s.whatsapp.net", name: "Chisambo", phone: "+27 72 455 6589", lastMessage: "Saved Phonebook Contact" },
-  { id: "27815734551", chatId: "27815734551@s.whatsapp.net", name: "Dumoe", phone: "+27 81 573 4551", lastMessage: "Saved Phonebook Contact" },
-  { id: "27671712635", chatId: "27671712635@s.whatsapp.net", name: "Bath3", phone: "+27 67 171 2635", lastMessage: "Saved Phonebook Contact" },
-  { id: "27828259961", chatId: "27828259961@s.whatsapp.net", name: "Roof1", phone: "+27 82 825 9961", lastMessage: "Saved Phonebook Contact" },
-  { id: "27783770744", chatId: "27783770744@s.whatsapp.net", name: "Rim", phone: "+27 78 377 0744", lastMessage: "Saved Phonebook Contact" },
-  { id: "27760868895", chatId: "27760868895@s.whatsapp.net", name: "Nic Theunissen", phone: "+27 76 086 8895", lastMessage: "WhatsApp Contact" },
-  { id: "27731160692", chatId: "27731160692@s.whatsapp.net", name: "X-MAN Construction & Projects", phone: "+27 73 116 0692", lastMessage: "WhatsApp Contact" },
-  { id: "27626593766", chatId: "27626593766@s.whatsapp.net", name: "Re Battery", phone: "+27 62 659 3766", lastMessage: "Saved Phonebook Contact" },
-  { id: "27663638131", chatId: "27663638131@s.whatsapp.net", name: "Ske", phone: "+27 66 363 8131", lastMessage: "Saved Phonebook Contact" },
-  { id: "263785889616", chatId: "263785889616@s.whatsapp.net", name: "Honest", phone: "+263 78 588 9616", lastMessage: "Saved Phonebook Contact" },
-  { id: "263788121743", chatId: "263788121743@s.whatsapp.net", name: "Money Money", phone: "+263 78 812 1743", lastMessage: "Saved Phonebook Contact" },
-  { id: "27787085891", chatId: "27787085891@s.whatsapp.net", name: "Big Man", phone: "+27 78 708 5891", lastMessage: "Saved Phonebook Contact" },
-  { id: "263779242629", chatId: "263779242629@s.whatsapp.net", name: "Bus", phone: "+263 77 924 2629", lastMessage: "Saved Phonebook Contact" },
-  { id: "27704213784", chatId: "27704213784@s.whatsapp.net", name: "Maden Xpress ZW", phone: "+27 70 421 3784", lastMessage: "Saved Phonebook Contact" },
-  { id: "27860900100", chatId: "27860900100@s.whatsapp.net", name: "Phone Yami", phone: "+27 86 090 0100", lastMessage: "Saved Phonebook Contact" },
-  { id: "263775429660", chatId: "263775429660@s.whatsapp.net", name: "Nkosisikelela", phone: "+263 77 542 9660", lastMessage: "Saved Phonebook Contact" },
-  { id: "27617747378", chatId: "27617747378@s.whatsapp.net", name: "Style and Beyouti Zone Spa", phone: "+27 61 774 7378", lastMessage: "WhatsApp Contact" },
-  { id: "27827732931", chatId: "27827732931@s.whatsapp.net", name: "Nish", phone: "+27 82 773 2931", lastMessage: "WhatsApp Contact" },
-  { id: "27732762910", chatId: "27732762910@s.whatsapp.net", name: "PeaceLover T Makwela", phone: "+27 73 276 2910", lastMessage: "WhatsApp Contact" },
-  { id: "27730509739", chatId: "27730509739@s.whatsapp.net", name: "anelemzizi77", phone: "+27 73 050 9739", lastMessage: "WhatsApp Contact" },
-  { id: "27827152506", chatId: "27827152506@s.whatsapp.net", name: "Liswaah", phone: "+27 82 715 2506", lastMessage: "WhatsApp Contact" },
-  { id: "27689570553", chatId: "27689570553@s.whatsapp.net", name: "Contact +27 68 957 0553", phone: "+27 68 957 0553", lastMessage: "Saved Phonebook Contact" },
-  { id: "27710798863", chatId: "27710798863@s.whatsapp.net", name: "Contact +27 71 079 8863", phone: "+27 71 079 8863", lastMessage: "WhatsApp Contact" },
-  { id: "27606709551", chatId: "27606709551@s.whatsapp.net", name: "Contact +27 60 670 9551", phone: "+27 60 670 9551", lastMessage: "WhatsApp Contact" },
-  { id: "27735230659", chatId: "27735230659@s.whatsapp.net", name: "Contact +27 73 523 0659", phone: "+27 73 523 0659", lastMessage: "WhatsApp Contact" },
-  { id: "27665273398", chatId: "27665273398@s.whatsapp.net", name: "Contact +27 66 527 3398", phone: "+27 66 527 3398", lastMessage: "WhatsApp Contact" },
-  { id: "27717765895", chatId: "27717765895@s.whatsapp.net", name: "Contact +27 71 776 5895", phone: "+27 71 776 5895", lastMessage: "WhatsApp Contact" },
-  { id: "27836601861", chatId: "27836601861@s.whatsapp.net", name: "Contact +27 83 660 1861", phone: "+27 83 660 1861", lastMessage: "WhatsApp Contact" },
-  { id: "27837086050", chatId: "27837086050@s.whatsapp.net", name: "Contact +27 83 708 6050", phone: "+27 83 708 6050", lastMessage: "WhatsApp Contact" },
-  { id: "263710957655", chatId: "263710957655@s.whatsapp.net", name: "Contact +263 71 095 7655", phone: "+263 71 095 7655", lastMessage: "WhatsApp Contact" },
-  { id: "27842765547", chatId: "27842765547@s.whatsapp.net", name: "Contact +27 84 276 5547", phone: "+27 84 276 5547", lastMessage: "WhatsApp Contact" },
-  { id: "27635559360", chatId: "27635559360@s.whatsapp.net", name: "Contact +27 63 555 9360", phone: "+27 63 555 9360", lastMessage: "WhatsApp Contact" },
-  { id: "27832386221", chatId: "27832386221@s.whatsapp.net", name: "Contact +27 83 238 6221", phone: "+27 83 238 6221", lastMessage: "WhatsApp Contact" },
-  { id: "27716859859", chatId: "27716859859@s.whatsapp.net", name: "Contact +27 71 685 9859", phone: "+27 71 685 9859", lastMessage: "WhatsApp Contact" },
-  { id: "27734194133", chatId: "27734194133@s.whatsapp.net", name: "Contact +27 73 419 4133", phone: "+27 73 419 4133", lastMessage: "WhatsApp Contact" },
-  { id: "27655773053", chatId: "27655773053@s.whatsapp.net", name: "Contact +27 65 577 3053", phone: "+27 65 577 3053", lastMessage: "WhatsApp Contact" },
-  { id: "27733112369", chatId: "27733112369@s.whatsapp.net", name: "Contact +27 73 311 2369", phone: "+27 73 311 2369", lastMessage: "WhatsApp Contact" },
-  { id: "27739575352", chatId: "27739575352@s.whatsapp.net", name: "Contact +27 73 957 5352", phone: "+27 73 957 5352", lastMessage: "WhatsApp Contact" },
-  { id: "27602821784", chatId: "27602821784@s.whatsapp.net", name: "Contact +27 60 282 1784", phone: "+27 60 282 1784", lastMessage: "WhatsApp Contact" },
-  { id: "27843474145", chatId: "27843474145@s.whatsapp.net", name: "Contact +27 84 347 4145", phone: "+27 84 347 4145", lastMessage: "WhatsApp Contact" },
-  { id: "27835955743", chatId: "27835955743@s.whatsapp.net", name: "Contact +27 83 595 5743", phone: "+27 83 595 5743", lastMessage: "WhatsApp Contact" },
-];
-
-function normalizeToChatId(rawPhone: string): string {
-  let digits = rawPhone.replace(/\D/g, "");
-  if (digits.startsWith("0") && digits.length === 10) {
-    digits = "27" + digits.slice(1);
-  }
-  return `${digits}@s.whatsapp.net`;
-}
 
 /**
  * Clean, modern WhatsApp formatter for a list of vehicles
@@ -347,121 +67,6 @@ function formatVehicleQuoteForWhatsApp(car: any): string {
   );
 
   return `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n\n🚘 *Vehicle:* ${car.year} ${car.make} ${car.model}\n🔢 *Stock ID:* #AF-${car.id}\n⚙️ *Specs:* ${Number(car.mileage || 0).toLocaleString()} km • ${car.transmission || "Automatic"} • ${car.fuelType || "Petrol"}\n\n💳 *FINANCE BREAKDOWN (ESTIMATE)*\n• *Retail Price:* R${price.toLocaleString()} ZAR\n• *10% Deposit:* R${deposit.toLocaleString()} ZAR\n• *Principal Loan:* R${loanAmount.toLocaleString()} ZAR\n• *Term & Rate:* 72 Months @ 11.75% Linked\n• *Monthly Instalment:* *~R${monthlyPayment.toLocaleString()} ZAR / month*\n\n📋 *REQUIRED FICA DOCUMENTS*\n1. Copy of SA ID (Smart Card / Book)\n2. Valid SA Driver's License\n3. 3 Months Stamped Bank Statements\n4. Latest 3 Months Payslips\n5. Proof of Residence (< 3 Months)\n\n📍 *AutoFame Dealership Johannesburg South*\n📞 +27 63 199 5124 | ✉️ alexsouthflow3@gmail.com`;
-}
-
-/**
- * Finds a contact in Whapi /contacts, /chats, or SYNCED_WHAPI_CONTACTS by phone or fuzzy name match
- */
-async function fetchContactMessagesFromWhapi(
-  queryText: string,
-  token: string,
-  fallbackMessages: any[] = []
-): Promise<{
-  targetChatId: string;
-  contactName: string;
-  contactPhone: string;
-  messages: any[];
-}> {
-  const lower = queryText.toLowerCase();
-
-  // First check against SYNCED_WHAPI_CONTACTS by name or phone
-  const stopWords = new Set([
-    "what",
-    "was",
-    "my",
-    "last",
-    "message",
-    "messages",
-    "with",
-    "from",
-    "take",
-    "all",
-    "the",
-    "information",
-    "info",
-    "this",
-    "user",
-    "contact",
-    "and",
-    "create",
-    "fill",
-    "application",
-    "form",
-    "send",
-    "via",
-    "email",
-    "attachments",
-    "chat",
-    "show",
-  ]);
-
-  const candidateWords = lower
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length >= 3 && !stopWords.has(w));
-
-  const syncedMatch = SYNCED_WHAPI_CONTACTS.find((c) => {
-    const cName = c.name.toLowerCase();
-    const cDigits = c.phone.replace(/\D/g, "");
-    if (candidateWords.some((w) => cName.includes(w) || (w.length >= 4 && cDigits.includes(w)))) {
-      return true;
-    }
-    // Fuzzy match e.g. "mableza" -> "blesz"
-    return candidateWords.some(
-      (w) => w.includes("bles") && cName.includes("bles")
-    );
-  });
-
-  const phoneMatch = queryText.match(/(?:\+?27|0)\s*\d{2}\s*\d{3}\s*\d{4}|\b27\d{9}\b/);
-  const targetChatId = phoneMatch
-    ? normalizeToChatId(phoneMatch[0])
-    : syncedMatch?.chatId || "27837324229@s.whatsapp.net";
-
-  try {
-    const res = await fetch(
-      `https://gate.whapi.cloud/messages/list/${encodeURIComponent(targetChatId)}?count=30`,
-      {
-        method: "GET",
-        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      }
-    );
-    if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const msgs = Array.isArray(data?.messages) ? data.messages : [];
-      if (msgs.length > 0) {
-        const digits = targetChatId.replace(/@.*$/, "");
-        return {
-          targetChatId,
-          contactName: syncedMatch?.name || msgs[0]?.from_name || `+${digits}`,
-          contactPhone: syncedMatch?.phone || `+${digits}`,
-          messages: msgs,
-        };
-      }
-    }
-  } catch {}
-
-  // Fallback to synced contact record if Whapi returns 402
-  const chosen = syncedMatch || SYNCED_WHAPI_CONTACTS[1];
-  return {
-    targetChatId: chosen.chatId,
-    contactName: chosen.name,
-    contactPhone: chosen.phone,
-    messages: [
-      {
-        id: `sync-${chosen.id}`,
-        from_me: Boolean(chosen.fromMe),
-        from: chosen.id,
-        from_name: chosen.name,
-        chat_id: chosen.chatId,
-        type: "text",
-        text: { body: chosen.lastMessage || "WhatsApp conversation" },
-        timestamp: chosen.timestamp
-          ? Math.floor(new Date(chosen.timestamp).getTime() / 1000)
-          : Math.floor(Date.now() / 1000),
-      },
-    ],
-  };
 }
 
 /**
@@ -602,9 +207,89 @@ export async function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get("action") || "status";
 
   try {
+    if (action === "contact_messages" || action === "contact_chat") {
+      const contactQuery =
+        req.nextUrl.searchParams.get("contact") ||
+        req.nextUrl.searchParams.get("query") ||
+        req.nextUrl.searchParams.get("chatId") ||
+        "Precious";
+
+      const contactData = await fetchContactMessagesFromWhapi(contactQuery, token);
+      const summary = formatContactDiscussion(
+        contactData.contactName,
+        contactData.contactPhone,
+        contactData.messages,
+        contactQuery
+      );
+
+      return NextResponse.json({
+        success: true,
+        contact: contactData.contact,
+        contactName: contactData.contactName,
+        contactPhone: contactData.contactPhone,
+        targetChatId: contactData.targetChatId,
+        messages: contactData.messages,
+        isLive: contactData.isLive,
+        summary,
+      });
+    }
+
     if (action === "messages" || action === "contacts") {
-      // Build base messages from SYNCED_WHAPI_CONTACTS so contacts & chats are always available
-      const syncedFormatted = SYNCED_WHAPI_CONTACTS.map((c) => ({
+      let contactsList = [...SYNCED_WHAPI_CONTACTS];
+
+      // Enrich with live chats from Whapi Cloud
+      try {
+        const liveChatsRes = await fetch("https://gate.whapi.cloud/chats?count=50", {
+          headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (liveChatsRes.ok) {
+          const liveData = await liveChatsRes.json();
+          const liveChats = Array.isArray(liveData?.chats) ? liveData.chats : [];
+          liveChats.forEach((lc: any) => {
+            const chatId = lc.id;
+            if (!chatId || chatId.includes("status@broadcast")) return;
+            const digits = chatId.replace(/@.*$/, "");
+            const existingIdx = contactsList.findIndex(
+              (c) => c.chatId === chatId || c.id === digits
+            );
+            const lastMsgText =
+              lc.last_message?.text?.body ||
+              (lc.last_message?.type === "voice"
+                ? `[Voice Note ${lc.last_message?.voice?.seconds || ""}s]`
+                : lc.last_message?.type === "action"
+                ? `[Reaction ${lc.last_message?.action?.emoji || ""}]`
+                : lc.last_message?.type
+                ? `[${lc.last_message.type}]`
+                : "");
+            const timeIso = lc.last_message?.timestamp
+              ? new Date(lc.last_message.timestamp * 1000).toISOString()
+              : new Date().toISOString();
+
+            if (existingIdx >= 0) {
+              if (lastMsgText) contactsList[existingIdx].lastMessage = lastMsgText;
+              if (lc.last_message?.timestamp) contactsList[existingIdx].timestamp = timeIso;
+              contactsList[existingIdx].isRecentChat = true;
+            } else {
+              contactsList.push({
+                id: digits,
+                chatId,
+                name: lc.name || `+${digits}`,
+                phone: `+${digits}`,
+                lastMessage: lastMsgText || "WhatsApp Chat",
+                fromMe: Boolean(lc.last_message?.from_me),
+                timestamp: timeIso,
+                lastContactedLabel: "Recent Chat",
+                isRecentChat: true,
+              });
+            }
+          });
+        }
+      } catch (liveErr) {
+        // Fallback to static synced contacts
+      }
+
+      const syncedFormatted = contactsList.map((c) => ({
         id: `sync-${c.id}`,
         fromMe: Boolean(c.fromMe),
         source: "mobile",
@@ -622,8 +307,8 @@ export async function GET(req: NextRequest) {
         connected: true,
         channelId,
         agentGroupId: AUTOFAME_AGENT_GROUP_ID,
-        totalChats: SYNCED_WHAPI_CONTACTS.length,
-        contacts: SYNCED_WHAPI_CONTACTS,
+        totalChats: contactsList.length,
+        contacts: contactsList,
         messages: syncedFormatted,
         intakePreview: {
           firstName: "Maria",
@@ -806,13 +491,33 @@ ${
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action: "send",
+            action: "submit_finance_to_bank",
             fromEmail: fromEmail || "alexsouthflow3@gmail.com",
             appPassword: appPassword || "dmjjjsyxcpqpdwlb",
             to: targetRecipient,
             subject: emailSubject,
             body: emailBody,
-            attachments: intake.documents.map((d) => ({
+            customerName: intake.fullName,
+            carName: intake.carName,
+            carPrice: intake.carPrice,
+            financeData: {
+              firstName: intake.firstName,
+              lastName: intake.lastName,
+              idNumber: intake.idNumber,
+              phone: intake.phone,
+              email: intake.email,
+              address: intake.address,
+              carName: intake.carName,
+              carPrice: intake.carPrice,
+              depositAmount: Math.round((intake.carPrice || 0) * 0.1),
+              termMonths: 72,
+              employerName: intake.employerName,
+              jobTitle: intake.jobTitle || "Applicant",
+              monthlyIncomeGross: intake.monthlyIncomeGross,
+              monthlyExpenses: intake.monthlyExpenses || 0,
+              bankEmail: targetRecipient,
+            },
+            attachments: intake.documents.map((d: any) => ({
               filename: d.originalName,
               url: d.url,
               mime: d.mime,

@@ -8,6 +8,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import {
+  findContactInQuery,
+  formatContactDiscussion,
+  buildWhatsAppContextForPrompt,
+  SYNCED_WHAPI_CONTACTS,
+} from "@/lib/whatsapp";
+import {
   Bot,
   Send,
   Plus,
@@ -35,10 +41,12 @@ import {
   Building2,
   Upload,
   RefreshCw,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { downloadFinanceApplicationPdf } from "@/lib/financePdf";
 
 // ──────────────────────────────────────────────
 // Required FICA & Bank Proof Documents
@@ -507,6 +515,43 @@ function getDirectAnswerOnly(
     recentTurnsText.includes("sold") ||
     recentTurnsText.includes("sale") ||
     recentTurnsText.includes("revenue");
+
+  // ── 00. SPECIFIC WHATSAPP CONTACT DISCUSSION / CONVERSATION INTENT ──
+  const matchedWaContact = findContactInQuery(query);
+  const isDiscussionIntent =
+    lower.includes("discus") ||
+    lower.includes("discuss") ||
+    lower.includes("discussed") ||
+    lower.includes("talk") ||
+    lower.includes("talked") ||
+    lower.includes("talking") ||
+    lower.includes("message") ||
+    lower.includes("messages") ||
+    lower.includes("chat") ||
+    lower.includes("said") ||
+    lower.includes("conversation") ||
+    lower.includes("what did we") ||
+    lower.includes("what did i") ||
+    lower.includes("last message") ||
+    lower.includes("contact list") ||
+    lower.includes("is a contact") ||
+    lower.includes("from my client") ||
+    lower.includes("from my clients") ||
+    lower.includes("from my what app") ||
+    lower.includes("from my whatsapp");
+
+  if (
+    matchedWaContact &&
+    (isDiscussionIntent ||
+      lower.includes("who is") ||
+      lower.includes("tell me about") ||
+      lower.includes("today") ||
+      lower.includes("yesterday") ||
+      lower.includes("contact list") ||
+      lower.includes("is a contact"))
+  ) {
+    return null; // Delegate to Puter / Server SSE stream with live Whapi messages
+  }
 
   const isWhatsAppQuery =
     lower.includes("whatsapp") ||
@@ -1013,7 +1058,8 @@ function buildDealershipAgentSystemPrompt(
   context: any,
   inboxEmails: any[],
   waContacts: any[],
-  connectedGmail: string
+  connectedGmail: string,
+  targetContactSummary?: string
 ) {
   const cars = Array.isArray(context?.cars) ? context.cars : [];
   const repairs = Array.isArray(context?.repairs) ? context.repairs : [];
@@ -1083,6 +1129,9 @@ ${soldCarsList || "None"}
 - Inactive / In-Prep Vehicles: ${inactiveCars.length} cars
 - Active Workshop / Maintenance: ${workshopCars.length || repairs.length} vehicles
 - Connected WhatsApp Channel: ANTMAN-ZPBZZ (+27 63 199 5124) with ${waContacts.length || 108} synced contacts
+
+${buildWhatsAppContextForPrompt(waContacts, targetContactSummary)}
+
 - Connected Dealership Gmail: ${connectedGmail} with ${inboxEmails.length} inbox emails
 - Staff: ${employees.length} employees (${empList || "Sales Associates & Managers"})
 - FICA Documentation: 1) SA ID Copy, 2) Valid Driver's License, 3) 3 Months Bank Statements, 4) Latest Payslips, 5) Proof of Residence
@@ -1753,13 +1802,42 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "send",
+          action: "submit_finance_to_bank",
           fromEmail: connectedGmail,
           appPassword: gmailAppPassword,
           to: bankEmail.trim(),
           cc: finEmail.trim() || undefined,
           subject: bankSubject,
           body: bankBody,
+          customerName: fullName,
+          carName: finCarName,
+          carPrice: finCarPrice,
+          financeData: {
+            applicationId: savedAppId || finAppId || `AF-${Date.now().toString().slice(-6)}`,
+            firstName: finFirstName,
+            lastName: finLastName,
+            idNumber: finIdNumber,
+            phone: finPhone,
+            email: finEmail,
+            address: finAddress,
+            employerName: finEmployerName,
+            jobTitle: finJobTitle,
+            employmentStatus: finEmploymentStatus,
+            monthlyIncomeGross: finMonthlyIncome,
+            monthlyExpenses: finMonthlyExpenses,
+            carName: finCarName,
+            carId: finCarId,
+            carPrice: finCarPrice,
+            depositAmount: finDeposit,
+            termMonths: finTermMonths,
+            bankEmail: bankEmail.trim(),
+            documents: REQUIRED_PROOF_DOCS.map((req) => ({
+              code: req.code,
+              label: req.label,
+              verified: Boolean(finProofDocs[req.code]),
+              fileName: finProofDocs[req.code]?.originalName,
+            })),
+          },
           attachments: Object.values(finProofDocs).map((d) => ({
             filename: d.originalName,
             url: d.url,
@@ -1771,7 +1849,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
       if (res.ok && data.status === "SENT") {
         setBankDispatched(true);
         toast.success(
-          `Vehicle Finance Application for ${fullName} dispatched to Bank (${bankEmail.trim()}) via ${connectedGmail}!`
+          `Vehicle Finance Application for ${fullName} with official filled PDF & FICA pack dispatched to Bank (${bankEmail.trim()}) via ${connectedGmail}!`
         );
         await recordCrmEvent({
           eventType: "BANK_FINANCE_SUBMITTED",
@@ -1785,6 +1863,40 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
       }
     } catch (err: any) {
       toast.error("Bank email dispatch error: " + err.message);
+    }
+  };
+
+  const handleDownloadFinancePdf = () => {
+    try {
+      downloadFinanceApplicationPdf({
+        applicationId: finAppId || `AF-${Date.now().toString().slice(-6)}`,
+        firstName: finFirstName || "Applicant",
+        lastName: finLastName || "",
+        idNumber: finIdNumber || "9405125289087",
+        phone: finPhone || "+27 63 199 5124",
+        email: finEmail || "alexsouthflow3@gmail.com",
+        address: finAddress || "Johannesburg South, Gauteng",
+        employerName: finEmployerName || "Verified Employer",
+        jobTitle: finJobTitle || "Applicant",
+        employmentStatus: finEmploymentStatus || "PERMANENT",
+        monthlyIncomeGross: finMonthlyIncome || 35000,
+        monthlyExpenses: finMonthlyExpenses || 12000,
+        carName: finCarName || "AutoFame Showroom Vehicle",
+        carId: finCarId || 1,
+        carPrice: finCarPrice || 189900,
+        depositAmount: finDeposit || 18990,
+        termMonths: finTermMonths || 72,
+        bankEmail: bankEmail.trim() || "alexsouthflow3@gmail.com",
+        documents: REQUIRED_PROOF_DOCS.map((req) => ({
+          code: req.code,
+          label: req.label,
+          verified: Boolean(finProofDocs[req.code]),
+          fileName: finProofDocs[req.code]?.originalName,
+        })),
+      });
+      toast.success("Downloaded official Vehicle Asset Finance Application PDF!");
+    } catch (err: any) {
+      toast.error("Failed to generate PDF: " + err.message);
     }
   };
 
@@ -2149,11 +2261,28 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
       // ── METHOD 1: REAL PUTER.JS AI STREAMING (Claude 3.5 Sonnet / GPT-4o) ──
       if (typeof window !== "undefined" && (window as any).puter?.ai?.chat) {
         try {
+          let targetContactSummary = "";
+          const matchedContact = findContactInQuery(finalContent);
+          if (matchedContact) {
+            try {
+              const res = await fetch(
+                `/api/whatsapp?action=contact_chat&contact=${encodeURIComponent(
+                  matchedContact.name
+                )}`
+              );
+              if (res.ok) {
+                const cData = await res.json();
+                targetContactSummary = cData?.summary || "";
+              }
+            } catch {}
+          }
+
           const systemPrompt = buildDealershipAgentSystemPrompt(
             dealershipContext,
             inboxEmails,
             waContacts,
-            connectedGmail
+            connectedGmail,
+            targetContactSummary
           );
 
           const recentHistory = cleanMessages.slice(-6).map((m: any) => ({
@@ -2269,6 +2398,30 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                   if (dataStr === "[DONE]") continue;
                   try {
                     const parsed = JSON.parse(dataStr);
+                    if (parsed.type === "meta" && parsed.actionPayload) {
+                      const ap = parsed.actionPayload;
+                      if (ap.actionType === "FINANCE_CONTAINER") {
+                        if (ap.financeData) {
+                          const fd = ap.financeData;
+                          if (fd.firstName) setFinFirstName(fd.firstName);
+                          if (fd.lastName) setFinLastName(fd.lastName);
+                          if (fd.idNumber) setFinIdNumber(fd.idNumber);
+                          if (fd.phone) setFinPhone(fd.phone);
+                          if (fd.email) setFinEmail(fd.email);
+                          if (fd.address) setFinAddress(fd.address);
+                          if (fd.employerName) setFinEmployerName(fd.employerName);
+                          if (fd.jobTitle) setFinJobTitle(fd.jobTitle);
+                          if (fd.monthlyIncomeGross) setFinMonthlyIncome(fd.monthlyIncomeGross);
+                          if (fd.monthlyExpenses) setFinMonthlyExpenses(fd.monthlyExpenses);
+                          if (fd.carName) setFinCarName(fd.carName);
+                          if (fd.carPrice) setFinCarPrice(fd.carPrice);
+                        }
+                        if (ap.isSent) {
+                          setBankDispatched(true);
+                        }
+                        openFinanceContainer();
+                      }
+                    }
                     if (parsed.type === "token" && parsed.text) {
                       setIsAiThinking(false);
                       answerText += parsed.text;
@@ -3390,21 +3543,33 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                     />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      onClick={handleSaveFinanceContainerToDb}
-                      variant="outline"
-                      className="h-9 px-3 rounded-xl border-[#38342d] bg-[#1b1916] hover:bg-[#25231e] text-[#eae7e1] text-xs"
-                    >
-                      Save Container
-                    </Button>
+                  <div className="flex flex-col gap-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleDownloadFinancePdf}
+                        variant="outline"
+                        className="flex-1 h-9 px-3 rounded-xl border-emerald-500/40 bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5"
+                      >
+                        <Download className="h-4 w-4 text-emerald-400" />
+                        Download PDF Form
+                      </Button>
+
+                      <Button
+                        type="button"
+                        onClick={handleSaveFinanceContainerToDb}
+                        variant="outline"
+                        className="h-9 px-3 rounded-xl border-[#38342d] bg-[#1b1916] hover:bg-[#25231e] text-[#eae7e1] text-xs"
+                      >
+                        Save Container
+                      </Button>
+                    </div>
 
                     <Button
                       type="button"
                       onClick={handleVerifyAndSendApplicationToBank}
                       className={cn(
-                        "flex-1 h-9 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5",
+                        "w-full h-9 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5",
                         isFinanceCompleteForBank
                           ? "bg-emerald-600 hover:bg-emerald-500 text-white"
                           : "bg-zinc-700/60 text-zinc-300 hover:bg-zinc-700"
@@ -3412,13 +3577,13 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                     >
                       {bankDispatched ? (
                         <>
-                          <CheckCircle2 className="h-4 w-4" />
-                          Sent to Bank
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          Sent to Bank (Dossier Attached)
                         </>
                       ) : (
                         <>
                           <SendHorizontal className="h-4 w-4" />
-                          Verify &amp; Email Application to Bank
+                          Verify, Generate PDF &amp; Email to Bank
                         </>
                       )}
                     </Button>
