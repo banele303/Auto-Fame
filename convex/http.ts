@@ -472,25 +472,44 @@ http.route({
         const loan = price - dep;
         const est = Math.round(price * 0.9 * 0.0218);
         replyBody = `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n\n🚘 *Vehicle:* ${qCar.year} ${qCar.make} ${qCar.model}\n🔢 *Stock ID:* #AF-${qCar.id}\n⚙️ *Specs:* ${Number(qCar.mileage || 0).toLocaleString()} km • ${qCar.transmission || "Auto"} • ${qCar.fuelType || "Petrol"}\n\n💳 *FINANCE BREAKDOWN*\n• *Retail Price:* R${price.toLocaleString()} ZAR\n• *10% Deposit:* R${dep.toLocaleString()} ZAR\n• *Principal Loan:* R${loan.toLocaleString()} ZAR\n• *Estimated Monthly (72 mo):* *~R${est.toLocaleString()} ZAR / month*\n\nReply *FINANCE* or send your SA ID, 3 months bank statements & payslips here to apply!`;
-      } else {
+      } else if (isStockQuery || isVehicleSearchQuery) {
         const matched = cars.filter(
           (c: any) =>
             lower.includes(c.make?.toLowerCase() || "") ||
             lower.includes((c.model?.toLowerCase() || "").split(" ")[0])
         );
-        const targetList = matched.length > 0 ? matched : availableCars.slice(0, 8);
-        const items = targetList.slice(0, 8).map((c: any, idx: number) => {
-          const price = Number(c.price || 0);
-          const est = Math.round(price * 0.9 * 0.0218);
-          const badge =
-            c.status === "AVAILABLE"
-              ? "🟢 *AVAILABLE*"
-              : c.status === "SOLD"
-              ? "🔴 *SOLD*"
-              : `🟡 *${c.status}*`;
-          return `*${idx + 1}. ${c.year} ${c.make} ${c.model}* (#AF-${c.id})\n💰 *R${price.toLocaleString()} ZAR* (~R${est.toLocaleString()}/mo)\n⚙️ ${Number(c.mileage || 0).toLocaleString()} km • ${c.transmission || "Auto"} • ${c.fuelType || "Petrol"}\n${badge}`;
-        });
-        replyBody = `🚘 *AUTOFAME SHOWROOM INVENTORY*\n📊 *Showing ${items.length} of ${targetList.length} Vehicles* (${availableCars.length} Available on Floor)\n━━━━━━━━━━━━━━━━━━━━\n\n${items.join("\n\n")}`;
+        if (matched.length > 0) {
+          const items = matched.slice(0, 5).map((c: any, idx: number) => {
+            const price = Number(c.price || 0);
+            const est = Math.round(price * 0.9 * 0.0218);
+            const badge =
+              c.status === "AVAILABLE"
+                ? "🟢 *AVAILABLE*"
+                : c.status === "SOLD"
+                ? "🔴 *SOLD*"
+                : `🟡 *${c.status}*`;
+            return `*${idx + 1}. ${c.year} ${c.make} ${c.model}* (#AF-${c.id})\n💰 *R${price.toLocaleString()} ZAR* (~R${est.toLocaleString()}/mo)\n⚙️ ${Number(c.mileage || 0).toLocaleString()} km • ${c.transmission || "Auto"} • ${c.fuelType || "Petrol"}\n${badge}`;
+          });
+          replyBody = `🚘 *Matching Vehicles in AutoFame Database*\n━━━━━━━━━━━━━━━━━━━━\n\n${items.join("\n\n")}`;
+        } else if (isVehicleSearchQuery) {
+          replyBody = `We currently do not have that specific vehicle in stock. There are ${availableCars.length} vehicles available on our floor.`;
+        }
+      }
+
+      // If no explicit reply was generated, do NOT send any message!
+      if (!replyBody || !replyBody.trim()) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            syncedToCrm: true,
+            replied: false,
+            reason: "No reply triggered",
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
 
       const whapiToken = process.env.WHAPI_API_TOKEN || "gfsvMATZZV5XA5bOi71jCmhyxdE7STgO";
