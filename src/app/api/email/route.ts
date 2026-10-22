@@ -4,8 +4,8 @@ import tls from "tls";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const DEFAULT_GMAIL_USER = "alexsouthflow3@gmail.com";
-const DEFAULT_GMAIL_PASS = "dmjjjsyxcpqpdwlb";
+export const DEFAULT_GMAIL_USER = "alexsouthflow3@gmail.com";
+export const DEFAULT_GMAIL_PASS = "dmjjjsyxcpqpdwlb";
 
 interface EmailAttachmentInput {
   filename: string;
@@ -79,7 +79,7 @@ function decodeMimeHeader(str: string): string {
  * Real Gmail IMAP Client (imap.gmail.com:993 SSL/TLS)
  * Fetches real emails from alexsouthflow3@gmail.com INBOX
  */
-function fetchGmailInboxImap(options: {
+export function fetchGmailInboxImap(options: {
   user: string;
   pass: string;
   limit?: number;
@@ -237,7 +237,7 @@ function fetchGmailInboxImap(options: {
   });
 }
 
-function buildHtmlEmail(payload: SendEmailPayload, senderEmail: string): string {
+export function buildHtmlEmail(payload: SendEmailPayload, senderEmail: string): string {
   const bodyHtml = (payload.body || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -284,7 +284,7 @@ function buildHtmlEmail(payload: SendEmailPayload, senderEmail: string): string 
 </html>`;
 }
 
-function executeGmailSmtp(options: {
+export function executeGmailSmtp(options: {
   user: string;
   pass: string;
   verifyOnly?: boolean;

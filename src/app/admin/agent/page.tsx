@@ -179,6 +179,14 @@ function buildClientGmailPayload(query: string, context: any, connectedGmail: st
     customerName = namePart.replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
+  const nameToMatch = query.match(/\b(?:to|for)\s+([A-Z][a-z]+)\b/i);
+  if (
+    nameToMatch &&
+    !["autofame", "client", "email", "all", "our", "the"].includes(nameToMatch[1].toLowerCase())
+  ) {
+    customerName = nameToMatch[1].trim();
+  }
+
   const matchedLead = realLeads.find(
     (lead) =>
       (lead.customerName && lower.includes(lead.customerName.toLowerCase())) ||
@@ -205,34 +213,152 @@ function buildClientGmailPayload(query: string, context: any, connectedGmail: st
   const priceLine = carPrice > 0 ? `R${carPrice.toLocaleString()} ZAR` : "Available on request";
   const monthlyEst = carPrice > 0 ? Math.round(carPrice * 0.9 * 0.0218) : 0;
 
-  const subject =
-    carPrice > 0
-      ? `AutoFame Official Quotation & Finance Details — ${carName}`
-      : `AutoFame Dealership — Vehicle & Finance Information`;
+  let subject = "";
+  let body = "";
 
-  const body = `Dear ${customerName},
+  if (
+    lower.includes("ready for collection") ||
+    lower.includes("collection") ||
+    lower.includes("ready to pick") ||
+    lower.includes("pick up")
+  ) {
+    subject = `AutoFame Dealership — Your Vehicle is Ready for Collection! (${carName})`;
+    body = `Dear ${customerName},
+
+Great news! We are delighted to inform you that your ${carName} is fully prepared, detailed, quality-checked, and ready for collection at AutoFame Dealership.
+
+Collection Details:
+• Dealership: AutoFame Dealership Johannesburg South
+• Address: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013
+• Operating Hours: Mon - Fri: 08:00 - 17:30 | Sat: 08:30 - 13:00
+
+What to bring upon collection:
+1. Original South African ID or Passport
+2. Valid South African Driver's License
+3. Confirmation of Comprehensive Insurance Certificate (if vehicle is financed)
+
+Please let us know your estimated arrival time so we can have your keys and handover documents ready on the showroom floor.
+
+Warm regards,
+AutoFame Dealership Management
+1 Rifle Range Rd, Baragwanath, Johannesburg South
+Phone: +27 63 199 5124 | Email: ${connectedGmail}`;
+  } else if (
+    lower.includes("finance approved") ||
+    lower.includes("approval") ||
+    lower.includes("approved")
+  ) {
+    subject = `AutoFame Dealership — Vehicle Finance Approved! (${carName})`;
+    body = `Dear ${customerName},
+
+Congratulations! We are pleased to advise that your vehicle finance application for the ${carName} has been officially APPROVED by our banking partners.
+
+Summary of Approval:
+• Approved Vehicle: ${carName}
+• Vehicle Value: ${carPrice > 0 ? `R${carPrice.toLocaleString()} ZAR` : "Agreed Purchase Price"}
+• Status: Ready for Contract Signing
+
+Next Steps:
+Our finance and insurance (F&I) manager will contact you shortly to review your interest rate, instalment structure, and sign the official bank contracts.
+
+If you have any questions in the meantime, feel free to reply directly to this email or call us at +27 63 199 5124.
+
+Warm regards,
+AutoFame Finance & Insurance Division
+1 Rifle Range Rd, Baragwanath, Johannesburg South
+Email: ${connectedGmail}`;
+  } else if (lower.includes("test drive") || lower.includes("booking confirmed")) {
+    subject = `AutoFame Dealership — Test Drive Confirmation: ${carName}`;
+    body = `Dear ${customerName},
+
+Thank you for booking a test drive with AutoFame Dealership.
+
+Your test drive booking details:
+• Vehicle: ${carName}
+• Location: AutoFame Showroom, 1 Rifle Range Rd, Baragwanath, Johannesburg South
+
+Our sales executive will have the vehicle fueled, sanitized, and ready for you. Please remember to bring along your valid driver's license.
+
+Looking forward to welcoming you!
+
+Warm regards,
+AutoFame Sales Team
+Email: ${connectedGmail}`;
+  } else if (
+    lower.includes("document") ||
+    lower.includes("fica") ||
+    lower.includes("bank statement") ||
+    lower.includes("payslip")
+  ) {
+    subject = `AutoFame Dealership — Required FICA Documents for ${carName}`;
+    body = `Dear ${customerName},
+
+Thank you for choosing AutoFame Dealership. To finalize your vehicle finance application for the ${carName}, our banking partners require the following FICA documents:
+
+1. Clear copy of South African ID (Smart Card front & back, or Green ID Book)
+2. Valid South African Driver's License
+3. Latest 3 months official bank statements (stamped by your bank)
+4. Latest 3 months payslips (or latest 6 months bank statements if self-employed)
+5. Proof of Residential Address (utility bill or store account not older than 3 months)
+
+Please reply directly to this email with these attachments, or upload them via our secure online portal at:
+https://www.autofame.co.za/financing
+
+Warm regards,
+AutoFame Dealership Operations
+1 Rifle Range Rd, Baragwanath, Johannesburg South
+Email: ${connectedGmail}`;
+  } else {
+    const customMatch = query.match(/(?:saying|telling him|telling her|that|with message)\s+([^.]+)/i);
+    const customIntent = customMatch ? customMatch[1].trim() : "";
+
+    subject =
+      carPrice > 0
+        ? `AutoFame Official Quotation & Finance Details — ${carName}`
+        : `AutoFame Dealership — Information regarding ${carName}`;
+
+    if (customIntent) {
+      body = `Dear ${customerName},
+
+Thank you for connecting with AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
+
+Regarding your inquiry: ${customIntent.charAt(0).toUpperCase() + customIntent.slice(1)}.
+
+Vehicle Reference:
+• Vehicle: ${carName}
+• Retail Price: ${priceLine}${
+        monthlyEst > 0
+          ? `\n• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit)`
+          : ""
+      }
+
+Please feel free to reply directly to this email or reach us on WhatsApp (+27 63 199 5124) if you need any additional details or would like to schedule a viewing.
+
+Warm regards,
+AutoFame Dealership
+1 Rifle Range Rd, Baragwanath, Johannesburg South
+Email: ${connectedGmail}`;
+    } else {
+      body = `Dear ${customerName},
 
 Thank you for contacting AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South).
 
 Here are the details regarding your inquiry:
 • Vehicle: ${carName}
 • Retail Price: ${priceLine}${
-    monthlyEst > 0
-      ? `\n• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit)`
-      : ""
-  }
+        monthlyEst > 0
+          ? `\n• Estimated Monthly Instalment: ~R${monthlyEst.toLocaleString()} ZAR / month (72 months, 10% deposit)`
+          : ""
+      }
 
-To proceed with vehicle finance pre-approval, please reply to this email with your FICA documents:
-1. Copy of SA ID (Smart Card or Green Barcoded Book)
-2. Valid South African Driver's License
-3. Latest 3 Months Stamped Bank Statements & Payslips
-4. Proof of Residence (not older than 3 months)
-
-Or apply online at: https://www.autofame.co.za/financing
+To proceed with vehicle financing pre-approval, please reply with your standard FICA documents (SA ID, Driver's License, 3 Months Bank Statements & Payslips), or complete your application online:
+https://www.autofame.co.za/financing
 
 Warm regards,
 AutoFame Dealership
 Email: ${connectedGmail}`;
+    }
+  }
 
   return {
     actionType: "GMAIL_COMPOSE",
@@ -929,13 +1055,26 @@ function buildDealershipAgentSystemPrompt(
     .map((e: any) => `${e.name} (${e.role}, Status: ${e.status}, Commission: ${e.commission}%, Sales: ${e.salesCount || 0})`)
     .join("; ");
 
+  const emailListGroundTruth = (inboxEmails || [])
+    .slice(0, 20)
+    .map((e: any, idx: number) => {
+      const rec = e.isToday
+        ? "Today"
+        : e.isYesterday
+        ? "Yesterday"
+        : new Date(e.date || e.timestamp).toLocaleDateString();
+      return `[Email #${idx + 1}] From: ${e.fromName || "Unknown"} <${e.fromEmail || ""}> | Date: ${rec} (${e.date}) | Subject: "${e.subject}" | Summary: ${e.snippet || "Standard notification"}`;
+    })
+    .join("\n");
+
   return `You are the AutoFame Autonomous Dealership AI Agent — an articulate, proactive, and deeply knowledgeable executive automotive AI partner for AutoFame Dealership Johannesburg South (1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013).
 
 YOUR AUTONOMOUS CAPABILITIES (REAL AGENT):
 1. Answer ANY question naturally: You are a genuine thinking AI. Whether asked about vehicle specs, market trends, comparisons, dealership performance, follow-up questions like "want only for last month?", or open-ended advice, think for yourself and respond with deep intelligence, warmth, and accuracy. Never output robotic canned templates.
-2. Effortless Email & Communication Writing: When asked to write, compose, draft, or send an email, write the entire polished email directly in the chat without hesitation! Include an attention-grabbing Subject line, warm greeting, compelling vehicle selling points, realistic finance breakdown, FICA requirements checklist, and professional dealership sign-off.
-3. Conversational Memory & Context: Pay close attention to previous messages in this conversation. If the user asks a short follow-up (e.g. "want only for last month?", "what about automatic?", "give me quotes for both"), understand what they are referring to and answer directly.
-4. Live Dealership Ground Truth (Verified Facts):
+2. Intelligent Email & Inbox Copilot: You have full real-time access to the dealership Gmail inbox (${connectedGmail}). When asked about senders (Tripo AI, Google, Pinterest, etc.), security alerts, what was received yesterday or today, or email summaries, answer accurately using the live email ground truth below.
+3. Effortless Email & Communication Writing: When asked to write, compose, draft, or send an email, write the entire polished email directly in the chat without hesitation! Include an attention-grabbing Subject line, warm greeting, customized body matching the user's instructions (ready for collection, finance approval, FICA request, quotation), and professional dealership sign-off.
+4. Conversational Memory & Context: Pay close attention to previous messages in this conversation. If the user asks a short follow-up (e.g. "want only for last month?", "what about automatic?", "give me quotes for both"), understand what they are referring to and answer directly.
+5. Live Dealership Ground Truth (Verified Facts):
 - Total Vehicles in System: ${cars.length} cars
 - Available Showroom Floor Vehicles: ${availableCars.length} cars (Showroom Value: R${totalValue.toLocaleString()} ZAR, Average Price: R${(totalCars > 0 ? Math.round(totalValue / (availableCars.length || 1)) : 0).toLocaleString()} ZAR)
 - Sold Vehicles: ${soldCars.length} cars (Total Sales Volume: R${soldRevenue.toLocaleString()} ZAR)
@@ -947,6 +1086,9 @@ ${soldCarsList || "None"}
 - Connected Dealership Gmail: ${connectedGmail} with ${inboxEmails.length} inbox emails
 - Staff: ${employees.length} employees (${empList || "Sales Associates & Managers"})
 - FICA Documentation: 1) SA ID Copy, 2) Valid Driver's License, 3) 3 Months Bank Statements, 4) Latest Payslips, 5) Proof of Residence
+
+LIVE GMAIL INBOX GROUND TRUTH (${inboxEmails.length} EMAILS):
+${emailListGroundTruth || "No recent emails recorded."}
 
 FULL LIVE INVENTORY (${cars.length} VEHICLES):
 ${carInventoryList}
@@ -984,7 +1126,6 @@ export default function AdminAutoFameAgentPage() {
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
 
   // Real LLM Provider Key State (Gemini / Groq / OpenAI)
-  const [aiKeyModalOpen, setAiKeyModalOpen] = useState(false);
   const [userAiKey, setUserAiKey] = useState("");
   const [aiProvider, setAiProvider] = useState<"gemini" | "groq" | "openai">("gemini");
 
@@ -2488,18 +2629,10 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setAiKeyModalOpen(true)}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition shadow-sm",
-                userAiKey
-                  ? "bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30"
-                  : "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25"
-              )}
-            >
-              <Bot className="h-3.5 w-3.5 text-emerald-400" />
-              <span>{userAiKey ? `Real AI Active (${aiProvider.toUpperCase()})` : "Connect Real AI (Gemini)"}</span>
-            </button>
+            <div className="h-7 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-1.5 text-xs font-semibold shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>AutoFame AI Copilot</span>
+            </div>
 
             <Link
               href="/admin/crm"
@@ -3797,164 +3930,6 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Save &amp; Sync
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Modal: Real AI Key Connection (Google Gemini / OpenAI / Groq) */}
-      {aiKeyModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#1a1916] border border-[#35312b] p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#2e2b26]">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Bot className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-[#f5f2eb]">Connect Real AI Engine</h3>
-                  <p className="text-[10px] text-[#8e8a82]">Google Gemini (Free) or Groq / OpenAI</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setAiKeyModalOpen(false)}
-                className="text-[#8e8a82] hover:text-white p-1"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#8e8a82] block mb-1">
-                  AI Model Provider
-                </label>
-                <div className="grid grid-cols-3 gap-1.5 bg-[#141311] p-1 rounded-xl border border-[#35312b]">
-                  <button
-                    type="button"
-                    onClick={() => setAiProvider("gemini")}
-                    className={cn(
-                      "py-1.5 rounded-lg text-xs font-semibold transition text-center",
-                      aiProvider === "gemini" ? "bg-emerald-600 text-white shadow-sm" : "text-[#8e8a82] hover:text-white"
-                    )}
-                  >
-                    Gemini (Free)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAiProvider("groq")}
-                    className={cn(
-                      "py-1.5 rounded-lg text-xs font-semibold transition text-center",
-                      aiProvider === "groq" ? "bg-emerald-600 text-white shadow-sm" : "text-[#8e8a82] hover:text-white"
-                    )}
-                  >
-                    Groq
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAiProvider("openai")}
-                    className={cn(
-                      "py-1.5 rounded-lg text-xs font-semibold transition text-center",
-                      aiProvider === "openai" ? "bg-emerald-600 text-white shadow-sm" : "text-[#8e8a82] hover:text-white"
-                    )}
-                  >
-                    OpenAI
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10px] font-mono uppercase text-[#8e8a82]">
-                    {aiProvider === "gemini"
-                      ? "Google Gemini API Key (100% Free)"
-                      : aiProvider === "groq"
-                      ? "Groq API Key (gsk_...)"
-                      : "OpenAI API Key (sk-...)"}
-                  </label>
-                  {aiProvider === "gemini" && (
-                    <a
-                      href="https://aistudio.google.com/app/apikey"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-emerald-400 hover:underline flex items-center gap-0.5"
-                    >
-                      Get Free Key <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
-                  )}
-                  {aiProvider === "groq" && (
-                    <a
-                      href="https://console.groq.com/keys"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-emerald-400 hover:underline flex items-center gap-0.5"
-                    >
-                      Get Groq Key <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
-                  )}
-                </div>
-                <input
-                  type="password"
-                  value={userAiKey}
-                  onChange={(e) => setUserAiKey(e.target.value.trim())}
-                  placeholder={
-                    aiProvider === "gemini"
-                      ? "AIzaSy..."
-                      : aiProvider === "groq"
-                      ? "gsk_..."
-                      : "sk-proj-..."
-                  }
-                  className="w-full bg-[#141311] border border-[#35312b] rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#22201c] border border-[#38342d] text-[11px] text-[#a6a197] space-y-1">
-                <p className="font-semibold text-[#f5f2eb]">Why connect an AI key?</p>
-                <p>
-                  Connecting a free Google Gemini key empowers AutoFame to dynamically reason and answer any open-ended question in natural context (like &quot;want only for last month?&quot;), while streaming tokens live!
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#2e2b26]">
-              {userAiKey && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setUserAiKey("");
-                    localStorage.removeItem("autofame_ai_key");
-                    toast.success("AI key disconnected");
-                  }}
-                  className="text-xs text-rose-400 hover:text-rose-300 mr-auto"
-                >
-                  Disconnect Key
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setAiKeyModalOpen(false)}
-                className="text-xs text-[#8e8a82] hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (userAiKey) {
-                    localStorage.setItem("autofame_ai_key", userAiKey);
-                    localStorage.setItem("autofame_ai_provider", aiProvider);
-                    toast.success(`Connected ${aiProvider.toUpperCase()} AI Engine with live streaming!`);
-                  } else {
-                    localStorage.removeItem("autofame_ai_key");
-                  }
-                  setAiKeyModalOpen(false);
-                }}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5"
-              >
-                <Check className="h-3.5 w-3.5" />
-                Save &amp; Activate
               </Button>
             </div>
           </div>
