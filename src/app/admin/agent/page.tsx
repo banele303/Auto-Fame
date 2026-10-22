@@ -646,13 +646,14 @@ ${formatCarsMarkdown(soldCars)}
     return `| Applicant | SA ID | Vehicle & Price | Gross Income | Proof Docs | Bank Verification |\n| :--- | :--- | :--- | :---: | :---: | :--- |\n${rows}`;
   }
 
-  // 4. INBOX / EMAIL QUERIES -> Cleanly formatted table
+  // 4. INBOX / EMAIL QUERIES -> Executive Briefing & Analyzed Breakdown
   if (
     !isWhatsAppQuery &&
     (lower.includes("email") ||
       lower.includes("imail") ||
       lower.includes("wmail") ||
       lower.includes("inbox") ||
+      lower.includes("check my recent") ||
       lower.includes("yesterday") ||
       lower.includes("yerstady")) &&
     !lower.includes("compose") &&
@@ -669,25 +670,118 @@ ${formatCarsMarkdown(soldCars)}
       ? inboxEmails.filter((e) => e.isToday)
       : inboxEmails;
 
-    if (filtered.length === 0) {
-      return "0";
+    if (lower.includes("how many") || lower.includes("count")) {
+      return `You have **${filtered.length} emails** ${
+        yesterdayOnly ? "from yesterday" : todayOnly ? "received today" : "in your inbox"
+      }.`;
     }
 
+    if (!filtered || filtered.length === 0) {
+      if (yesterdayOnly) {
+        return `### 📬 AutoFame Gmail Inbox Briefing\n\nNo emails were received **yesterday**. Your connected Gmail inbox is fully up to date!`;
+      }
+      if (todayOnly) {
+        return `### 📬 AutoFame Gmail Inbox Briefing\n\nNo new emails have arrived **today** so far. Everything is clear!`;
+      }
+      return `### 📬 AutoFame Gmail Inbox Briefing\n\nYour inbox is currently clear with no recent emails recorded.`;
+    }
+
+    // Categorize emails
+    const securityEmails = filtered.filter(
+      (e) =>
+        e.subject?.toLowerCase().includes("security") ||
+        e.subject?.toLowerCase().includes("alert") ||
+        e.subject?.toLowerCase().includes("verification") ||
+        e.fromEmail?.toLowerCase().includes("accounts.google")
+    );
+
+    const customerEmails = filtered.filter(
+      (e) =>
+        e.subject?.toLowerCase().includes("finance") ||
+        e.subject?.toLowerCase().includes("quote") ||
+        e.subject?.toLowerCase().includes("car") ||
+        e.subject?.toLowerCase().includes("application") ||
+        e.subject?.toLowerCase().includes("inquiry") ||
+        e.subject?.toLowerCase().includes("test drive")
+    );
+
+    const aiTechEmails = filtered.filter(
+      (e) =>
+        e.fromName?.toLowerCase().includes("tripo") ||
+        e.fromName?.toLowerCase().includes("chatgpt") ||
+        e.fromName?.toLowerCase().includes("openai") ||
+        e.fromName?.toLowerCase().includes("meshy") ||
+        e.fromEmail?.toLowerCase().includes("tripo3d") ||
+        e.fromEmail?.toLowerCase().includes("openai")
+    );
+
+    const generalEmails = filtered.filter(
+      (e) =>
+        !securityEmails.includes(e) &&
+        !customerEmails.includes(e) &&
+        !aiTechEmails.includes(e)
+    );
+
+    let briefing = `### 📬 AutoFame Gmail Inbox Executive Briefing\n\n`;
+    briefing += `I analyzed your latest **${filtered.length} emails**. Here is the executive breakdown of what requires attention:\n\n`;
+
+    if (securityEmails.length > 0) {
+      briefing += `#### 🚨 1. Priority & Security Alerts (${securityEmails.length})\n`;
+      for (const e of securityEmails.slice(0, 3)) {
+        briefing += `* **${e.fromName || "Google"}** (\`${e.fromEmail}\`): **${e.subject}** (${
+          e.isToday ? "Today" : e.isYesterday ? "Yesterday" : new Date(e.date).toLocaleDateString()
+        })\n`;
+      }
+      briefing += `\n`;
+    }
+
+    if (customerEmails.length > 0) {
+      briefing += `#### 🚘 2. Customer & Dealership Inquiries (${customerEmails.length})\n`;
+      for (const e of customerEmails.slice(0, 3)) {
+        briefing += `* **${e.fromName}** (\`${e.fromEmail}\`): **${e.subject}**\n`;
+      }
+      briefing += `\n`;
+    }
+
+    if (aiTechEmails.length > 0) {
+      briefing += `#### 🤖 3. AI & Platform Updates (${aiTechEmails.length})\n`;
+      for (const e of aiTechEmails.slice(0, 4)) {
+        briefing += `* **${e.fromName}**: ${e.subject}\n`;
+      }
+      briefing += `\n`;
+    }
+
+    if (generalEmails.length > 0) {
+      briefing += `#### 📌 4. Marketing & Subscriptions (${generalEmails.length})\n`;
+      const senders = Array.from(
+        new Set(generalEmails.map((e) => e.fromName || e.fromEmail))
+      ).slice(0, 5);
+      briefing += `* Digests and promo notifications from: **${senders.join(", ")}**\n\n`;
+    }
+
+    briefing += `---\n\n### 📋 Recent Messages Overview\n\n`;
+
     const rows = filtered
-      .slice(0, 10)
-      .map(
-        (e) =>
-          `| **${e.fromName}** | ${e.fromEmail} | ${e.subject} | **${
-            e.isToday
-              ? "Today"
-              : e.isYesterday
-              ? "Yesterday"
-              : new Date(e.date).toLocaleDateString()
-          }** |`
-      )
+      .slice(0, 15)
+      .map((e) => {
+        let cat = "📌 Promo";
+        if (securityEmails.includes(e)) cat = "🚨 Security";
+        else if (customerEmails.includes(e)) cat = "🚘 Client";
+        else if (aiTechEmails.includes(e)) cat = "🤖 AI Tool";
+
+        const rec = e.isToday
+          ? "Today"
+          : e.isYesterday
+          ? "Yesterday"
+          : new Date(e.date).toLocaleDateString();
+        return `| **${e.fromName || "Unknown"}** | ${e.subject} | ${rec} | ${cat} |`;
+      })
       .join("\n");
 
-    return `| Sender | Email Address | Subject | Received |\n| :--- | :--- | :--- | :---: |\n${rows}`;
+    briefing += `| Sender | Subject | Received | Category |\n| :--- | :--- | :---: | :---: |\n${rows}\n\n`;
+    briefing += `💡 **Copilot Action Tip**: Would you like me to compose an official dealership reply, answer an inquiry, or forward finance documents?`;
+
+    return briefing;
   }
 
   // 4. COMPOSE EMAIL / WHATSAPP
