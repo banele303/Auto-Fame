@@ -208,13 +208,34 @@ http.route({
 
       const lower = incomingText.toLowerCase().trim();
 
-      // STRICT KEYWORD FILTER: Only reply if the message explicitly contains dealership trigger keywords
+      const isGroup = chatId.includes("@g.us");
+
+      // Auto-reply filter:
+      // In direct 1-on-1 chats, reply to all user inquiries.
+      // In group chats, reply if agent is mentioned, greeting is sent, or dealership keywords match.
       const isAgentMentioned =
         lower.includes("@agent") ||
+        lower.includes("agent") ||
         lower.includes("@ai") ||
         lower.includes("@autofame") ||
         lower.includes("autofame") ||
-        lower.includes("bot");
+        lower.includes("auto fame") ||
+        lower.includes("bot") ||
+        lower.includes("27631995124") ||
+        lower.includes("631995124");
+
+      const isGreeting =
+        lower === "hi" ||
+        lower === "hello" ||
+        lower === "hey" ||
+        lower.startsWith("hi ") ||
+        lower.startsWith("hello ") ||
+        lower.startsWith("hey ") ||
+        lower.includes("good morning") ||
+        lower.includes("good afternoon") ||
+        lower.includes("good day") ||
+        lower.includes("help") ||
+        lower.includes("test");
 
       const isCountQuery =
         lower.includes("how many") ||
@@ -283,15 +304,17 @@ http.route({
         lower.includes("contact");
 
       const shouldReply =
+        !isGroup ||
         isAgentMentioned ||
         isCountQuery ||
         isStockQuery ||
         isStatusQuery ||
         isFinanceQuoteQuery ||
         isVehicleSearchQuery ||
-        isDealershipInfoQuery;
+        isDealershipInfoQuery ||
+        isGreeting;
 
-      // If no valid dealership keywords match, DO NOT auto-reply! (Preserves conversation hygiene)
+      // If in group and no valid dealership / agent triggers match, DO NOT auto-reply (preserves group hygiene)
       if (!shouldReply) {
         return new Response(
           JSON.stringify({
@@ -359,7 +382,11 @@ http.route({
 
       let replyBody = "";
 
-      if (lower.includes("sold") || lower.includes("sale") || lower.includes("sell")) {
+      if (isGreeting && !lower.includes("sold") && !lower.includes("available") && !lower.includes("quote") && !lower.includes("how many") && !isVehicleSearchQuery) {
+        replyBody = `👋 *Welcome to AutoFame Deals!*\n━━━━━━━━━━━━━━━━━━━━\nI am the AutoFame AI Assistant.\n\n🚘 *How can I help you today?*\n• *Showroom Inventory*: Ask *"What cars are available?"* or search any model (e.g. *Toyota*, *Hilux*, *Polo*, *BMW*)\n• *Finance & Quotes*: Ask *"Quote for Hilux"* or *"Monthly instalment"*\n• *Showroom Location*: Ask *"Where are you located?"*\n• *Sales Report*: Ask *"Sold vehicles this month"*\n\nType your question or model name to get instant details!`;
+      } else if (isDealershipInfoQuery && !lower.includes("sold") && !lower.includes("quote") && !isVehicleSearchQuery) {
+        replyBody = `📍 *AUTOFAME DEALERSHIP DETAILS*\n━━━━━━━━━━━━━━━━━━━━\n• *Showroom*: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013\n• *Trading Hours*: Mon - Fri 8:00 AM - 5:30 PM | Sat 8:30 AM - 1:30 PM\n• *WhatsApp & Phone*: +27 63 199 5124\n• *Email*: alexsouthflow3@gmail.com\n• *Website*: https://www.autofame.co.za\n\nVisit our showroom or ask me about any car in stock!`;
+      } else if (lower.includes("sold") || lower.includes("sale") || lower.includes("sell")) {
         if (isLastMonth) {
           const list = soldLastMonth
             .map(
@@ -433,7 +460,7 @@ http.route({
         replyBody = `🚘 *AUTOFAME SHOWROOM INVENTORY*\n📊 *Showing ${items.length} of ${targetList.length} Vehicles* (${availableCars.length} Available on Floor)\n━━━━━━━━━━━━━━━━━━━━\n\n${items.join("\n\n")}`;
       }
 
-      const whapiToken = process.env.WHAPI_API_TOKEN || "ohxDDFSuvqRvl4DKZLu7eEYUfbAEkCil";
+      const whapiToken = process.env.WHAPI_API_TOKEN || "gfsvMATZZV5XA5bOi71jCmhyxdE7STgO";
 
       const dispatchRes = await fetch("https://gate.whapi.cloud/messages/text", {
         method: "POST",

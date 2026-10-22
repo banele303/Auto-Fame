@@ -424,7 +424,7 @@ export const getDealershipContext = query({
       dealership: {
         name: "AutoFame Dealership Johannesburg South",
         country: "South Africa (ZAR)",
-        whatsappProvider: "Whapi.Cloud Channel STARLD-W5LEE (+27 63 199 5124)",
+        whatsappProvider: "Whapi.Cloud Channel ANTMAN-ZPBZZ (+27 63 199 5124)",
         emailProvider: "Gmail Connected Channel (alexsouthflow3@gmail.com)",
         dealershipPhone: "+27 63 199 5124",
         address: "1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa",

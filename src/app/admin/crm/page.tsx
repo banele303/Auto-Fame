@@ -783,7 +783,7 @@ export default function DealershipCrmPage() {
         }) — ${finCarName}`;
         const emailBodyText = `OFFICIAL DEALERSHIP VEHICLE FINANCE APPLICATION DOSSIER
 Submitted by: AutoFame Dealership (1 Rifle Range Rd, Baragwanath, Johannesburg South)
-Channel: WhatsApp Agent (STARLD-W5LEE) & Dealership CRM
+Channel: WhatsApp Agent (ANTMAN-ZPBZZ) & Dealership CRM
 ====================================================================
 
 1. APPLICANT DETAILS

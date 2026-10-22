@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_WHAPI_TOKEN = "ohxDDFSuvqRvl4DKZLu7eEYUfbAEkCil";
-const DEFAULT_CHANNEL_ID = "STARLD-W5LEE";
+const DEFAULT_WHAPI_TOKEN = "gfsvMATZZV5XA5bOi71jCmhyxdE7STgO";
+const DEFAULT_CHANNEL_ID = "ANTMAN-ZPBZZ";
 const AUTOFAME_AGENT_GROUP_ID = "120363413508068515@g.us";
 
 // Track answered message IDs in memory so we never double-reply
 const answeredMessageIds = new Set<string>();
 
 /**
- * Synced Phonebook Contacts & Recent Chats from Whapi Channel STARLD-W5LEE (+27 63 199 5124)
+ * Synced Phonebook Contacts & Recent Chats from Whapi Channel ANTMAN-ZPBZZ (+27 63 199 5124)
  * Ensures contact search, selection, and chat history always work even if Whapi trial quota is at 0.
  */
 const SYNCED_WHAPI_CONTACTS: {

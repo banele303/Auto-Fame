@@ -648,7 +648,7 @@ function answerEmailQuestion(
         .join("\n");
       return `### 🚘 Customer & Dealership Inquiries (${customerEmails.length})\n\n| Lead | Email | Subject | Received |\n| :--- | :--- | :--- | :---: |\n${rows}`;
     } else {
-      return `### 🚘 Customer Inquiries Check\n\nNo direct customer inquiry emails are currently pending in the latest inbox batch. Customer traffic is actively streaming through the connected WhatsApp channel (STARLD-W5LEE) and website finance portal.`;
+      return `### 🚘 Customer Inquiries Check\n\nNo direct customer inquiry emails are currently pending in the latest inbox batch. Customer traffic is actively streaming through the connected WhatsApp channel (ANTMAN-ZPBZZ) and website finance portal.`;
     }
   }
 
@@ -894,7 +894,7 @@ ${formatCarTable(soldThisMonth)}
 | **Average Fleet Mileage** | **${Number(analytics.avgMileage || 89400).toLocaleString()} km** | Quality-inspected showroom stock |
 | **Customers & Leads** | **${customers.length} Customers** | ${realLeads.length} Active Form Submissions & Inquiries |
 | **Team & Staff** | **${employees.length} Employees** | ${employees.filter((e: any) => e.status === "ACTIVE").length || employees.length} Active Staff Members |
-| **Omnichannel CRM** | **${waChannelMessages.length || crmContacts.length || 108} Contacts** | WhatsApp STARLD-W5LEE & Gmail (${connectedGmail}) |
+| **Omnichannel CRM** | **${waChannelMessages.length || crmContacts.length || 108} Contacts** | WhatsApp ANTMAN-ZPBZZ & Gmail (${connectedGmail}) |
 
 #### 2. Inventory Breakdown by Brand (Top Makes)
 | Brand / Make | Total Units | Available | Sold | Total Valuation |
@@ -1014,7 +1014,7 @@ ${priceRows}`;
     lower.includes("branch") ||
     lower.includes("contact detail")
   ) {
-    return `### AutoFame Dealership — Official Branch Details\n- **Dealership Name**: AutoFame Dealership Johannesburg South\n- **Showroom Address**: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa\n- **WhatsApp & Phone**: +27 63 199 5124 (Whapi.Cloud Channel \`STARLD-W5LEE\`)\n- **Connected Gmail**: ${connectedGmail}\n- **Website**: https://www.autofame.co.za`;
+    return `### AutoFame Dealership — Official Branch Details\n- **Dealership Name**: AutoFame Dealership Johannesburg South\n- **Showroom Address**: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa\n- **WhatsApp & Phone**: +27 63 199 5124 (Whapi.Cloud Channel \`ANTMAN-ZPBZZ\`)\n- **Connected Gmail**: ${connectedGmail}\n- **Website**: https://www.autofame.co.za`;
   }
 
   // ── 1. SOLD / SALES QUERIES (With accurate Month-by-Month Date Filters) ──
@@ -1125,10 +1125,10 @@ ${formatCarTable(soldCars)}
       lower.includes("count") ||
       lower.includes("number of")
     ) {
-      return `You have **${waChannelMessages.length || 108} synced WhatsApp contacts & chats** on Channel **STARLD-W5LEE (+27 63 199 5124)**.`;
+      return `You have **${waChannelMessages.length || 108} synced WhatsApp contacts & chats** on Channel **ANTMAN-ZPBZZ (+27 63 199 5124)**.`;
     }
     if (waChannelMessages.length === 0) {
-      return `WhatsApp Channel **STARLD-W5LEE (+27 63 199 5124)** is connected. Open the WhatsApp drawer or Dealership CRM to view all 108 synced contacts.`;
+      return `WhatsApp Channel **ANTMAN-ZPBZZ (+27 63 199 5124)** is connected. Open the WhatsApp drawer or Dealership CRM to view all 108 synced contacts.`;
     }
     const rows = waChannelMessages
       .slice(0, 25)
@@ -1446,7 +1446,7 @@ Here is our live dealership status from the Convex database:
 - **Available Vehicles on Floor**: **${availableCars.length} vehicles** ready for immediate purchase (Showroom Value: **R${totalShowroomValue.toLocaleString()} ZAR**).
 - **Sold Vehicles**: **${soldCars.length} vehicles** (**R${soldRevenue.toLocaleString()} ZAR** sales volume).
 - **Active Finance & Inquiries**: **${realLeads.length} leads** in the pipeline.
-- **Connected Channels**: WhatsApp **STARLD-W5LEE** (+27 63 199 5124) with **${waChannelMessages.length || 108} contacts** & Gmail (\`${connectedGmail}\`).
+- **Connected Channels**: WhatsApp **ANTMAN-ZPBZZ** (+27 63 199 5124) with **${waChannelMessages.length || 108} contacts** & Gmail (\`${connectedGmail}\`).
 
 You can ask me to write an email to any client, calculate finance for a vehicle, compare models in stock, or break down sales performance!`;
 }
@@ -1733,7 +1733,7 @@ Live Dealership Data Ground Truth:
 - Available on Floor: ${(Array.isArray(context?.cars) ? context.cars : []).filter((c: any) => c.status === "AVAILABLE").length} vehicles
 - Sold Vehicles: ${(Array.isArray(context?.cars) ? context.cars : []).filter((c: any) => c.status === "SOLD").length} vehicles (2013 Land Rover Range Rover Sport #AF-32 for R359,900 ZAR and 2020 Hyundai Grand i10 #AF-15 for R169,900 ZAR, total sales volume: R529,800 ZAR)
 - Inactive Vehicles: ${(Array.isArray(context?.cars) ? context.cars : []).filter((c: any) => c.status === "INACTIVE").length} vehicles
-- Connected WhatsApp: STARLD-W5LEE (+27 63 199 5124) with 108 synced contacts
+- Connected WhatsApp: ANTMAN-ZPBZZ (+27 63 199 5124) with 108 synced contacts
 - Dealership Address: 1 Rifle Range Rd, Baragwanath, Johannesburg South, 2013, South Africa
 Connected Dealership Gmail Inbox (${connectedGmail}) — 20 Recent Messages Ground Truth:
 ${emailGroundTruth || "No recent messages"}

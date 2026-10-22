@@ -574,7 +574,7 @@ ${formatCarsMarkdown(soldThisMonth)}
     lower.includes("breakdown")
   ) {
     const totalInventoryValue = cars.reduce((s: number, c: any) => s + (c.price || 0), 0);
-    return `### AutoFame Dealership — Complete Live Analytics Report\n\n| Metric | Live Value | Details |\n| :--- | :---: | :--- |\n| **Total Vehicle Inventory** | **${totalCars} Units** | ${availableCars.length} Available • ${soldCars.length} Sold • ${inactiveCars.length} Inactive |\n| **Total Inventory Valuation** | **R${totalInventoryValue.toLocaleString()} ZAR** | Avg Price: R${(totalCars > 0 ? Math.round(totalInventoryValue / totalCars) : 0).toLocaleString()} ZAR |\n| **Available Showroom Value** | **R${totalValue.toLocaleString()} ZAR** | Ready for immediate floor sale |\n| **Sold Volume / Gross Revenue** | **R${soldRevenue.toLocaleString()} ZAR** | ${soldCars.length} Sold Vehicles |\n| **Active Leads & Forms** | **${realLeads.length} Submissions** | Finance Apps, Inquiries & Test Drives |\n| **Omnichannel CRM** | **${waChannelMessages.length || 108} Contacts** | WhatsApp STARLD-W5LEE & Gmail |`;
+    return `### AutoFame Dealership — Complete Live Analytics Report\n\n| Metric | Live Value | Details |\n| :--- | :---: | :--- |\n| **Total Vehicle Inventory** | **${totalCars} Units** | ${availableCars.length} Available • ${soldCars.length} Sold • ${inactiveCars.length} Inactive |\n| **Total Inventory Valuation** | **R${totalInventoryValue.toLocaleString()} ZAR** | Avg Price: R${(totalCars > 0 ? Math.round(totalInventoryValue / totalCars) : 0).toLocaleString()} ZAR |\n| **Available Showroom Value** | **R${totalValue.toLocaleString()} ZAR** | Ready for immediate floor sale |\n| **Sold Volume / Gross Revenue** | **R${soldRevenue.toLocaleString()} ZAR** | ${soldCars.length} Sold Vehicles |\n| **Active Leads & Forms** | **${realLeads.length} Submissions** | Finance Apps, Inquiries & Test Drives |\n| **Omnichannel CRM** | **${waChannelMessages.length || 108} Contacts** | WhatsApp ANTMAN-ZPBZZ & Gmail |`;
   }
 
   if (
@@ -682,7 +682,7 @@ ${formatCarsMarkdown(soldCars)}
     lower.includes("how many message") ||
     lower.includes("how many chat")
   ) {
-    return `You have **${waChannelMessages.length || 108} synced WhatsApp contacts & chats** on Channel **STARLD-W5LEE (+27 63 199 5124)**.`;
+    return `You have **${waChannelMessages.length || 108} synced WhatsApp contacts & chats** on Channel **ANTMAN-ZPBZZ (+27 63 199 5124)**.`;
   }
 
   // 6. FORMS / LEADS COUNT
@@ -1082,7 +1082,7 @@ YOUR AUTONOMOUS CAPABILITIES (REAL AGENT):
 ${soldCarsList || "None"}
 - Inactive / In-Prep Vehicles: ${inactiveCars.length} cars
 - Active Workshop / Maintenance: ${workshopCars.length || repairs.length} vehicles
-- Connected WhatsApp Channel: STARLD-W5LEE (+27 63 199 5124) with ${waContacts.length || 108} synced contacts
+- Connected WhatsApp Channel: ANTMAN-ZPBZZ (+27 63 199 5124) with ${waContacts.length || 108} synced contacts
 - Connected Dealership Gmail: ${connectedGmail} with ${inboxEmails.length} inbox emails
 - Staff: ${employees.length} employees (${empList || "Sales Associates & Managers"})
 - FICA Documentation: 1) SA ID Copy, 2) Valid Driver's License, 3) 3 Months Bank Statements, 4) Latest Payslips, 5) Proof of Residence
@@ -1118,11 +1118,11 @@ export default function AdminAutoFameAgentPage() {
     selectedSessionId ? { sessionId: selectedSessionId } : "skip"
   );
 
-  // Connected Channels State (alexsouthflow3@gmail.com + Whapi STARLD-W5LEE)
+  // Connected Channels State (alexsouthflow3@gmail.com + Whapi ANTMAN-ZPBZZ)
   const [connectedGmail, setConnectedGmail] = useState("alexsouthflow3@gmail.com");
   const [gmailAppPassword, setGmailAppPassword] = useState("dmjjjsyxcpqpdwlb");
   const [gmailVerifyError, setGmailVerifyError] = useState<string | null>(null);
-  const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 63 199 5124 (STARLD-W5LEE)");
+  const [connectedWhatsApp, setConnectedWhatsApp] = useState("+27 63 199 5124 (ANTMAN-ZPBZZ)");
   const [channelsModalOpen, setChannelsModalOpen] = useState(false);
 
   // Real LLM Provider Key State (Gemini / Groq / OpenAI)
@@ -1132,7 +1132,7 @@ export default function AdminAutoFameAgentPage() {
   // Live Gmail Inbox (Today, Yesterday, All)
   const [inboxEmails, setInboxEmails] = useState<any[]>([]);
 
-  // Live Whapi.Cloud WhatsApp Messages & Contacts (Channel STARLD-W5LEE)
+  // Live Whapi.Cloud WhatsApp Messages & Contacts (Channel ANTMAN-ZPBZZ)
   const [waChannelMessages, setWaChannelMessages] = useState<any[]>([]);
   const [waContacts, setWaContacts] = useState<any[]>([]);
   const [waSearchQuery, setWaSearchQuery] = useState("");
@@ -1310,7 +1310,7 @@ export default function AdminAutoFameAgentPage() {
               return next;
             });
           }
-          toast.success("Synced latest applicant info & proof documents from WhatsApp channel STARLD-W5LEE");
+          toast.success("Synced latest applicant info & proof documents from WhatsApp channel ANTMAN-ZPBZZ");
         }
       }
     } catch {}
@@ -1394,8 +1394,8 @@ export default function AdminAutoFameAgentPage() {
       if (savedWa && savedWa !== "+27 11 942 1200") {
         setConnectedWhatsApp(savedWa);
       } else {
-        setConnectedWhatsApp("+27 63 199 5124 (STARLD-W5LEE)");
-        localStorage.setItem("autofame_connected_whatsapp", "+27 63 199 5124 (STARLD-W5LEE)");
+        setConnectedWhatsApp("+27 63 199 5124 (ANTMAN-ZPBZZ)");
+        localStorage.setItem("autofame_connected_whatsapp", "+27 63 199 5124 (ANTMAN-ZPBZZ)");
       }
 
       const savedAiKey = localStorage.getItem("autofame_ai_key") || "";
@@ -1602,7 +1602,7 @@ export default function AdminAutoFameAgentPage() {
     }
   };
 
-  // Send Finance Application Form Container OR Request Missing Items via WhatsApp (STARLD-W5LEE)
+  // Send Finance Application Form Container OR Request Missing Items via WhatsApp (ANTMAN-ZPBZZ)
   const handleSendFinanceFormOrMissingViaWhatsApp = async (requestMissingOnly = false) => {
     const targetPhone = finPhone.trim() || canvasWaPhone.trim();
     if (!targetPhone) {
@@ -1636,7 +1636,7 @@ export default function AdminAutoFameAgentPage() {
         toast.success(
           requestMissingOnly
             ? `Requested ${missingFinanceItems.length} missing items on WhatsApp (${targetPhone})`
-            : `Sent Finance Application Form Container to ${targetPhone} via STARLD-W5LEE`
+            : `Sent Finance Application Form Container to ${targetPhone} via ANTMAN-ZPBZZ`
         );
         await recordCrmEvent({
           eventType: requestMissingOnly ? "WHATSAPP_MISSING_ITEMS" : "WHATSAPP_FINANCE_CONTAINER",
@@ -1655,7 +1655,7 @@ export default function AdminAutoFameAgentPage() {
     }
   };
 
-  // Trigger Two-Way WhatsApp AI Agent Reply on Channel STARLD-W5LEE
+  // Trigger Two-Way WhatsApp AI Agent Reply on Channel ANTMAN-ZPBZZ
   const handleTriggerWhatsAppAgentAutoReply = async () => {
     try {
       const res = await fetch("/api/whatsapp", {
@@ -1672,7 +1672,7 @@ export default function AdminAutoFameAgentPage() {
         fetchLiveWhatsAppChannel(true);
       } else {
         fetchLiveWhatsAppChannel(true);
-        toast.info(data.reason || "Synced WhatsApp channel STARLD-W5LEE");
+        toast.info(data.reason || "Synced WhatsApp channel ANTMAN-ZPBZZ");
       }
     } catch (err: any) {
       toast.error("WhatsApp Agent sync error: " + err.message);
@@ -1866,7 +1866,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
           window.open(data.waMeUrl, "_blank", "noopener,noreferrer");
           toast.success(`Opened WhatsApp reply to ${selectedWaContact?.name || canvasWaPhone.trim()}`);
         } else {
-          toast.success(`Sent on WhatsApp (STARLD-W5LEE) to ${selectedWaContact?.name || canvasWaPhone.trim()}`);
+          toast.success(`Sent on WhatsApp (ANTMAN-ZPBZZ) to ${selectedWaContact?.name || canvasWaPhone.trim()}`);
         }
       } else {
         toast.error(data.error || "Failed to send WhatsApp message");
@@ -2730,7 +2730,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                       <span>WhatsApp Agent</span>
                       <PhoneCall className="h-4 w-4 text-emerald-400" />
                     </div>
-                    <p className="text-lg font-bold text-[#f5f2eb] mt-1.5 truncate">STARLD-W5LEE</p>
+                    <p className="text-lg font-bold text-[#f5f2eb] mt-1.5 truncate">ANTMAN-ZPBZZ</p>
                     <p className="text-[11px] text-emerald-400 mt-0.5">+27 63 199 5124 Live</p>
                   </button>
 
@@ -2994,7 +2994,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
                 {composeDrawerMode === "gmail"
                   ? `Compose Email (${connectedGmail})`
                   : composeDrawerMode === "whatsapp"
-                  ? "WhatsApp Agent (STARLD-W5LEE)"
+                  ? "WhatsApp Agent (ANTMAN-ZPBZZ)"
                   : "Finance Application Container & Bank Check"}
               </span>
             </div>
@@ -3859,7 +3859,7 @@ Dealer Contact: AutoFame Dealership | +27 63 199 5124 | ${connectedGmail}`;
               <div>
                 <h3 className="text-sm font-bold text-[#f5f2eb]">Connected Channels</h3>
                 <p className="text-[11px] text-[#8e8a82]">
-                  Live Gmail (`alexsouthflow3@gmail.com`) &amp; Whapi (`STARLD-W5LEE`)
+                  Live Gmail (`alexsouthflow3@gmail.com`) &amp; Whapi (`ANTMAN-ZPBZZ`)
                 </p>
               </div>
               <button
