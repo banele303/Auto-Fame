@@ -1704,30 +1704,6 @@ export default function AdminAutoFameAgentPage() {
     }
   };
 
-  // Trigger Two-Way WhatsApp AI Agent Reply on Channel ANTMAN-ZPBZZ
-  const handleTriggerWhatsAppAgentAutoReply = async () => {
-    try {
-      const res = await fetch("/api/whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "agent_auto_reply",
-          context: dealershipContext,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.replied) {
-        toast.success(`WhatsApp Agent replied to ${data.senderName} (${data.recipient})`);
-        fetchLiveWhatsAppChannel(true);
-      } else {
-        fetchLiveWhatsAppChannel(true);
-        toast.info(data.reason || "Synced WhatsApp channel ANTMAN-ZPBZZ");
-      }
-    } catch (err: any) {
-      toast.error("WhatsApp Agent sync error: " + err.message);
-    }
-  };
-
   // ── VERIFY COMPLETENESS & SEND APPLICATION TO BANK VIA EMAIL (alexsouthflow3@gmail.com) ──
   const handleVerifyAndSendApplicationToBank = async () => {
     // 1. Strict Completeness Check: Do we have everything we need?

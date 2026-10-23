@@ -12,62 +12,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// Track answered message IDs in memory so we never double-reply
-const answeredMessageIds = new Set<string>();
-
-/**
- * Clean, modern WhatsApp formatter for a list of vehicles
- */
-function formatCarsForWhatsApp(
-  cars: any[],
-  title = "AUTOFAME SHOWROOM INVENTORY",
-  maxShow = 12
-): string {
-  if (!cars || cars.length === 0) {
-    return "No matching vehicles found in showroom inventory.";
-  }
-
-  const availableCount = cars.filter((c: any) => c.status === "AVAILABLE").length;
-  const header = `🚘 *${title}*\n📊 *Showing ${Math.min(cars.length, maxShow)} of ${cars.length} Vehicles* (${availableCount} Available)\n━━━━━━━━━━━━━━━━━━━━`;
-
-  const items = cars.slice(0, maxShow).map((c: any, idx: number) => {
-    const price = Number(c.price || 0);
-    const estMonthly = Math.round(price * 0.9 * 0.0218);
-    const mileage = Number(c.mileage || 0).toLocaleString();
-    const trans = c.transmission || "Auto";
-    const fuel = c.fuelType || "Petrol";
-    const statusBadge =
-      c.status === "AVAILABLE"
-        ? "🟢 *AVAILABLE*"
-        : c.status === "SOLD"
-        ? "🔴 *SOLD*"
-        : "🟡 *" + (c.status || "IN STOCK") + "*";
-
-    return `*${idx + 1}. ${c.year} ${c.make} ${c.model}*\n💰 *R${price.toLocaleString()} ZAR* (~R${estMonthly.toLocaleString()}/mo)\n⚙️ ${mileage} km • ${trans} • ${fuel}\n${statusBadge}`;
-  });
-
-  return `${header}\n\n${items.join("\n\n")}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _Reply with any car name to generate an official quote or type *FINANCE* to open an application._`;
-}
-
-/**
- * Clean, modern WhatsApp formatter for an Official Vehicle Quote
- */
-function formatVehicleQuoteForWhatsApp(car: any): string {
-  if (!car) {
-    return "No vehicle available to quote.";
-  }
-  const price = Number(car.price || 0);
-  const deposit = Math.round(price * 0.1);
-  const loanAmount = price - deposit;
-  const monthlyRate = 0.1175 / 12;
-  const term = 72;
-  const monthlyPayment = Math.round(
-    (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, term)) /
-      (Math.pow(1 + monthlyRate, term) - 1)
-  );
-
-  return `📄 *AUTOFAME OFFICIAL VEHICLE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n\n🚘 *Vehicle:* ${car.year} ${car.make} ${car.model}\n🔢 *Stock ID:* #AF-${car.id}\n⚙️ *Specs:* ${Number(car.mileage || 0).toLocaleString()} km • ${car.transmission || "Automatic"} • ${car.fuelType || "Petrol"}\n\n💳 *FINANCE BREAKDOWN (ESTIMATE)*\n• *Retail Price:* R${price.toLocaleString()} ZAR\n• *10% Deposit:* R${deposit.toLocaleString()} ZAR\n• *Principal Loan:* R${loanAmount.toLocaleString()} ZAR\n• *Term & Rate:* 72 Months @ 11.75% Linked\n• *Monthly Instalment:* *~R${monthlyPayment.toLocaleString()} ZAR / month*\n\n📋 *REQUIRED FICA DOCUMENTS*\n1. Copy of SA ID (Smart Card / Book)\n2. Valid SA Driver's License\n3. 3 Months Stamped Bank Statements\n4. Latest 3 Months Payslips\n5. Proof of Residence (< 3 Months)\n\n📍 *AutoFame Dealership Johannesburg South*\n📞 +27 63 199 5124 | ✉️ alexsouthflow3@gmail.com`;
-}
+// STRICT POLICY: ZERO auto-replies to users. Passive CRM sync & manual dispatch only.
 
 /**
  * Extracts structured finance fields & all attachments from a WhatsApp contact's messages
@@ -376,6 +321,15 @@ export async function POST(req: NextRequest) {
       process.env.WHAPI_API_TOKEN ||
       process.env.NEXT_PUBLIC_WHAPI_TOKEN ||
       DEFAULT_WHAPI_TOKEN;
+
+    // STRICT PROTECTION: ZERO AUTO-REPLIES TO ANY CLIENTS
+    if (action === "agent_auto_reply" || action === "auto_reply") {
+      return NextResponse.json({
+        ok: true,
+        replied: false,
+        reason: "Auto-replies are strictly and permanently disabled.",
+      });
+    }
 
     // ──────────────────────────────────────────────────────────────
     // ACTION 0: Add or Update a Contact in the WhatsApp Directory
